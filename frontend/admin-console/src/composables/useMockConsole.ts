@@ -45,30 +45,30 @@ export interface ActionSpec {
   impact: string[]
 }
 
-const storageKey = 'anjing-ai-platform-console-mock-v2'
+const storageKey = 'anjing-ai-platform-console-mock-v3'
 
 const routeByModule: Record<ConsoleModuleId, string> = {
   overview: '/console/overview',
   gateway: '/console/gateway',
   iam: '/console/iam',
-  llm: '/console/llm',
-  skill: '/console/skills',
-  observability: '/console/observability',
+  llm: '/console/gateway',
+  skill: '/console/gateway',
+  observability: '/console/overview',
   quota: '/console/quota',
-  credential: '/console/credentials',
-  examples: '/console/examples'
+  credential: '/console/iam',
+  examples: '/console/docs'
 }
 
 const moduleLabel: Record<ConsoleModuleId, string> = {
   overview: '运营总览',
-  gateway: '网关管理',
+  gateway: '网关与模型',
   iam: '用户与权限',
-  llm: '模型服务',
-  skill: 'Skill Hub',
-  observability: '运营看板',
+  llm: '网关与模型',
+  skill: '网关与模型',
+  observability: '运营总览',
   quota: '计费与配额',
-  credential: '凭据中心',
-  examples: '示例接入'
+  credential: '用户与权限',
+  examples: '帮助文档'
 }
 
 export const workspaceTabs: Record<ConsoleModuleId, Record<string, WorkspaceTab>> = {
@@ -99,6 +99,30 @@ export const workspaceTabs: Record<ConsoleModuleId, Record<string, WorkspaceTab>
     }
   },
   gateway: {
+    'API 路由': {
+      eyebrow: 'API Routes',
+      title: 'API 路由',
+      description: '统一管理业务系统、Agent 和内部工具的 API 入口。',
+      columns: ['Route', 'Upstream', 'Auth', 'Rate Limit', 'Status']
+    },
+    模型路由: {
+      eyebrow: 'Model Routing',
+      title: '模型路由',
+      description: '用统一别名屏蔽模型供应商差异，并支持 fallback 和预算控制。',
+      columns: ['别名', '场景', '首选模型', 'Fallback', '状态']
+    },
+    模型供应商: {
+      eyebrow: 'Providers',
+      title: '模型供应商',
+      description: '管理供应商、Key 引用、权重和运行状态。',
+      columns: ['供应商', '模型数', 'Key Ref', '权重', '状态']
+    },
+    'Skill 调用': {
+      eyebrow: 'Skill Invocation',
+      title: 'Skill 调用',
+      description: '把 Skill 作为网关后的工具能力统一治理和调用。',
+      columns: ['Skill', '协议', 'Route', 'Timeout', '状态']
+    },
     路由: {
       eyebrow: 'Routes',
       title: '生产路由表',
@@ -160,6 +184,12 @@ export const workspaceTabs: Record<ConsoleModuleId, Record<string, WorkspaceTab>
       title: 'API Key',
       description: 'API Key 同时关联项目、权限范围、配额和计费。',
       columns: ['Key', '项目', 'Scope', '到期', '状态']
+    },
+    凭据: {
+      eyebrow: 'Credentials',
+      title: '凭据引用',
+      description: 'credentialRef 归属访问控制中心，业务模块只引用、不读取明文。',
+      columns: ['credentialRef', '用途', '范围', '到期', '状态']
     },
     'SSO/OAuth': {
       eyebrow: 'SSO',
@@ -329,6 +359,24 @@ export const workspaceTabs: Record<ConsoleModuleId, Record<string, WorkspaceTab>
     }
   },
   examples: {
+    'API 文档': {
+      eyebrow: 'API Docs',
+      title: 'API 文档',
+      description: '提供网关、模型、Skill 和计费相关 API 的最小参考。',
+      columns: ['文档', '范围', '版本', 'Owner', '状态']
+    },
+    示例: {
+      eyebrow: 'Examples',
+      title: '示例',
+      description: '用于快速理解平台接入路径的示例应用和模板。',
+      columns: ['示例', '依赖模块', 'Owner', '接入状态', '状态']
+    },
+    FAQ: {
+      eyebrow: 'FAQ',
+      title: '常见问题',
+      description: '记录接入、权限、模型调用、计费和故障排查问题。',
+      columns: ['问题', '分类', 'Owner', '更新时间', '状态']
+    },
     示例应用: {
       eyebrow: 'Apps',
       title: '示例应用',
@@ -372,6 +420,15 @@ const seedRows: Array<[ConsoleModuleId, string, string[]]> = [
   ['overview', '接入进度', ['customer-service-agent', '使用用户', '观察用量', 'Ready']],
   ['overview', '接入进度', ['knowledge-rag', '开发人员', '绑定 Skill', 'Review']],
 
+  ['gateway', 'API 路由', ['/api/v1/llm/**', 'platform-api.llm', 'API Key', '1200/min', 'Active']],
+  ['gateway', 'API 路由', ['/api/v1/skills/**', 'platform-api.skill', 'API Key', '800/min', 'Active']],
+  ['gateway', 'API 路由', ['/api/v1/admin/**', 'platform-api.admin', 'RBAC', 'internal', 'Locked']],
+  ['gateway', '模型路由', ['chat-default', '客服 Agent', 'gpt-4.1-mini', 'claude-haiku', 'Active']],
+  ['gateway', '模型路由', ['embedding-default', 'RAG', 'text-embedding-3', 'local-bge', 'Active']],
+  ['gateway', '模型供应商', ['openai-primary', '7', 'cred.openai.default', '60%', 'Active']],
+  ['gateway', '模型供应商', ['claude-fallback', '4', 'cred.claude.backup', '25%', 'Standby']],
+  ['gateway', 'Skill 调用', ['search-knowledge', 'MCP', '/api/v1/skills/search', '8s', 'Published']],
+  ['gateway', 'Skill 调用', ['send-message', 'HTTP', '/api/v1/skills/send-message', '8s', 'Draft']],
   ['gateway', '路由', ['/api/v1/llm/**', 'platform-api.llm', 'API Key', '1200/min', 'Active']],
   ['gateway', '路由', ['/api/v1/skills/**', 'platform-api.skill', 'API Key', '800/min', 'Active']],
   ['gateway', '上游服务', ['platform-api.llm', 'http://platform-api:8080/llm', 'HTTP', 'Healthy', 'Active']],
@@ -393,6 +450,9 @@ const seedRows: Array<[ConsoleModuleId, string, string[]]> = [
   ['iam', '权限矩阵', ['Operator', 'None', 'Read runtime', 'Manage quota', 'None', 'Active']],
   ['iam', 'API Key', ['ak_live_customer', 'customer-service-agent', 'llm:chat skill:invoke', '2026-09-01', 'Active']],
   ['iam', 'API Key', ['ak_live_knowledge', 'knowledge-rag', 'llm:embedding skill:read', '2026-08-15', 'Active']],
+  ['iam', '凭据', ['cred.openai.default', 'LLM provider', 'Gateway / Model', '2026-07-01', 'Active']],
+  ['iam', '凭据', ['cred.claude.backup', 'LLM fallback', 'Gateway / Model', '2026-06-28', 'Expiring']],
+  ['iam', '凭据', ['cred.skill.http.default', 'HTTP Skill', 'Gateway / Skill', '2026-09-12', 'Active']],
   ['iam', 'SSO/OAuth', ['GitHub', 'gh_anjing_console', '/oauth/github/callback', 'admin only', 'Draft']],
   ['iam', 'SSO/OAuth', ['Google', 'google_console', '/oauth/google/callback', 'all users', 'Draft']],
 
@@ -453,6 +513,12 @@ const seedRows: Array<[ConsoleModuleId, string, string[]]> = [
 
   ['examples', '示例应用', ['agent-customer-service', 'Gateway / LLM / Skill', '使用用户', 'Ready', 'Active']],
   ['examples', '示例应用', ['agent-knowledge', 'LLM / Skill / Credential', '使用用户', 'Ready', 'Active']],
+  ['examples', 'API 文档', ['Gateway API', 'route / model / skill', 'v1', '开发人员', 'Ready']],
+  ['examples', 'API 文档', ['Billing API', 'usage / invoice', 'v1', '管理员', 'Draft']],
+  ['examples', '示例', ['客服 Agent', 'Gateway / Model / Skill', '使用用户', 'Ready', 'Active']],
+  ['examples', '示例', ['知识库 RAG', 'Gateway / Model / Skill', '使用用户', 'Ready', 'Active']],
+  ['examples', 'FAQ', ['API Key 过期怎么办', 'Access', '管理员', '2026-06-10', 'Ready']],
+  ['examples', 'FAQ', ['模型调用失败怎么排查', 'Gateway', '运维人员', '2026-06-10', 'Ready']],
   ['examples', 'API Access', ['agent-customer-service', '/api/v1/llm/chat', 'llm:chat skill:invoke', 'Business', 'Active']],
   ['examples', 'API Access', ['agent-knowledge', '/api/v1/skills/search', 'llm:embedding skill:read', 'Team', 'Active']],
   ['examples', 'Quickstart', ['1', '创建应用与 API Key', 'appId / key scope', '使用用户', 'Ready']],
@@ -587,7 +653,7 @@ function buildRecord(moduleId: ConsoleModuleId, tab: string, values: string[], i
     details: workspace.columns.map((column) => ({ label: column, value: cells[column] || '-' })),
     related: [
       { label: moduleLabel[moduleId], route: routeByModule[moduleId] },
-      { label: '运营看板', route: routeByModule.observability }
+      { label: '运营总览', route: routeByModule.observability }
     ]
   }
 }
@@ -662,7 +728,7 @@ function executeAction(moduleId: ConsoleModuleId, draft: Record<string, string>)
       const route = draft.route || '/api/v1/demo-agent/**'
       const upstream = draft.upstream || 'platform-api.demo'
       const rateLimit = draft.rateLimit || '600/min'
-      addRecord('gateway', '路由', [route, upstream, 'API Key', rateLimit, 'Draft'])
+      addRecord('gateway', 'API 路由', [route, upstream, 'API Key', rateLimit, 'Draft'])
       addRecord('gateway', '请求日志', [`POST ${route.replace('/**', '/invoke')}`, 'demo-agent-workbench', '64ms', '201', 'Mocked'])
       addAudit(moduleId, 'create route', route)
       state.lastMessage = `已创建网关路由：${route}`
@@ -738,6 +804,7 @@ function executeAction(moduleId: ConsoleModuleId, draft: Record<string, string>)
       const appName = draft.appName || 'demo-agent-workbench'
       const owner = draft.owner || '使用用户'
       const plan = draft.plan || 'Business'
+      addRecord('examples', '示例', [appName, 'Gateway / Model / Skill', owner, 'Provisioning', 'Active'])
       addRecord('examples', '示例应用', [appName, 'Gateway / LLM / Skill', owner, 'Provisioning', 'Active'])
       addRecord('examples', 'API Access', [appName, '/api/v1/llm/chat', 'llm:chat skill:invoke', plan, 'Active'])
       addRecord('iam', 'API Key', [`ak_live_${appName.replace(/-/g, '_')}`, appName, 'llm:chat skill:invoke', '2026-09-30', 'Active'])

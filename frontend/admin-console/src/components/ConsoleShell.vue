@@ -15,9 +15,18 @@ const activeRoleId = ref<PlatformRoleId>('admin')
 const activeRole = computed(() => platformRoles.find((role) => role.id === activeRoleId.value) || platformRoles[0])
 const visibleEntries = computed(() => consoleEntries.filter((entry) => entry.roles.includes(activeRoleId.value)))
 
+const normalizedRoute = computed(() => {
+  if (props.currentRoute === '/console') {
+    return '/console/overview'
+  }
+  if (props.currentRoute === '/console/examples') {
+    return '/console/docs'
+  }
+  return props.currentRoute
+})
+
 const activeEntry = computed(() => {
-  const normalizedRoute = props.currentRoute === '/console' ? '/console/overview' : props.currentRoute
-  return consoleEntries.find((entry) => entry.route === normalizedRoute) || visibleEntries.value[0] || consoleEntries[0]
+  return visibleEntries.value.find((entry) => entry.route === normalizedRoute.value) || visibleEntries.value[0] || consoleEntries[0]
 })
 
 const activePage = computed(() => {
@@ -28,8 +37,19 @@ function navigateTo(route: string) {
   window.location.hash = route
 }
 
+watch(
+  [activeRoleId, normalizedRoute],
+  () => {
+    const routeVisible = visibleEntries.value.some((entry) => entry.route === normalizedRoute.value)
+    if (!routeVisible) {
+      navigateTo((visibleEntries.value[0] || consoleEntries[0]).route)
+    }
+  },
+  { immediate: true }
+)
+
 watch(activeRoleId, () => {
-  if (!activeEntry.value.roles.includes(activeRoleId.value)) {
+  if (!visibleEntries.value.some((entry) => entry.id === activeEntry.value.id)) {
     navigateTo((visibleEntries.value[0] || consoleEntries[0]).route)
   }
 })
