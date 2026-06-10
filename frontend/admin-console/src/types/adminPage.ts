@@ -4,22 +4,43 @@ export interface AdminMetric {
   note: string
 }
 
-export interface AdminRecord {
-  name: string
-  type: string
-  owner: string
-  status: string
+export interface AdminTable {
+  eyebrow: string
+  title: string
+  columns: string[]
+  rows: string[][]
+}
+
+export interface AdminPanelItem {
+  label: string
+  value: string
+  note: string
+}
+
+export interface AdminPanel {
+  eyebrow: string
+  title: string
+  items: AdminPanelItem[]
+}
+
+export interface AdminFlowStep {
+  label: string
+  title: string
+  note: string
 }
 
 export interface AdminPageDefinition {
   id: string
+  layout: 'dashboard' | 'management'
   eyebrow: string
   title: string
   description: string
   primaryAction: string
   secondaryAction: string
+  tabs: string[]
   metrics: AdminMetric[]
-  focusItems: string[]
-  records: AdminRecord[]
+  primaryTable: AdminTable
+  secondaryTable?: AdminTable
+  panels: AdminPanel[]
+  flow?: AdminFlowStep[]
 }
-

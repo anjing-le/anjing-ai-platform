@@ -30,37 +30,37 @@ export const platformRoles: PlatformRole[] = [
 export const consoleEntries: ConsoleEntry[] = [
   {
     id: 'overview',
-    name: 'Overview',
-    title: '平台总览',
+    name: 'Dashboard',
+    title: '运营总览',
     route: '/console/overview',
-    summary: '汇总平台状态、调用趋势、风险提示和下一步接入入口。',
+    summary: '汇总平台状态、调用趋势、账单风险、告警和运营待办。',
     status: 'designing',
     roles: ['admin', 'user', 'developer', 'operator']
   },
   {
     id: 'gateway',
-    name: 'Gateway Console',
-    title: '统一 API 入口',
+    name: 'API Gateway',
+    title: '网关管理',
     route: '/console/gateway',
-    summary: '面向使用用户展示接入入口；面向开发人员维护路由、限流和服务配置。',
+    summary: '维护 API 路由、上游服务、消费者、限流策略和请求追踪。',
     status: 'planned',
     roles: ['admin', 'user', 'developer']
   },
   {
     id: 'iam',
-    name: 'IAM Console',
-    title: '身份与权限',
+    name: 'Users & Access',
+    title: '用户与权限',
     route: '/console/iam',
-    summary: '管理用户、组织、角色、权限、Token 和 API Key。',
+    summary: '管理组织、用户、角色、权限矩阵、SSO/OAuth、Token 和 API Key。',
     status: 'planned',
     roles: ['admin']
   },
   {
     id: 'llm',
-    name: 'LLM Console',
-    title: '模型供应与路由',
+    name: 'Model Service',
+    title: '模型服务',
     route: '/console/llm',
-    summary: '使用模型调用能力，或维护供应商、模型列表、Key 池和路由策略。',
+    summary: '维护模型供应商、模型目录、路由策略、Key 池和 Token 用量。',
     status: 'planned',
     roles: ['admin', 'user', 'developer']
   },
@@ -75,26 +75,26 @@ export const consoleEntries: ConsoleEntry[] = [
   },
   {
     id: 'observability',
-    name: 'Observability',
-    title: '日志与指标',
+    name: 'Operations',
+    title: '运营看板',
     route: '/console/observability',
-    summary: '查看调用日志、失败追踪、指标看板和审计事件。',
+    summary: '查看调用日志、失败追踪、指标看板、审计事件和告警处理。',
     status: 'planned',
     roles: ['admin', 'developer', 'operator']
   },
   {
     id: 'quota',
-    name: 'Quota Console',
-    title: '配额与限额',
+    name: 'Billing & Quota',
+    title: '计费与配额',
     route: '/console/quota',
-    summary: '配置调用配额、资源限额、用量统计和未来计费边界。',
+    summary: '管理套餐、配额、预算告警、用量统计和账单导出。',
     status: 'planned',
     roles: ['admin', 'developer', 'operator']
   },
   {
     id: 'credential',
-    name: 'Credential Console',
-    title: '凭据与密钥',
+    name: 'Secrets',
+    title: '凭据中心',
     route: '/console/credentials',
     summary: '管理 credentialRef、供应商 Key、脱敏展示和密钥读取策略。',
     status: 'planned',
@@ -102,7 +102,7 @@ export const consoleEntries: ConsoleEntry[] = [
   },
   {
     id: 'examples',
-    name: 'Examples',
+    name: 'Developer Portal',
     title: '示例接入',
     route: '/console/examples',
     summary: '沉淀客服、知识库、AIGC 等示例入口，辅助接入验证。',
