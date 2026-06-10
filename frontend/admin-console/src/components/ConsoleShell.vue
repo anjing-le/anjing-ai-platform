@@ -33,6 +33,14 @@ watch(activeRoleId, () => {
     navigateTo((visibleEntries.value[0] || consoleEntries[0]).route)
   }
 })
+
+watch(
+  () => props.currentRoute,
+  () => {
+    window.scrollTo({ top: 0 })
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -61,7 +69,6 @@ watch(activeRoleId, () => {
         <div>
           <span>{{ activeRole.name }} View</span>
           <strong>{{ activeEntry.title }}</strong>
-          <p>{{ activeRole.purpose }}</p>
         </div>
         <div class="console-role-switcher" aria-label="角色视角">
           <button

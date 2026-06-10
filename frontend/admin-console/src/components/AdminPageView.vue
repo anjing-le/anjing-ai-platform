@@ -49,7 +49,7 @@ const recentRelatedRecords = computed(() => {
 
 function tableColumns(columnCount: number) {
   return {
-    '--admin-table-columns': `repeat(${columnCount + 1}, minmax(112px, 1fr))`
+    '--admin-table-columns': `repeat(${columnCount}, minmax(86px, 1fr))`
   }
 }
 
@@ -126,10 +126,12 @@ watch(
       </div>
       <div class="admin-page__actions">
         <button type="button" @click="openActionDialog">{{ page.primaryAction }}</button>
+      </div>
+      <div class="admin-page__tools" aria-label="页面工具">
         <button class="admin-page__secondary-action" type="button" @click="runSecondaryAction">
           {{ page.secondaryAction }}
         </button>
-        <button class="admin-page__secondary-action" type="button" @click="runMockFlow">模拟调用链路</button>
+        <button class="admin-page__secondary-action" type="button" @click="runMockFlow">模拟链路</button>
       </div>
     </div>
 
@@ -197,13 +199,13 @@ watch(
         <div class="admin-table" :style="tableColumns(currentWorkspace.columns.length)">
           <div class="admin-table__row admin-table__row--head">
             <span v-for="column in currentWorkspace.columns" :key="column">{{ column }}</span>
-            <span>Action</span>
           </div>
           <button
             v-for="record in filteredRecords"
             :key="record.id"
             class="admin-table__row admin-table__row--button"
             type="button"
+            :aria-label="`查看 ${record.title} 详情`"
             @click="selectedRecord = record"
           >
             <span
@@ -213,7 +215,6 @@ watch(
             >
               {{ record.cells[column] || '-' }}
             </span>
-            <span class="admin-row-action">详情</span>
           </button>
           <div v-if="filteredRecords.length === 0" class="admin-empty-state">
             当前分区没有匹配记录
