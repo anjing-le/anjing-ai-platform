@@ -5,7 +5,7 @@ import ConsoleEntryCard from '@/components/ConsoleEntryCard.vue'
 import { consoleEntries, platformRoles } from '@/data/accessModel'
 import type { ConsoleEntry, PlatformRoleId } from '@/types/accessModel'
 
-const activeRoleId = ref<PlatformRoleId>('platform-owner')
+const activeRoleId = ref<PlatformRoleId>('admin')
 
 const activeRole = computed(() => platformRoles.find((role) => role.id === activeRoleId.value) || platformRoles[0])
 const visibleEntries = computed(() => consoleEntries.filter((entry) => entry.roles.includes(activeRoleId.value)))
@@ -23,10 +23,10 @@ function isVisibleForActiveRole(entry: ConsoleEntry) {
   <section id="console-entry" class="console-entry-section" aria-labelledby="console-entry-title">
     <div class="console-entry-heading">
       <p class="eyebrow">Console entry</p>
-      <h2 id="console-entry-title">先定义谁进来，看见什么</h2>
+      <h2 id="console-entry-title">一个管理员，三类角色</h2>
       <p>
-        这一屏先作为权限模型的前置草图。现在只做角色标记和模块入口，后续接入 IAM 后再把这些定义
-        落到真实 RBAC、API Key 和菜单权限里。
+        这一屏先作为权限模型的前置草图。管理员可以看全部；使用用户看接入和调用；开发人员看大部分配置；
+        运维人员看运行配置与指标，但不进入网关这类关键开发配置。
       </p>
     </div>
 
@@ -71,4 +71,3 @@ function isVisibleForActiveRole(entry: ConsoleEntry) {
     </div>
   </section>
 </template>
-

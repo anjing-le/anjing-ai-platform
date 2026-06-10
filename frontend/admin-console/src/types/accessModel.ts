@@ -1,10 +1,8 @@
 export type PlatformRoleId =
-  | 'platform-owner'
-  | 'security-admin'
-  | 'ops-admin'
-  | 'ai-engineer'
-  | 'agent-builder'
-  | 'app-developer'
+  | 'admin'
+  | 'user'
+  | 'developer'
+  | 'operator'
 
 export interface PlatformRole {
   id: PlatformRoleId
@@ -22,4 +20,3 @@ export interface ConsoleEntry {
   status: 'planned' | 'designing' | 'ready'
   roles: PlatformRoleId[]
 }
-
