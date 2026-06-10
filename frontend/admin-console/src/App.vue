@@ -1,13 +1,30 @@
 <script setup lang="ts">
-import ArchitectureSection from '@/components/ArchitectureSection.vue'
-import ConsoleEntrySection from '@/components/ConsoleEntrySection.vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+
+import ConsoleShell from '@/components/ConsoleShell.vue'
 import HeroSection from '@/components/HeroSection.vue'
+
+const currentHash = ref(window.location.hash)
+
+function syncHash() {
+  currentHash.value = window.location.hash
+}
+
+onMounted(() => {
+  window.addEventListener('hashchange', syncHash)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('hashchange', syncHash)
+})
+
+const currentRoute = computed(() => currentHash.value.replace(/^#/, ''))
+const isConsole = computed(() => currentRoute.value.startsWith('/console'))
 </script>
 
 <template>
-  <main class="platform-home">
+  <ConsoleShell v-if="isConsole" :current-route="currentRoute" />
+  <main v-else class="platform-home">
     <HeroSection />
-    <ArchitectureSection />
-    <ConsoleEntrySection />
   </main>
 </template>

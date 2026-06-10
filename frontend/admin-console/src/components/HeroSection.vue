@@ -8,9 +8,8 @@ import InfrastructureField from '@/components/InfrastructureField.vue'
     <header class="topbar">
       <span class="brand-mark">anjing</span>
       <nav class="topbar-nav" aria-label="页面导航">
-        <a href="#architecture">Architecture</a>
-        <a href="#console-entry">Console</a>
-        <a href="https://github.com/anjing-le" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="#/console/overview">Console</a>
+        <a href="https://github.com/anjing-le/anjing-ai-platform" target="_blank" rel="noreferrer">GitHub</a>
       </nav>
     </header>
 
@@ -22,11 +21,18 @@ import InfrastructureField from '@/components/InfrastructureField.vue'
         Gateway、IAM、LLM、Skill、Audit、Quota 和 Credential 收到同一套清晰边界里。
       </p>
       <div class="hero-actions">
-        <a class="hero-action hero-action--primary" href="#console-entry">
+        <a class="hero-action hero-action--primary" href="#/console/overview">
           <span>进入控制台</span>
           <span class="hero-action__arrow" aria-hidden="true" />
         </a>
-        <a class="hero-action hero-action--ghost" href="#architecture">查看架构</a>
+        <a
+          class="hero-action hero-action--ghost"
+          href="https://github.com/anjing-le/anjing-ai-platform"
+          target="_blank"
+          rel="noreferrer"
+        >
+          查看仓库
+        </a>
       </div>
       <div class="hero-tags" aria-label="核心模块">
         <span>gateway</span>
@@ -37,8 +43,8 @@ import InfrastructureField from '@/components/InfrastructureField.vue'
       </div>
     </div>
 
-    <a class="section-cue" href="#architecture" aria-label="查看架构设计">
-      <span>Architecture</span>
+    <a class="section-cue" href="#/console/overview" aria-label="进入控制台">
+      <span>Console</span>
       <span class="section-cue__line" />
     </a>
   </section>
