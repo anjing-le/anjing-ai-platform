@@ -41,12 +41,6 @@ const filteredRecords = computed(() => {
   })
 })
 
-const recentRelatedRecords = computed(() => {
-  return consoleStore.state.records
-    .filter((record) => record.moduleId === 'observability' && ['审计事件', '调用日志', 'Trace'].includes(record.tab))
-    .slice(0, 5)
-})
-
 function tableColumns(columnCount: number) {
   return {
     '--admin-table-columns': `repeat(${columnCount}, minmax(86px, 1fr))`
@@ -78,21 +72,6 @@ function openActionDialog() {
 function submitAction() {
   consoleStore.executeAction(pageId.value, { ...actionDraft })
   actionDialogOpen.value = false
-}
-
-function runSecondaryAction() {
-  consoleStore.executeSecondary(pageId.value)
-}
-
-function runMockFlow() {
-  consoleStore.simulateTraffic(pageId.value)
-}
-
-function resetMockState() {
-  consoleStore.resetMockData()
-  searchQuery.value = ''
-  statusFilter.value = 'all'
-  selectedRecord.value = null
 }
 
 function markRecordDone(record: ConsoleRecord) {
@@ -127,12 +106,6 @@ watch(
       <div class="admin-page__actions">
         <button type="button" @click="openActionDialog">{{ page.primaryAction }}</button>
       </div>
-      <div class="admin-page__tools" aria-label="页面工具">
-        <button class="admin-page__secondary-action" type="button" @click="runSecondaryAction">
-          {{ page.secondaryAction }}
-        </button>
-        <button class="admin-page__secondary-action" type="button" @click="runMockFlow">模拟链路</button>
-      </div>
     </div>
 
     <nav class="admin-tabs" aria-label="页面分区">
@@ -152,22 +125,6 @@ watch(
         <span>{{ metric.label }}</span>
         <strong>{{ metric.value }}</strong>
         <p>{{ metric.note }}</p>
-      </article>
-    </div>
-
-    <div class="admin-connect-strip" aria-live="polite">
-      <div>
-        <span>Mock Data Flow</span>
-        <strong>{{ consoleStore.state.lastMessage }}</strong>
-      </div>
-      <button type="button" @click="resetMockState">重置 Mock</button>
-    </div>
-
-    <div v-if="page.flow" class="admin-flow" aria-label="模块工作流">
-      <article v-for="step in page.flow" :key="`${page.id}-${step.label}`" class="admin-flow__step">
-        <span>{{ step.label }}</span>
-        <strong>{{ step.title }}</strong>
-        <p>{{ step.note }}</p>
       </article>
     </div>
 
@@ -236,26 +193,6 @@ watch(
             </article>
           </div>
         </section>
-
-        <section class="admin-panel">
-          <div class="admin-panel__heading">
-            <span>Live Link</span>
-            <strong>最近联动</strong>
-          </div>
-          <div class="admin-panel-list">
-            <button
-              v-for="record in recentRelatedRecords"
-              :key="record.id"
-              class="admin-related-item"
-              type="button"
-              @click="selectedRecord = record"
-            >
-              <span>{{ record.tab }}</span>
-              <strong>{{ record.title }}</strong>
-              <p>{{ record.status }} · {{ record.updatedAt }}</p>
-            </button>
-          </div>
-        </section>
       </aside>
     </div>
 
@@ -319,7 +256,7 @@ watch(
 
         <div class="admin-modal__actions">
           <button class="admin-page__secondary-action" type="button" @click="actionDialogOpen = false">取消</button>
-          <button type="submit">提交 Mock 操作</button>
+          <button type="submit">提交</button>
         </div>
       </form>
     </div>

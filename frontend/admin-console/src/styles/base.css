@@ -1079,21 +1079,6 @@ a {
   outline: none;
 }
 
-.admin-connect-strip {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 66px;
-  margin-top: 12px;
-  padding: 14px 16px;
-  border: 1px solid rgba(0, 0, 0, 0.11);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.05);
-}
-
-.admin-connect-strip span,
 .admin-toolbar label span,
 .admin-detail-drawer__header span,
 .admin-detail-grid span,
@@ -1106,15 +1091,6 @@ a {
   text-transform: uppercase;
 }
 
-.admin-connect-strip strong {
-  display: block;
-  margin-top: 5px;
-  color: var(--ink);
-  font-size: 0.96rem;
-  line-height: 1.45;
-}
-
-.admin-connect-strip button,
 .admin-detail-drawer button,
 .admin-modal button {
   min-height: 34px;
@@ -1128,8 +1104,6 @@ a {
   font-weight: 800;
 }
 
-.admin-connect-strip button:hover,
-.admin-connect-strip button:focus-visible,
 .admin-detail-drawer button:hover,
 .admin-detail-drawer button:focus-visible,
 .admin-modal button:hover,
@@ -1149,8 +1123,7 @@ a {
 
 .admin-metric,
 .admin-panel,
-.admin-table-panel,
-.admin-flow {
+.admin-table-panel {
   border: 1px solid rgba(0, 0, 0, 0.11);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.88);
@@ -1175,55 +1148,6 @@ a {
   color: #6e6e73;
   font-size: 0.84rem;
   line-height: 1.42;
-}
-
-.admin-flow {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-  padding: 14px;
-}
-
-.admin-flow__step {
-  position: relative;
-  min-height: 118px;
-  padding: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.09);
-  border-radius: 8px;
-  background: rgba(245, 245, 247, 0.72);
-}
-
-.admin-flow__step:not(:last-child)::after {
-  position: absolute;
-  top: 50%;
-  right: -10px;
-  width: 14px;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.28);
-  content: "";
-}
-
-.admin-flow__step span {
-  display: block;
-  color: #86868b;
-  font-size: 0.7rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.admin-flow__step strong {
-  display: block;
-  margin-top: 10px;
-  color: var(--ink);
-  font-size: 0.98rem;
-}
-
-.admin-flow__step p {
-  margin: 8px 0 0;
-  color: #6e6e73;
-  font-size: 0.82rem;
-  line-height: 1.45;
 }
 
 .admin-workspace-grid {
@@ -1309,47 +1233,6 @@ a {
   color: #6e6e73;
   font-size: 0.8rem;
   line-height: 1.35;
-}
-
-.admin-related-item {
-  width: 100%;
-  min-height: 68px;
-  padding: 11px 12px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  background: rgba(245, 245, 247, 0.78);
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.admin-related-item:hover,
-.admin-related-item:focus-visible {
-  border-color: rgba(0, 0, 0, 0.24);
-  background: #ffffff;
-  outline: none;
-}
-
-.admin-related-item span {
-  display: block;
-  color: #86868b;
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.admin-related-item strong {
-  display: block;
-  margin-top: 7px;
-  color: var(--ink);
-  font-size: 0.9rem;
-  line-height: 1.35;
-}
-
-.admin-related-item p {
-  margin: 6px 0 0;
-  color: #6e6e73;
-  font-size: 0.8rem;
 }
 
 .admin-toolbar {
@@ -1788,68 +1671,6 @@ a {
   font-size: 0.8rem;
 }
 
-.admin-connect-strip {
-  min-height: 44px;
-  margin-top: 10px;
-  padding: 8px 0;
-  border: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.admin-connect-strip strong {
-  margin-top: 3px;
-  color: #424245;
-  font-size: 0.86rem;
-  font-weight: 760;
-}
-
-.admin-connect-strip button {
-  min-height: 28px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-}
-
-.admin-flow {
-  gap: 0;
-  margin-top: 14px;
-  padding: 0;
-  overflow: hidden;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: none;
-}
-
-.admin-flow__step {
-  min-height: 94px;
-  padding: 13px 14px;
-  border: 0;
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 0;
-  background: transparent;
-}
-
-.admin-flow__step:last-child {
-  border-right: 0;
-}
-
-.admin-flow__step:not(:last-child)::after {
-  display: none;
-}
-
-.admin-flow__step strong {
-  margin-top: 8px;
-  font-size: 0.92rem;
-}
-
-.admin-flow__step p {
-  margin-top: 6px;
-  font-size: 0.78rem;
-}
-
 .admin-workspace-grid {
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 14px;
@@ -1881,8 +1702,7 @@ a {
   gap: 0;
 }
 
-.admin-panel-list__item,
-.admin-related-item {
+.admin-panel-list__item {
   min-height: auto;
   padding: 10px 0;
   border: 0;
@@ -1891,27 +1711,18 @@ a {
   background: transparent;
 }
 
-.admin-panel-list__item:first-child,
-.admin-related-item:first-child {
+.admin-panel-list__item:first-child {
   border-top: 0;
 }
 
-.admin-panel-list__item strong,
-.admin-related-item strong {
+.admin-panel-list__item strong {
   margin-top: 5px;
   font-size: 0.9rem;
 }
 
-.admin-panel-list__item p,
-.admin-related-item p {
+.admin-panel-list__item p {
   margin-top: 4px;
   font-size: 0.78rem;
-}
-
-.admin-related-item:hover,
-.admin-related-item:focus-visible {
-  background: transparent;
-  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .admin-toolbar {
@@ -2107,6 +1918,13 @@ a {
   margin-top: 18px;
 }
 
+.console-home__overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 14px;
+  margin-top: 18px;
+}
+
 .console-home__section-heading {
   display: flex;
   align-items: center;
@@ -2121,7 +1939,7 @@ a {
 
 .console-home__module-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 8px;
@@ -2130,14 +1948,20 @@ a {
 
 .console-home__module {
   display: grid;
-  min-height: 190px;
+  min-height: 170px;
   align-content: space-between;
   padding: 14px;
   border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+.console-home__module:nth-child(2n),
 .console-home__module:last-child {
   border-right: 0;
+}
+
+.console-home__module:nth-last-child(-n + 2) {
+  border-bottom: 0;
 }
 
 .console-home__module:hover,
@@ -2177,43 +2001,116 @@ a {
   text-transform: none;
 }
 
+.console-home__pending-list,
+.console-home__boundary,
+.console-home__service-plan,
 .console-home__path {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.82);
 }
 
+.console-home__pending-list {
+  align-content: start;
+}
+
+.console-home__pending-list a,
+.console-home__boundary a,
+.console-home__service-plan article,
 .console-home__path a {
   min-height: 86px;
   padding: 14px;
-  border-right: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.console-home__path a:last-child {
-  border-right: 0;
+.console-home__pending-list a:first-child,
+.console-home__boundary a:first-child,
+.console-home__service-plan article:first-child,
+.console-home__path a:first-child {
+  border-top: 0;
 }
 
+.console-home__pending-list a:hover,
+.console-home__pending-list a:focus-visible,
+.console-home__boundary a:hover,
+.console-home__boundary a:focus-visible,
 .console-home__path a:hover,
 .console-home__path a:focus-visible {
   background: rgba(0, 0, 0, 0.025);
   outline: none;
 }
 
+.console-home__pending-list span,
+.console-home__service-plan span,
+.console-home__boundary span,
+.console-home__path span {
+  display: block;
+  color: #86868b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.console-home__pending-list strong,
+.console-home__boundary strong,
+.console-home__service-plan strong,
 .console-home__path strong {
   display: block;
+  margin-top: 7px;
   color: var(--ink);
   font-size: 0.94rem;
 }
 
+.console-home__pending-list p,
+.console-home__service-plan p,
 .console-home__path span {
   display: block;
   margin-top: 8px;
   color: #6e6e73;
   font-size: 0.8rem;
   line-height: 1.4;
+}
+
+.console-home__boundary {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.console-home__boundary a {
+  min-height: 96px;
+  border-top: 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.console-home__boundary a:last-child {
+  border-right: 0;
+}
+
+.console-home__boundary span {
+  margin-top: 8px;
+  color: #6e6e73;
+  line-height: 1.4;
+}
+
+.console-home__service-plan {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.console-home__service-plan article {
+  min-height: 118px;
+  border-top: 0;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.console-home__service-plan article:last-child {
+  border-right: 0;
+}
+
+.console-home__empty {
+  margin: 0;
+  padding: 16px;
+  color: #86868b;
+  font-size: 0.86rem;
 }
 
 @keyframes signalFlow {
@@ -2256,12 +2153,15 @@ a {
   }
 
   .admin-page__heading,
+  .console-home__overview-grid,
   .admin-workspace-grid,
   .admin-workspace-grid--dashboard {
     grid-template-columns: 1fr;
   }
 
   .console-home__module-grid,
+  .console-home__boundary,
+  .console-home__service-plan,
   .console-home__path {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2270,19 +2170,13 @@ a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .console-home__boundary a,
+  .console-home__service-plan article,
   .console-home__module,
   .console-home__path a,
   .console-home__metrics article {
     border-right: 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  }
-
-  .admin-flow {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .admin-flow__step:not(:last-child)::after {
-    display: none;
   }
 
   .admin-page__actions {
@@ -2330,8 +2224,7 @@ a {
 
 @media (max-width: 780px) {
   .console-sidebar__nav,
-  .admin-metric-grid,
-  .admin-flow {
+  .admin-metric-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2364,11 +2257,12 @@ a {
 
   .console-home__metrics,
   .console-home__module-grid,
+  .console-home__boundary,
+  .console-home__service-plan,
   .console-home__path {
     grid-template-columns: 1fr;
   }
 
-  .admin-connect-strip,
   .admin-detail-drawer__header,
   .admin-modal__heading,
   .admin-modal__actions {

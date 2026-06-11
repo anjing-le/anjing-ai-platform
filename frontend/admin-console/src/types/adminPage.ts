@@ -23,12 +23,6 @@ export interface AdminPanel {
   items: AdminPanelItem[]
 }
 
-export interface AdminFlowStep {
-  label: string
-  title: string
-  note: string
-}
-
 export interface AdminPageDefinition {
   id: string
   layout: 'dashboard' | 'management'
@@ -36,11 +30,9 @@ export interface AdminPageDefinition {
   title: string
   description: string
   primaryAction: string
-  secondaryAction: string
   tabs: string[]
   metrics: AdminMetric[]
   primaryTable: AdminTable
   secondaryTable?: AdminTable
   panels: AdminPanel[]
-  flow?: AdminFlowStep[]
 }
