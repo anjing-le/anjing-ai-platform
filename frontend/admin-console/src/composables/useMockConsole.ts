@@ -36,7 +36,7 @@ export interface ActionSpec {
   impact: string[]
 }
 
-const storageKey = 'anjing-ai-platform-console-mock-v4'
+const storageKey = 'anjing-ai-platform-console-mock-v5'
 
 const routeByModule: Record<ConsoleModuleId, string> = {
   overview: '/console/overview',
@@ -179,8 +179,8 @@ const seedRows: Array<[ConsoleModuleId, string, string[]]> = [
   ['overview', '调用与审计', ['12:40:22', 'POST /llm/chat', 'customer-service-agent', 'fallback succeeded', 'Success']],
   ['overview', '调用与审计', ['12:38:07', '用户与权限', 'role granted', 'dev-api@anjing.ai', 'Success']],
 
-  ['gateway', 'API 路由', ['/api/v1/llm/**', 'platform-api.gateway', 'API Key', '1200/min', 'Active']],
-  ['gateway', 'API 路由', ['/api/v1/skills/**', 'platform-api.gateway', 'API Key', '800/min', 'Active']],
+  ['gateway', 'API 路由', ['/api/v1/llm/**', 'gateway-api', 'API Key', '1200/min', 'Active']],
+  ['gateway', 'API 路由', ['/api/v1/skills/**', 'gateway-api', 'API Key', '800/min', 'Active']],
   ['gateway', '模型路由', ['chat-default', '客服 Agent', 'gpt-4.1-mini', 'claude-haiku', 'Active']],
   ['gateway', '模型路由', ['embedding-default', 'RAG', 'text-embedding-3', 'local-bge', 'Active']],
   ['gateway', 'Skill 调用', ['search-knowledge', 'MCP', '/api/v1/skills/search', '8s', 'Published']],
@@ -224,7 +224,7 @@ const actionSpecs: Record<ConsoleModuleId, ActionSpec> = {
     description: '创建 API Route，并联动请求日志与运营审计。',
     fields: [
       { id: 'route', label: 'Route', defaultValue: '/api/v1/demo-agent/**' },
-      { id: 'upstream', label: 'Upstream', defaultValue: 'platform-api.gateway' },
+      { id: 'upstream', label: 'Upstream', defaultValue: 'gateway-api' },
       { id: 'rateLimit', label: 'Limit', defaultValue: '600/min' }
     ],
     impact: ['新增 API 路由', '生成请求日志', '写入运营审计']
@@ -371,7 +371,7 @@ function executeAction(moduleId: ConsoleModuleId, draft: Record<string, string>)
     }
     case 'gateway': {
       const route = draft.route || '/api/v1/demo-agent/**'
-      const upstream = draft.upstream || 'platform-api.gateway'
+      const upstream = draft.upstream || 'gateway-api'
       const rateLimit = draft.rateLimit || '600/min'
       addRecord('gateway', 'API 路由', [route, upstream, 'API Key', rateLimit, 'Draft'])
       addRecord('gateway', '请求日志', [`POST ${route.replace('/**', '/invoke')}`, 'demo-agent-workbench', '64ms', '201', 'Mocked'])
@@ -405,7 +405,7 @@ function executeAction(moduleId: ConsoleModuleId, draft: Record<string, string>)
       const plan = draft.plan || 'Business'
       addRecord('examples', 'Quickstart', ['3', `完成 ${appName} 接入`, 'appId / key / route', owner, 'Active'])
       addRecord('iam', 'API Key', [`ak_live_${appName.replace(/-/g, '_')}`, appName, 'llm:chat skill:invoke', '2026-09-30', 'Active'])
-      addRecord('gateway', 'API 路由', [`/api/v1/${appName}/**`, 'platform-api.gateway', 'API Key', '600/min', 'Draft'])
+      addRecord('gateway', 'API 路由', [`/api/v1/${appName}/**`, 'gateway-api', 'API Key', '600/min', 'Draft'])
       addRecord('quota', '用量', [appName, '0', '0', '$0', plan])
       addAudit(moduleId, 'create application', appName)
       state.lastMessage = `已创建接入应用，并完成 API Key、网关路由、用量和审计联动：${appName}`

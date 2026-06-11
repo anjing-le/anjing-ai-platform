@@ -2,15 +2,16 @@
 
 Anjing AI Infra Platform 是面向 AI 应用、Agent、内部工具和业务系统的 public 开源基础设施平台。
 
-当前阶段先从前端体验开始迭代：用一个统一的 `admin-console` 跑通后台首页、模块入口、Mock 数据和后续后端服务边界。
+当前阶段先从前端体验开始迭代：用一个统一的 `admin-console` 跑通后台首页、模块入口、Mock 数据和后续后端服务边界。后续工程落地以 DVSkyFolding 脚手架口径为基础。
 
 ## 当前内容
 
-- `frontend/admin-console`: Vue 3 + TypeScript + Vite 后台控制台
+- `frontend/admin-console`: Vue 3 + TypeScript + Vite 后台控制台原型
 - 后台首页：平台状态、模块入口、今日待办、模块整合关系、后端服务建议
 - 业务入口：运营总览、用户与权限、网关与模型、计费与配额、帮助文档
 - Mock 数据：创建应用、API Key、网关路由、用量、审计、调用日志联动
 - 后端规划：见 `docs/architecture/backend-services.md`
+- 技术基线：见 `docs/architecture/dvskyfolding-baseline.md`
 
 ## 本地启动
 
@@ -28,7 +29,7 @@ http://localhost:13007/
 
 ## 方向
 
-V1 先采用模块化单体，前端后台已经收敛为 5 个业务入口：
+V1 先采用 DVSkyFolding 风格的 Go 服务边界，前端后台已经收敛为 5 个业务入口：
 
 - `operations`: 运营总览、健康状态、告警、日志、审计
 - `access`: 用户、角色、权限、API Key、credentialRef
@@ -37,3 +38,16 @@ V1 先采用模块化单体，前端后台已经收敛为 5 个业务入口：
 - `docs`: Quickstart、API 文档、示例、FAQ
 
 暂不把 `llm`、`skill`、`credential`、`audit` 做成独立后台入口。它们先作为能力被合并进 `gateway`、`access` 和 `operations`，等真实业务边界稳定后再拆。
+
+## 技术栈基线
+
+后续正式工程优先按 DVSkyFolding 口径重构：
+
+- Frontend: React + TypeScript + Vite 统一大前端
+- Backend: Go，优先标准库 `net/http` / `ServeMux`
+- Database: PostgreSQL
+- DB Access: `pgx/v5` + SQL migrations
+- Logging: `log/slog` JSON
+- Delivery: 单应用镜像，内含 console web 和多个 Go command；本地可 `all` 模式启动，生产可按 command 拆容器
+
+当前 Vue 控制台只作为信息架构原型保留，后续进入真实工程化阶段时迁移到 `apps/console`。

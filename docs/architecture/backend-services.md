@@ -1,5 +1,7 @@
 # 后端服务规划
 
+后端正式实现改为 Go，并以 DVSkyFolding 脚手架口径为基础。当前不再按 Spring Boot / Java 规划。
+
 当前前端后台已经收敛为 1 个后台首页 + 5 个业务入口：
 
 - 后台首页
@@ -11,87 +13,139 @@
 
 这 5 个入口不是把能力做少，而是把后台导航先做少。`llm`、`skill`、`credential`、`audit` 先作为能力并入对应入口：
 
-| 后台入口 | 合并能力 | 说明 |
+| 后台入口 | 合并能力 | 后端归属 |
 | --- | --- | --- |
-| 运营总览 | observability / audit / ops | 健康状态、调用日志、审计事件、待办和风险 |
-| 用户与权限 | iam / api key / credential | 用户、角色、API Key、credentialRef 和凭据策略 |
-| 网关与模型 | api gateway / llm gateway / skill hub | API 路由、模型路由、Skill 调用、限流和请求日志 |
-| 计费与配额 | quota / billing / usage | 套餐、配额、项目用量、预算告警，未来接真实账单 |
-| 帮助文档 | docs / examples / quickstart | 接入路径、API 文档、示例和 FAQ |
+| 运营总览 | observability / audit / ops | `ops-api` |
+| 用户与权限 | iam / api key / credential | `control-api` |
+| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` |
+| 计费与配额 | quota / billing / usage | `billing-service` |
+| 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API |
 
-## V1：1 个后端服务
+## V1：Go command 边界 + 简单部署
 
-V1 建议只做 1 个 Spring Boot 服务：`platform-api`。
+V1 建议按 DVSkyFolding 的方式定义 4 个 Go command：
 
-原因：
+```text
+cmd/control-api
+cmd/gateway-api
+cmd/billing-service
+cmd/ops-api
+```
 
-- 当前产品边界还在快速变化，模块化单体更适合前端驱动迭代。
-- 认证、网关配置、模型路由、用量、审计之间强关联，过早拆服务会增加事务和联调成本。
-- public 开源项目需要容易启动、容易理解、容易部署。
+同时保留一个 `cmd/console-web` 用于生产镜像内服务前端静态文件。
 
-`platform-api` 内部按模块拆包：
+开发和预览阶段可以用一个 `all` 模式启动全部 command；生产或联调需要时，同一个镜像按 command 拆成多个容器。这样不是一开始做复杂微服务，而是先把代码边界、运行入口和未来拆分方向定清楚。
 
-- `operations`: 运营总览、健康状态、调用日志、审计事件、待办
-- `access`: 用户、角色、权限、API Key、credentialRef、凭据策略
-- `gateway`: API 路由、模型路由、Skill 调用、限流、请求日志
-- `billing`: 套餐、配额、用量、预算告警
-- `docs`: Quickstart、API 文档、示例、FAQ 元数据
+## 技术栈
 
-V1 的目标是先把后台所有页面接到同一个 API 边界上。数据库可以先用 H2 开发，生产再接 MySQL；Redis 可以等限流、会话或异步任务需要时再接。
+| 层 | 选择 |
+| --- | --- |
+| 语言 | Go |
+| HTTP | 标准库 `net/http` / `ServeMux` |
+| 数据库 | PostgreSQL |
+| DB 访问 | `pgx/v5` + SQL |
+| 迁移 | SQL migrations |
+| 日志 | `log/slog` JSON |
+| 配置 | env |
+| 前端生产服务 | `cmd/console-web` |
 
-## V1 可选：1 个 Worker
+V1 不再使用 H2 / MySQL 作为默认开发口径。开发数据库也优先 PostgreSQL，和生产事实一致。
 
-当开始接真实调用流量后，可以增加一个轻量 worker：`platform-worker`。
+## 共享能力
+
+共享包建议放在：
+
+```text
+internal/platform/
+  config/
+  db/
+  httpjson/
+  auth/
+  log/
+```
 
 职责：
 
-- 聚合调用日志
-- 写入审计事件
-- 计算用量和预算告警
-- 执行凭据到期检查
-- 导出日报、用量报表和账单草稿
+- 统一配置加载
+- PostgreSQL 连接池
+- JSON 响应和错误结构
+- API Key / session 鉴权
+- 结构化日志
+- request id / trace id
 
-如果想继续极简，`platform-worker` 可以先作为 `platform-api` 内部定时任务存在，不单独部署。
+业务包建议：
 
-## V2：3 个服务
+```text
+internal/control/
+internal/gateway/
+internal/billing/
+internal/ops/
+```
 
-当出现以下信号时，再拆成 3 个服务：
+业务域之间不互相 import。需要联动时先通过数据库事实、事件记录或 HTTP API 解耦。
 
-- 运行期 API 流量明显高于后台管理流量
-- 计量、预算和账单需要独立扩展
-- 网关运行期需要更强的发布、回滚和隔离能力
+## 服务职责
 
-V2 服务：
+### `control-api`
 
-1. `platform-api`
-   - 后台管理 API
-   - 用户权限
-   - 配置管理
-   - 文档元数据
+- 用户
+- 组织
+- 角色权限
+- Session / OAuth
+- API Key
+- credentialRef
+- 凭据脱敏和轮换策略
 
-2. `gateway-runtime`
-   - API 入口
-   - 鉴权前置
-   - 限流
-   - 模型路由
-   - Skill 调用代理
-   - 流式响应
+### `gateway-api`
 
-3. `metering-worker`
-   - 调用日志
-   - 审计事件
-   - 用量统计
-   - 预算告警
-   - 账单聚合
+- API 路由
+- 模型路由
+- 供应商渠道
+- Skill 调用适配
+- 限流
+- 请求日志
+- 流式响应
+- fallback / timeout / retry
 
-## V3：按团队和边界继续拆
+### `billing-service`
 
-只有当模块边界稳定，并且团队需要独立交付时，再考虑继续拆：
+- 套餐
+- 配额
+- 用量事件
+- 预算告警
+- 账单聚合
+- 幂等结算
 
-- `iam-service`
-- `billing-service`
-- `model-gateway`
-- `skill-runtime`
-- `audit-service`
+### `ops-api`
 
-当前阶段不要这样拆。V1 以 `platform-api` 模块化单体为主，最多加一个 worker。
+- 运营总览
+- 服务健康
+- 审计事件
+- 失败追踪
+- 指标聚合
+- 待办事项
+
+### `console-web`
+
+- 前端静态文件服务
+- 健康检查
+- 同镜像预览入口
+
+## V2：按真实压力增强
+
+只有出现真实压力或明确瓶颈后，再引入：
+
+- Redis：高频 API Key / rate limit / session cache
+- ClickHouse：高吞吐请求日志和分析
+- MQ：异步计量、审计、通知
+- Prometheus：运行指标
+- Kubernetes：多副本编排
+
+## 不做什么
+
+- 不再按 Java / Spring Boot 做新后端。
+- 不把所有能力设计成一个巨大 `platform-api` 概念。
+- 不为了“像微服务”而提前增加 Redis、MQ、ClickHouse、Kubernetes。
+- 不把 PostgreSQL 塞进应用镜像，数据库始终独立部署。
+
+当前阶段的核心判断：代码边界按 Go command 拆清楚，部署复杂度先保持低。

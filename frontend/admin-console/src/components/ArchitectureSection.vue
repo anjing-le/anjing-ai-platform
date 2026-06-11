@@ -18,26 +18,26 @@ function selectModule(module: PlatformModule) {
   <section id="architecture" class="architecture-section" aria-labelledby="architecture-title">
     <div class="architecture-heading">
       <p class="eyebrow">V1 software design</p>
-      <h2 id="architecture-title">模块化单体，边界先清楚</h2>
+      <h2 id="architecture-title">DVSkyFolding 基线，Go 服务边界先清楚</h2>
       <p>
-        前端统一为一个 `admin-console`，后端统一为一个 `platform-api`。模块先在同一进程内协作，
-        通过 contracts、schemas 和明确 API 边界保持可拆分。
+        当前 Vue 控制台先验证信息架构；正式工程以 React + TypeScript + Vite 大前端和 Go command 后端为基线。
+        部署可以先 all 模式，代码边界从第一天按 control、gateway、billing、ops 拆清楚。
       </p>
     </div>
 
     <div class="architecture-layout">
       <aside class="platform-stack" aria-label="平台分层">
         <div class="stack-row">
-          <span>frontend/admin-console</span>
-          <strong>统一运营入口</strong>
+          <span>apps/console</span>
+          <strong>React 统一大前端</strong>
         </div>
         <div class="stack-row stack-row--primary">
-          <span>backend/platform-api</span>
-          <strong>模块化单体核心</strong>
+          <span>cmd/* Go services</span>
+          <strong>control / gateway / billing / ops</strong>
         </div>
         <div class="stack-row">
-          <span>contracts/docs/examples</span>
-          <strong>公共契约与示例</strong>
+          <span>infra/postgres + contracts</span>
+          <strong>PostgreSQL 与公共契约</strong>
         </div>
       </aside>
 
@@ -66,4 +66,3 @@ function selectModule(module: PlatformModule) {
     </div>
   </section>
 </template>
-

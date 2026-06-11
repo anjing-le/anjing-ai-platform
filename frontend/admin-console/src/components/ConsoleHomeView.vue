@@ -36,8 +36,8 @@ const homeMetrics = computed(() => [
   },
   {
     label: 'V1 服务',
-    value: '1 + Worker',
-    note: 'platform-api first'
+    value: '4 Go cmds',
+    note: 'DVSkyFolding'
   }
 ])
 
@@ -76,18 +76,18 @@ const consolidation = [
 const backendPlan = [
   {
     label: 'V1',
-    title: '1 个 platform-api',
-    note: '模块化单体，先把访问控制、网关配置、用量和审计跑通。'
+    title: '4 个 Go command',
+    note: 'control-api、gateway-api、billing-service、ops-api，边界先清楚。'
   },
   {
-    label: 'V1 optional',
-    title: '1 个 platform-worker',
-    note: '只在接入真实调用后承接日志聚合、计量、预算告警和导出任务。'
+    label: 'Deploy',
+    title: '单镜像 all 模式',
+    note: '本地和预览可一个进程组启动，生产再按 command 拆容器。'
   },
   {
     label: 'V2',
-    title: '拆成 3 个服务',
-    note: 'platform-api、gateway-runtime、metering-worker，等边界稳定后再拆。'
+    title: '按压力加组件',
+    note: '真实瓶颈出现后再引入 Redis、MQ、ClickHouse 或 K8s。'
   }
 ]
 </script>
