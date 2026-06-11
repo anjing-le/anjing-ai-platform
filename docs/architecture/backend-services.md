@@ -149,3 +149,58 @@ internal/ops/
 - 不把 PostgreSQL 塞进应用镜像，数据库始终独立部署。
 
 当前阶段的核心判断：代码边界按 Go command 拆清楚，部署复杂度先保持低。
+
+## 当前已实现的 V1 API
+
+当前 Go 后端先以内存 seed 数据跑通控制台核心路径，PostgreSQL schema 已放在 `infra/postgres/migrations/001_core.sql`，下一步再接 `pgx/v5` 持久化。
+
+完整后端本地启动：
+
+```bash
+go run ./cmd/platform-all
+```
+
+单服务本地启动：
+
+```bash
+go run ./cmd/control-api      # :1820
+go run ./cmd/gateway-api      # :1821
+go run ./cmd/billing-service  # :1822
+go run ./cmd/ops-api          # :1823
+go run ./cmd/console-web      # :1818
+```
+
+### `control-api`
+
+- `GET /api/control/healthz`
+- `GET /api/control/users`
+- `POST /api/control/users`
+- `GET /api/control/roles`
+- `GET /api/control/api-keys`
+- `GET /api/control/credentials`
+
+### `gateway-api`
+
+- `GET /api/gateway/healthz`
+- `GET /api/gateway/routes`
+- `POST /api/gateway/routes`
+- `GET /api/gateway/model-routes`
+- `GET /api/gateway/skills`
+- `GET /api/gateway/request-logs`
+
+### `billing-service`
+
+- `GET /api/billing/healthz`
+- `GET /api/billing/plans`
+- `POST /api/billing/plans`
+- `GET /api/billing/usage`
+- `GET /api/billing/budget-alerts`
+
+### `ops-api`
+
+- `GET /api/ops/healthz`
+- `GET /api/ops/dashboard`
+- `GET /api/ops/todos`
+- `POST /api/ops/todos/resolve`
+- `GET /api/ops/service-health`
+- `GET /api/ops/audit-events`
