@@ -9,7 +9,7 @@ export const adminPages: AdminPageDefinition[] = [
     description: '一个入口看清平台是否健康、哪些调用异常、哪些成本或权限风险需要处理。',
     primaryAction: '处理待办',
     secondaryAction: '导出日报',
-    tabs: ['运营总览', '服务健康', '费用风险', '接入进度'],
+    tabs: ['运营总览', '服务健康', '费用风险'],
     metrics: [
       { label: '今日调用', value: '128.4K', note: 'Gateway / Model / Skill' },
       { label: '成功率', value: '99.21%', note: '近 24 小时' },
@@ -51,7 +51,7 @@ export const adminPages: AdminPageDefinition[] = [
     description: '把用户、组织、角色、权限、API Key 和 credentialRef 收到一个访问控制中心。',
     primaryAction: '邀请用户',
     secondaryAction: '新增角色',
-    tabs: ['用户', '组织', '角色', '权限矩阵', 'API Key', '凭据'],
+    tabs: ['用户', '权限矩阵', 'API Key', '凭据'],
     metrics: [
       { label: '用户', value: '42', note: '活跃 31' },
       { label: '组织', value: '6', note: 'workspace / tenant' },
@@ -83,13 +83,6 @@ export const adminPages: AdminPageDefinition[] = [
           { label: '脱敏展示', value: 'Enabled', note: 'last 4 only' }
         ]
       }
-    ],
-    flow: [
-      { label: '01', title: 'User', note: '用户加入组织' },
-      { label: '02', title: 'Role', note: '绑定角色与权限' },
-      { label: '03', title: 'API Key', note: '签发调用凭证' },
-      { label: '04', title: 'credentialRef', note: '引用供应商密钥' },
-      { label: '05', title: 'Audit', note: '记录访问变更' }
     ]
   },
   {
@@ -100,7 +93,7 @@ export const adminPages: AdminPageDefinition[] = [
     description: '网关是统一入口：API 路由、模型路由、供应商、Skill 调用、限流和请求日志都在这里配置。',
     primaryAction: '新增路由',
     secondaryAction: '查看日志',
-    tabs: ['API 路由', '模型路由', '模型供应商', 'Skill 调用', '请求日志'],
+    tabs: ['API 路由', '模型路由', '请求日志'],
     metrics: [
       { label: 'API 路由', value: '24', note: '生产入口' },
       { label: '模型别名', value: '8', note: 'chat / embedding / rerank' },
@@ -132,13 +125,6 @@ export const adminPages: AdminPageDefinition[] = [
           { label: '回滚版本', value: 'ready', note: 'v2026.06.08' }
         ]
       }
-    ],
-    flow: [
-      { label: '01', title: 'API Key', note: '识别用户和项目' },
-      { label: '02', title: 'Gateway', note: '路由、鉴权、限流' },
-      { label: '03', title: 'Model Route', note: '选择模型供应商' },
-      { label: '04', title: 'Skill', note: '按需调用工具能力' },
-      { label: '05', title: 'Metering', note: '记录日志和用量' }
     ]
   },
   {
@@ -149,7 +135,7 @@ export const adminPages: AdminPageDefinition[] = [
     description: '统一管理套餐、配额、用量、账单、发票和预算告警，后续直接接真实计费。',
     primaryAction: '新增套餐',
     secondaryAction: '导出账单',
-    tabs: ['套餐', '配额', '用量', '发票', '预算告警'],
+    tabs: ['套餐', '用量', '预算告警'],
     metrics: [
       { label: '本月收入', value: '$18.4K', note: 'estimated' },
       { label: '今日 Token', value: '8.6M', note: '+14%' },
@@ -181,13 +167,6 @@ export const adminPages: AdminPageDefinition[] = [
           { label: '用量窗口', value: 'daily', note: 'UTC+8 reset' }
         ]
       }
-    ],
-    flow: [
-      { label: '01', title: 'Plan', note: '绑定套餐' },
-      { label: '02', title: 'Quota', note: '检查配额' },
-      { label: '03', title: 'Usage', note: '记录用量' },
-      { label: '04', title: 'Invoice', note: '生成账单' },
-      { label: '05', title: 'Alert', note: '触发预算告警' }
     ]
   },
   {
@@ -198,7 +177,7 @@ export const adminPages: AdminPageDefinition[] = [
     description: '把接入说明、API 文档、SDK、示例和 FAQ 放到一个轻量入口，减少后台主导航复杂度。',
     primaryAction: '新增示例',
     secondaryAction: '查看文档',
-    tabs: ['Quickstart', 'API 文档', 'SDK', '示例', 'FAQ'],
+    tabs: ['Quickstart', 'API 文档', 'FAQ'],
     metrics: [
       { label: '文档', value: '12', note: 'quickstart / api / sdk' },
       { label: '示例', value: '3', note: '客服 / RAG / AIGC' },
@@ -230,13 +209,6 @@ export const adminPages: AdminPageDefinition[] = [
           { label: 'OpenAPI', value: 'Ready', note: 'contracts/openapi' }
         ]
       }
-    ],
-    flow: [
-      { label: '01', title: 'Create App', note: '创建应用' },
-      { label: '02', title: 'Get Key', note: '获取 API Key' },
-      { label: '03', title: 'Call Gateway', note: '调用网关' },
-      { label: '04', title: 'Check Usage', note: '查看用量' },
-      { label: '05', title: 'Go Live', note: '上线接入' }
     ]
   }
 ]

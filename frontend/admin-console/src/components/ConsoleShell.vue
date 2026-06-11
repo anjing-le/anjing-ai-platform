@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 
 import AdminPageView from '@/components/AdminPageView.vue'
+import ConsoleHomeView from '@/components/ConsoleHomeView.vue'
 import { adminPages } from '@/data/adminPages'
 import { consoleEntries, platformRoles } from '@/data/accessModel'
 import type { PlatformRoleId } from '@/types/accessModel'
@@ -17,7 +18,7 @@ const visibleEntries = computed(() => consoleEntries.filter((entry) => entry.rol
 
 const normalizedRoute = computed(() => {
   if (props.currentRoute === '/console') {
-    return '/console/overview'
+    return '/console/home'
   }
   if (props.currentRoute === '/console/examples') {
     return '/console/docs'
@@ -32,6 +33,7 @@ const activeEntry = computed(() => {
 const activePage = computed(() => {
   return adminPages.find((page) => page.id === activeEntry.value.id) || adminPages[0]
 })
+const isHome = computed(() => activeEntry.value.id === 'home')
 
 function navigateTo(route: string) {
   window.location.hash = route
@@ -104,7 +106,8 @@ watch(
       </header>
 
       <main class="console-content">
-        <AdminPageView :page="activePage" />
+        <ConsoleHomeView v-if="isHome" :entries="visibleEntries" />
+        <AdminPageView v-else :page="activePage" />
       </main>
     </div>
   </div>

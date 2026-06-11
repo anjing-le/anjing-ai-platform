@@ -29,6 +29,15 @@ export const platformRoles: PlatformRole[] = [
 
 export const consoleEntries: ConsoleEntry[] = [
   {
+    id: 'home',
+    name: 'Home',
+    title: '后台首页',
+    route: '/console/home',
+    summary: '用一个页面看清平台能力、模块边界、关键状态和推荐操作路径。',
+    status: 'ready',
+    roles: ['admin', 'user', 'developer', 'operator']
+  },
+  {
     id: 'overview',
     name: 'Operations',
     title: '运营总览',

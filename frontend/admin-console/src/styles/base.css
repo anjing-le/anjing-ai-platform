@@ -2018,6 +2018,204 @@ a {
   background: rgba(247, 247, 248, 0.72);
 }
 
+.console-home {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.console-home__heading {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.console-home__heading span,
+.console-home__section-heading span,
+.console-home__metrics span,
+.console-home__module span {
+  display: block;
+  color: #86868b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.console-home__heading h1 {
+  margin: 6px 0 7px;
+  color: var(--ink);
+  font-size: 2rem;
+  line-height: 1.08;
+}
+
+.console-home__heading p {
+  max-width: 660px;
+  margin: 0;
+  color: #515154;
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.console-home__heading a {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #1d1d1f;
+  border-radius: 6px;
+  background: #1d1d1f;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.console-home__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.console-home__metrics article {
+  min-height: 96px;
+  padding: 14px 16px;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.console-home__metrics article:last-child {
+  border-right: 0;
+}
+
+.console-home__metrics strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--ink);
+  font-size: 1.56rem;
+  line-height: 1;
+}
+
+.console-home__metrics p {
+  margin: 7px 0 0;
+  color: #6e6e73;
+  font-size: 0.8rem;
+}
+
+.console-home__section {
+  margin-top: 18px;
+}
+
+.console-home__section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.console-home__section-heading strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.console-home__module-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.console-home__module {
+  display: grid;
+  min-height: 190px;
+  align-content: space-between;
+  padding: 14px;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.console-home__module:last-child {
+  border-right: 0;
+}
+
+.console-home__module:hover,
+.console-home__module:focus-visible {
+  background: rgba(0, 0, 0, 0.025);
+  outline: none;
+}
+
+.console-home__module strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--ink);
+  font-size: 1.02rem;
+}
+
+.console-home__module p {
+  margin: 9px 0 0;
+  color: #515154;
+  font-size: 0.84rem;
+  line-height: 1.48;
+}
+
+.console-home__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 14px;
+}
+
+.console-home__chips span {
+  padding: 4px 7px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  background: rgba(247, 247, 248, 0.78);
+  color: #424245;
+  font-size: 0.74rem;
+  text-transform: none;
+}
+
+.console-home__path {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.console-home__path a {
+  min-height: 86px;
+  padding: 14px;
+  border-right: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.console-home__path a:last-child {
+  border-right: 0;
+}
+
+.console-home__path a:hover,
+.console-home__path a:focus-visible {
+  background: rgba(0, 0, 0, 0.025);
+  outline: none;
+}
+
+.console-home__path strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.94rem;
+}
+
+.console-home__path span {
+  display: block;
+  margin-top: 8px;
+  color: #6e6e73;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 @keyframes signalFlow {
   from {
     transform: translateX(0);
@@ -2061,6 +2259,22 @@ a {
   .admin-workspace-grid,
   .admin-workspace-grid--dashboard {
     grid-template-columns: 1fr;
+  }
+
+  .console-home__module-grid,
+  .console-home__path {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .console-home__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .console-home__module,
+  .console-home__path a,
+  .console-home__metrics article {
+    border-right: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   }
 
   .admin-flow {
@@ -2137,6 +2351,21 @@ a {
 
   .admin-page h1 {
     font-size: 1.92rem;
+  }
+
+  .console-home__heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .console-home__heading h1 {
+    font-size: 1.92rem;
+  }
+
+  .console-home__metrics,
+  .console-home__module-grid,
+  .console-home__path {
+    grid-template-columns: 1fr;
   }
 
   .admin-connect-strip,
