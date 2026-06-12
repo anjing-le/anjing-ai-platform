@@ -20,9 +20,11 @@ import {
   loadPlatformSnapshot,
   publishRoute,
   resolveTodo,
+  rotateCredential,
   rotateApplicationKey,
   type Application,
   type BillingPlan,
+  type Credential,
   type GatewayRoute,
   type LLMInvokeResponse,
   type PlatformSnapshot,
@@ -77,6 +79,7 @@ function App() {
   const [rotatingApplicationId, setRotatingApplicationId] = useState("");
   const [publishingRouteId, setPublishingRouteId] = useState("");
   const [activatingPlanId, setActivatingPlanId] = useState("");
+  const [rotatingCredentialId, setRotatingCredentialId] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -303,6 +306,21 @@ function App() {
     }
   }
 
+  async function handleCredentialRotate(id: string) {
+    setNotice("");
+    setRotatingCredentialId(id);
+
+    try {
+      const credential = await rotateCredential(id, role);
+      await refreshSnapshot();
+      setNotice(`已轮换凭据：${credential.ref}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "凭据轮换失败");
+    } finally {
+      setRotatingCredentialId("");
+    }
+  }
+
   return (
     <>
       <ConsoleShell
@@ -326,6 +344,7 @@ function App() {
             notice={notice}
             onApplicationActivate={handleApplicationActivate}
             onApplicationKeyRotate={handleApplicationKeyRotate}
+            onCredentialRotate={handleCredentialRotate}
             onPlanActivate={handlePlanActivate}
             onRoutePublish={handleRoutePublish}
             activatingApplicationId={activatingApplicationId}
@@ -334,6 +353,7 @@ function App() {
             page={activePage}
             publishingRouteId={publishingRouteId}
             role={role}
+            rotatingCredentialId={rotatingCredentialId}
             rotatingApplicationId={rotatingApplicationId}
             snapshot={snapshot}
           />
@@ -591,6 +611,7 @@ function ModulePage({
   notice,
   onApplicationActivate,
   onApplicationKeyRotate,
+  onCredentialRotate,
   onPlanActivate,
   onPrimaryAction,
   onRoutePublish,
@@ -598,6 +619,7 @@ function ModulePage({
   activatingPlanId,
   publishingRouteId,
   role,
+  rotatingCredentialId,
   rotatingApplicationId,
   snapshot,
 }: {
@@ -605,6 +627,7 @@ function ModulePage({
   notice: string;
   onApplicationActivate: (id: string) => Promise<void>;
   onApplicationKeyRotate: (id: string) => Promise<void>;
+  onCredentialRotate: (id: string) => Promise<void>;
   onPlanActivate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   onRoutePublish: (id: string) => Promise<void>;
@@ -612,6 +635,7 @@ function ModulePage({
   page: ModulePageDefinition;
   publishingRouteId: string;
   role: RoleId;
+  rotatingCredentialId: string;
   rotatingApplicationId: string;
   snapshot?: PlatformSnapshot;
 }) {
@@ -658,6 +682,18 @@ function ModulePage({
 
     return snapshot.plans.find((plan) => plan.id === selectedRowId) || snapshot.plans[0];
   }, [page.id, selectedRowId, snapshot?.plans]);
+
+  const selectedCredential = useMemo(() => {
+    if (page.id !== "iam" || !snapshot?.credentials?.length) {
+      return undefined;
+    }
+
+    return (
+      snapshot.credentials.find((credential) => credential.status === "Expiring") ||
+      snapshot.credentials.find((credential) => credential.status === "Active") ||
+      snapshot.credentials[0]
+    );
+  }, [page.id, snapshot?.credentials]);
 
   const selectableTable = page.id === "docs" || page.id === "gateway" || page.id === "quota";
   let selectedTableRowId: string | undefined;
@@ -735,6 +771,14 @@ function ModulePage({
         </Panel>
 
         <div className="side-panels">
+          {page.id === "iam" ? (
+            <CredentialRefPanel
+              credential={selectedCredential}
+              onRotate={onCredentialRotate}
+              role={role}
+              rotating={rotatingCredentialId === selectedCredential?.id}
+            />
+          ) : null}
           {page.id === "gateway" ? (
             <GatewayRoutePanel
               onPublish={onRoutePublish}
@@ -1048,6 +1092,72 @@ function BillingPlanPanel({
           type="button"
         >
           {plan.status === "Active" ? "已启用" : activating ? "启用中" : "启用套餐"}
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    </Panel>
+  );
+}
+
+function CredentialRefPanel({
+  credential,
+  onRotate,
+  role,
+  rotating,
+}: {
+  credential?: Credential;
+  onRotate: (id: string) => Promise<void>;
+  role: RoleId;
+  rotating: boolean;
+}) {
+  if (!credential) {
+    return (
+      <Panel eyebrow="Credential" title="凭据详情">
+        <div className="empty-panel">
+          <strong>暂无凭据引用</strong>
+          <p>接入供应商 Key 后，这里会展示 credentialRef、scope、脱敏预览和轮换动作。</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  const canRotate = role === "admin";
+  const checks = [
+    { label: "Purpose", value: credential.purpose, note: "用途", tone: "neutral" },
+    { label: "Scope", value: credential.scope, note: "绑定范围", tone: "neutral" },
+    { label: "Preview", value: credential.maskedPreview, note: "脱敏展示", tone: "watch" },
+  ] as const;
+
+  return (
+    <Panel eyebrow="Credential" title="凭据详情">
+      <div className="credential-summary">
+        <div>
+          <span>Selected Credential</span>
+          <strong>{credential.ref}</strong>
+          <p>{credential.expiresAt ? `Expires ${credential.expiresAt}` : "No expiry configured"}</p>
+        </div>
+        <StatusBadge tone={toneForStatus(credential.status)}>{credential.status}</StatusBadge>
+      </div>
+
+      <div className="credential-checks">
+        {checks.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.note}</p>
+            <StatusDot tone={item.tone} />
+          </article>
+        ))}
+      </div>
+
+      <div className="application-actions">
+        <button
+          className="button button--primary"
+          disabled={!canRotate || rotating || credential.status === "Rotated"}
+          onClick={() => void onRotate(credential.id)}
+          type="button"
+        >
+          {credential.status === "Rotated" ? "已轮换" : rotating ? "轮换中" : "轮换凭据"}
           <ChevronRight size={16} />
         </button>
       </div>

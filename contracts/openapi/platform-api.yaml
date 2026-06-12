@@ -298,6 +298,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/control/credentials/rotate:
+    post:
+      tags: [control]
+      operationId: rotateCredential
+      summary: Rotate a credential reference and return the new active ref.
+      x-anjing-roles: [Administrator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RotateCredentialRequest"
+      responses:
+        "200":
+          description: Credential rotated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Credential"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/gateway/healthz:
     get:
       tags: [gateway]
@@ -1009,6 +1041,12 @@ components:
         status:
           type: string
         maskedPreview:
+          type: string
+    RotateCredentialRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
           type: string
     GatewayRoute:
       type: object

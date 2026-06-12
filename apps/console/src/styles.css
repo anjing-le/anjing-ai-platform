@@ -904,7 +904,8 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-summary,
-.plan-summary {
+.plan-summary,
+.credential-summary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -914,7 +915,8 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-summary div,
-.plan-summary div {
+.plan-summary div,
+.credential-summary div {
   display: grid;
   min-width: 0;
   gap: 7px;
@@ -923,11 +925,13 @@ tbody tr.is-selected td:first-child {
 .application-summary span,
 .route-summary span,
 .plan-summary span,
+.credential-summary span,
 .journey-list small,
 .application-usage span,
 .mini-log-list span,
 .route-checks span,
-.plan-checks span {
+.plan-checks span,
+.credential-checks span {
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 900;
@@ -937,7 +941,8 @@ tbody tr.is-selected td:first-child {
 
 .application-summary strong,
 .route-summary strong,
-.plan-summary strong {
+.plan-summary strong,
+.credential-summary strong {
   overflow-wrap: anywhere;
   font-size: 1.28rem;
 }
@@ -945,11 +950,13 @@ tbody tr.is-selected td:first-child {
 .application-summary p,
 .route-summary p,
 .plan-summary p,
+.credential-summary p,
 .journey-list p,
 .application-usage p,
 .mini-log-list p,
 .route-checks p,
-.plan-checks p {
+.plan-checks p,
+.credential-checks p {
   margin: 0;
   color: var(--ink-soft);
   font-size: 0.86rem;
@@ -957,12 +964,14 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks,
-.plan-checks {
+.plan-checks,
+.credential-checks {
   display: grid;
 }
 
 .route-checks article,
-.plan-checks article {
+.plan-checks article,
+.credential-checks article {
   position: relative;
   display: grid;
   gap: 7px;
@@ -972,12 +981,14 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks article:last-child,
-.plan-checks article:last-child {
+.plan-checks article:last-child,
+.credential-checks article:last-child {
   border-bottom: 0;
 }
 
 .route-checks .status-dot,
-.plan-checks .status-dot {
+.plan-checks .status-dot,
+.credential-checks .status-dot {
   position: absolute;
   top: 16px;
   right: 16px;

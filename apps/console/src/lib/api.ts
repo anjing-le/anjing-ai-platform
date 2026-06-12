@@ -356,6 +356,13 @@ export function activatePlan(id: string, role?: RoleId): Promise<BillingPlan> {
   }, role);
 }
 
+export function rotateCredential(id: string, role?: RoleId): Promise<Credential> {
+  return requestJson<Credential>("/api/control/credentials/rotate", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function resolveTodo(id: string, role?: RoleId): Promise<OpsTodo> {
   return requestJson<OpsTodo>("/api/ops/todos/resolve", {
     method: "POST",

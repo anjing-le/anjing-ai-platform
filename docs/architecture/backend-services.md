@@ -211,6 +211,7 @@ go run ./cmd/console-web      # :1818
 - `GET /api/control/roles`
 - `GET /api/control/api-keys`
 - `GET /api/control/credentials`
+- `POST /api/control/credentials/rotate`
 
 ### `gateway-api`
 

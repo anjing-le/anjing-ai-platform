@@ -46,6 +46,7 @@ type APIKeyRepository interface {
 
 type CredentialRepository interface {
 	ListCredentials(ctx context.Context) ([]store.Credential, error)
+	RotateCredential(ctx context.Context, id string) (store.Credential, bool, error)
 }
 
 type Repositories struct {
@@ -142,6 +143,11 @@ func NewMemoryCredentialRepository(st *store.Store) MemoryCredentialRepository {
 
 func (repo MemoryCredentialRepository) ListCredentials(context.Context) ([]store.Credential, error) {
 	return repo.store.ListCredentials(), nil
+}
+
+func (repo MemoryCredentialRepository) RotateCredential(_ context.Context, id string) (store.Credential, bool, error) {
+	credential, ok := repo.store.RotateCredential(id)
+	return credential, ok, nil
 }
 
 type PostgresUserRepository struct {
@@ -511,6 +517,65 @@ func (repo PostgresCredentialRepository) ListCredentials(ctx context.Context) ([
 	}
 
 	return items, nil
+}
+
+func (repo PostgresCredentialRepository) RotateCredential(ctx context.Context, id string) (store.Credential, bool, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.Credential{}, false, fmt.Errorf("begin rotate credential: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
+		select id, ref, purpose, scope, coalesce(expires_at::text, ''), status, masked_preview
+		from credentials
+		where id = $1
+	`, id)
+	if err != nil {
+		return store.Credential{}, false, fmt.Errorf("query credential for rotation: %w", err)
+	}
+	defer rows.Close()
+
+	old, err := pgx.CollectOneRow(rows, scanCredential)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.Credential{}, false, nil
+		}
+		return store.Credential{}, false, fmt.Errorf("collect credential for rotation: %w", err)
+	}
+	rows.Close()
+
+	_, err = tx.Exec(ctx, `
+		update credentials
+		set status = 'Rotated'
+		where id = $1
+	`, id)
+	if err != nil {
+		return store.Credential{}, false, fmt.Errorf("mark credential rotated: %w", err)
+	}
+
+	credential := store.Credential{
+		ID:            fmt.Sprintf("cred_%d", time.Now().UnixNano()),
+		Ref:           fmt.Sprintf("%s.rot.%d", old.Ref, time.Now().Unix()),
+		Purpose:       old.Purpose,
+		Scope:         old.Scope,
+		ExpiresAt:     old.ExpiresAt,
+		Status:        "Active",
+		MaskedPreview: "sk-****-rot",
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into credentials(id, ref, purpose, scope, expires_at, status, masked_preview)
+		values($1, $2, $3, $4, nullif($5, '')::date, $6, $7)
+	`, credential.ID, credential.Ref, credential.Purpose, credential.Scope, credential.ExpiresAt, credential.Status, credential.MaskedPreview); err != nil {
+		return store.Credential{}, false, fmt.Errorf("insert rotated credential: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.Credential{}, false, fmt.Errorf("commit rotate credential: %w", err)
+	}
+
+	return credential, true, nil
 }
 
 func scanCredential(row pgx.CollectableRow) (store.Credential, error) {

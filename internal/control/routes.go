@@ -31,6 +31,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/control/roles", rolesHandler(repos.Roles))
 	mux.HandleFunc("/api/control/api-keys", apiKeysHandler(repos.APIKeys))
 	mux.HandleFunc("/api/control/credentials", credentialsHandler(repos.Credentials))
+	mux.HandleFunc("/api/control/credentials/rotate", rotateCredentialHandler(repos.Credentials))
 }
 
 func usersHandler(users UserRepository) http.HandlerFunc {
@@ -235,6 +236,39 @@ func credentialsHandler(credentials CredentialRepository) http.HandlerFunc {
 			return
 		}
 		httpjson.OK(w, items)
+	}
+}
+
+func rotateCredentialHandler(credentials CredentialRepository) http.HandlerFunc {
+	type rotateCredentialRequest struct {
+		ID string `json:"id"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req rotateCredentialRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+
+		credential, ok, err := credentials.RotateCredential(r.Context(), req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "credential not found")
+			return
+		}
+		httpjson.OK(w, credential)
 	}
 }
 

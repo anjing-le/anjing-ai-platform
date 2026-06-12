@@ -406,6 +406,33 @@ func (s *Store) ListCredentials() []Credential {
 	return append([]Credential(nil), s.credentials...)
 }
 
+func (s *Store) RotateCredential(id string) (Credential, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.credentials {
+		if s.credentials[index].ID != id {
+			continue
+		}
+
+		old := s.credentials[index]
+		newRef := old.Ref + ".rot." + time.Now().UTC().Format("20060102150405")
+		s.credentials[index].Status = "Rotated"
+		credential := Credential{
+			ID:            nextID("cred"),
+			Ref:           newRef,
+			Purpose:       old.Purpose,
+			Scope:         old.Scope,
+			ExpiresAt:     old.ExpiresAt,
+			Status:        "Active",
+			MaskedPreview: "sk-****-rot",
+		}
+		s.credentials = append([]Credential{credential}, s.credentials...)
+		s.addAuditLocked("用户与权限", "rotate credential", old.Ref, "Success")
+		return credential, true
+	}
+	return Credential{}, false
+}
+
 func (s *Store) ListRoutes() []GatewayRoute {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

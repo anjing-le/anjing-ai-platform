@@ -106,3 +106,36 @@ func TestApplicationsCanBeCreatedAndListed(t *testing.T) {
 		t.Fatalf("expected listed application to be active with rotated key, got %+v", listed.Data[0])
 	}
 }
+
+func TestCredentialCanBeRotated(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	credentials := st.ListCredentials()
+	if len(credentials) == 0 {
+		t.Fatal("seed store should contain credentials")
+	}
+
+	body := bytes.NewBufferString(`{"id":"` + credentials[0].ID + `"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/control/credentials/rotate", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var rotated struct {
+		Success bool             `json:"success"`
+		Data    store.Credential `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &rotated); err != nil {
+		t.Fatalf("decode rotate response: %v", err)
+	}
+	if !rotated.Success || rotated.Data.Ref == credentials[0].Ref || rotated.Data.Status != "Active" {
+		t.Fatalf("expected rotated credential, got %+v", rotated)
+	}
+}
