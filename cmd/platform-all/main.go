@@ -21,6 +21,7 @@ func main() {
 	controlRegister := control.Register
 	gatewayRegister := gateway.Register
 	billingRegister := billing.Register
+	opsRegister := ops.Register
 
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
@@ -40,13 +41,17 @@ func main() {
 		billingRegister = func(mux *http.ServeMux, st *store.Store) {
 			billing.RegisterWithPlans(mux, st, plans)
 		}
+		todos := ops.NewPostgresTodoRepository(pool)
+		opsRegister = func(mux *http.ServeMux, st *store.Store) {
+			ops.RegisterWithTodos(mux, st, todos)
+		}
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st,
 		controlRegister,
 		gatewayRegister,
 		billingRegister,
-		ops.Register,
+		opsRegister,
 	)
 	consoleweb.Register(mux, cfg.StaticDir)
 	if err := service.Listen(cfg.Addr, cfg.ServiceName, mux); err != nil {

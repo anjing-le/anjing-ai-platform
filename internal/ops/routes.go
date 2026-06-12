@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
@@ -8,6 +9,10 @@ import (
 )
 
 func Register(mux *http.ServeMux, st *store.Store) {
+	RegisterWithTodos(mux, st, NewMemoryTodoRepository(st))
+}
+
+func RegisterWithTodos(mux *http.ServeMux, st *store.Store, todos TodoRepository) {
 	mux.HandleFunc("/api/ops/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
 			return
@@ -18,15 +23,56 @@ func Register(mux *http.ServeMux, st *store.Store) {
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
 			return
 		}
-		httpjson.OK(w, st.Dashboard())
+		dashboard, err := dashboardWithTodos(r, st, todos)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		httpjson.OK(w, dashboard)
 	})
-	mux.HandleFunc("/api/ops/todos", listHandler(st.ListTodos))
-	mux.HandleFunc("/api/ops/todos/resolve", resolveTodoHandler(st))
+	mux.HandleFunc("/api/ops/todos", todosHandler(todos))
+	mux.HandleFunc("/api/ops/todos/resolve", resolveTodoHandler(todos))
 	mux.HandleFunc("/api/ops/service-health", listHandler(st.ListHealth))
 	mux.HandleFunc("/api/ops/audit-events", listHandler(st.ListAudit))
 }
 
-func resolveTodoHandler(st *store.Store) http.HandlerFunc {
+func dashboardWithTodos(r *http.Request, st *store.Store, todos TodoRepository) (store.OpsDashboard, error) {
+	dashboard := st.Dashboard()
+	items, err := todos.ListTodos(r.Context())
+	if err != nil {
+		return store.OpsDashboard{}, err
+	}
+
+	pending := 0
+	for _, item := range items {
+		if item.Status != "Resolved" {
+			pending++
+		}
+	}
+
+	dashboard.Todos = items
+	if len(dashboard.Metrics) >= 3 {
+		dashboard.Metrics[2] = store.Metric{Label: "待处理", Value: fmt.Sprintf("%d", pending), Note: "告警 / 审批 / 预算"}
+	}
+
+	return dashboard, nil
+}
+
+func todosHandler(todos TodoRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodGet) {
+			return
+		}
+		items, err := todos.ListTodos(r.Context())
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		httpjson.OK(w, items)
+	}
+}
+
+func resolveTodoHandler(todos TodoRepository) http.HandlerFunc {
 	type resolveTodoRequest struct {
 		ID string `json:"id"`
 	}
@@ -44,7 +90,11 @@ func resolveTodoHandler(st *store.Store) http.HandlerFunc {
 			httpjson.BadRequest(w, "id is required")
 			return
 		}
-		todo, ok := st.ResolveTodo(req.ID)
+		todo, ok, err := todos.ResolveTodo(r.Context(), req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
 		if !ok {
 			httpjson.NotFound(w, "todo not found")
 			return
