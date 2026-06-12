@@ -78,7 +78,7 @@ export const navItems: NavItem[] = [
     name: "Gateway",
     label: "网关与模型",
     summary: "统一管理 API 路由、模型路由、模型供应商、Skill 调用和请求日志。",
-    roles: ["admin", "developer", "operator"],
+    roles: ["admin", "developer"],
     icon: Network,
     tags: ["LLM", "Skill"],
   },

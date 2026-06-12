@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/access"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
@@ -39,13 +40,13 @@ func Listen(addr, serviceName string, handler http.Handler) error {
 }
 
 func WithMiddleware(logger *slog.Logger, serviceName string, next http.Handler) http.Handler {
-	return cors(requestLog(logger, serviceName, next))
+	return cors(requestLog(logger, serviceName, access.Middleware(access.LoadConfig(), next)))
 }
 
 func cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-API-Key, X-Request-ID")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)

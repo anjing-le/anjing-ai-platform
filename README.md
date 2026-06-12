@@ -78,6 +78,28 @@ ANJING_DATABASE_URL='postgres://anjing:anjing@localhost:54329/anjing_ai_platform
 go run ./cmd/platform-all
 ```
 
+强制开启后端鉴权：
+
+```bash
+ANJING_AUTH_MODE=enforced go run ./cmd/platform-all
+```
+
+开发默认是 `permissive`，方便前端先跑通。强制模式下，控制台会按当前角色自动带 demo bearer token：
+
+```text
+Administrator -> dev-admin-token
+User          -> dev-user-token
+Developer     -> dev-developer-token
+Operator      -> dev-operator-token
+```
+
+服务端也支持 `X-API-Key`：
+
+```text
+ak_live_customer
+ak_live_knowledge
+```
+
 如果要让 `platform-all` 服务最新前端，先运行：
 
 ```bash

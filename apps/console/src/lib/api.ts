@@ -1,4 +1,4 @@
-import type { MetricItem, StatusTone } from "../types";
+import type { MetricItem, RoleId, StatusTone } from "../types";
 
 interface ApiEnvelope<T> {
   success: boolean;
@@ -197,6 +197,13 @@ export interface CreatePlanInput {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
+const demoTokens: Record<RoleId, string> = {
+  admin: "dev-admin-token",
+  user: "dev-user-token",
+  developer: "dev-developer-token",
+  operator: "dev-operator-token",
+};
+
 const endpoints = {
   dashboard: "/api/ops/dashboard",
   users: "/api/control/users",
@@ -214,10 +221,10 @@ const endpoints = {
 
 type EndpointKey = keyof typeof endpoints;
 
-export async function loadPlatformSnapshot(): Promise<SnapshotResult> {
+export async function loadPlatformSnapshot(role?: RoleId): Promise<SnapshotResult> {
   const entries = Object.entries(endpoints) as Array<[EndpointKey, string]>;
   const settled = await Promise.allSettled(
-    entries.map(async ([key, path]) => [key, await requestJson<unknown>(path)] as const),
+    entries.map(async ([key, path]) => [key, await requestJson<unknown>(path, undefined, role)] as const),
   );
 
   const snapshot: PlatformSnapshot = {};
@@ -251,39 +258,40 @@ export function metricFromApi(metric: ApiMetric, tone: StatusTone = "neutral"): 
   };
 }
 
-export function createUser(input: CreateUserInput): Promise<ControlUser> {
+export function createUser(input: CreateUserInput, role?: RoleId): Promise<ControlUser> {
   return requestJson<ControlUser>("/api/control/users", {
     method: "POST",
     body: JSON.stringify(input),
-  });
+  }, role);
 }
 
-export function createRoute(input: CreateRouteInput): Promise<GatewayRoute> {
+export function createRoute(input: CreateRouteInput, role?: RoleId): Promise<GatewayRoute> {
   return requestJson<GatewayRoute>("/api/gateway/routes", {
     method: "POST",
     body: JSON.stringify(input),
-  });
+  }, role);
 }
 
-export function createPlan(input: CreatePlanInput): Promise<BillingPlan> {
+export function createPlan(input: CreatePlanInput, role?: RoleId): Promise<BillingPlan> {
   return requestJson<BillingPlan>("/api/billing/plans", {
     method: "POST",
     body: JSON.stringify(input),
-  });
+  }, role);
 }
 
-export function resolveTodo(id: string): Promise<OpsTodo> {
+export function resolveTodo(id: string, role?: RoleId): Promise<OpsTodo> {
   return requestJson<OpsTodo>("/api/ops/todos/resolve", {
     method: "POST",
     body: JSON.stringify({ id }),
-  });
+  }, role);
 }
 
-async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+async function requestJson<T>(path: string, init?: RequestInit, role?: RoleId): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders(role),
       ...init?.headers,
     },
   });
@@ -294,4 +302,14 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return payload.data as T;
+}
+
+function authHeaders(role?: RoleId): Record<string, string> {
+  if (!role) {
+    return {};
+  }
+
+  return {
+    Authorization: `Bearer ${demoTokens[role]}`,
+  };
 }

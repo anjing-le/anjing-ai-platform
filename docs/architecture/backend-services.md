@@ -60,7 +60,7 @@ internal/platform/
   config/
   db/
   httpjson/
-  auth/
+  access/
   log/
 ```
 
@@ -69,9 +69,38 @@ internal/platform/
 - 统一配置加载
 - PostgreSQL 连接池
 - JSON 响应和错误结构
-- API Key / session 鉴权
+- Bearer token / API Key / RBAC 鉴权
 - 结构化日志
 - request id / trace id
+
+## V1 访问控制
+
+默认开发模式为 `ANJING_AUTH_MODE=permissive`，便于控制台和接口快速联调。设置 `ANJING_AUTH_MODE=enforced` 后，所有 `/api/**` 业务接口都会进入访问控制；`/healthz` 和各服务 `/api/*/healthz` 仍保持公开。
+
+角色边界先按后台信息架构落地：
+
+| 角色 | 允许范围 |
+| --- | --- |
+| `Administrator` | 全部接口 |
+| `User` | 运营首页只读、计费与用量只读 |
+| `Developer` | 运营只读、网关与模型配置、API Key / credentialRef 只读、计费只读 |
+| `Operator` | 运营处理、服务健康、审计、计费只读、请求日志；不看网关配置 |
+
+Demo bearer token：
+
+```text
+dev-admin-token
+dev-user-token
+dev-developer-token
+dev-operator-token
+```
+
+Demo API Key：
+
+```text
+ak_live_customer
+ak_live_knowledge
+```
 
 业务包建议：
 

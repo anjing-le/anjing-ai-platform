@@ -77,7 +77,7 @@ function App() {
   );
 
   const refreshSnapshot = useCallback(async () => {
-    const result = await loadPlatformSnapshot();
+    const result = await loadPlatformSnapshot(role);
 
     if (result.ok) {
       setSnapshot(result.snapshot);
@@ -89,7 +89,7 @@ function App() {
     }
 
     return result;
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     let active = true;
@@ -144,7 +144,7 @@ function App() {
         setNotice("当前没有待处理事项。");
         return;
       }
-      await resolveTodo(pendingTodo.id);
+      await resolveTodo(pendingTodo.id, role);
       await refreshSnapshot();
       setNotice(`已处理：${pendingTodo.title}`);
       return;
@@ -168,29 +168,38 @@ function App() {
 
     try {
       if (actionMode === "iam") {
-        await createUser({
-          email: values.email,
-          org: values.org,
-          role: values.role,
-        });
+        await createUser(
+          {
+            email: values.email,
+            org: values.org,
+            role: values.role,
+          },
+          role,
+        );
         setNotice(`已邀请用户：${values.email}`);
       }
 
       if (actionMode === "gateway") {
-        await createRoute({
-          route: values.route,
-          upstream: values.upstream,
-          limit: values.limit,
-        });
+        await createRoute(
+          {
+            route: values.route,
+            upstream: values.upstream,
+            limit: values.limit,
+          },
+          role,
+        );
         setNotice(`已创建路由：${values.route}`);
       }
 
       if (actionMode === "quota") {
-        await createPlan({
-          name: values.name,
-          rps: values.rps,
-          tokenPerDay: values.tokenPerDay,
-        });
+        await createPlan(
+          {
+            name: values.name,
+            rps: values.rps,
+            tokenPerDay: values.tokenPerDay,
+          },
+          role,
+        );
         setNotice(`已创建套餐：${values.name}`);
       }
 
