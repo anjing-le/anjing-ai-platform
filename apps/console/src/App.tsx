@@ -5,7 +5,7 @@ import {
   CircleAlert,
   Search,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ActionDialog, type ActionMode, type ActionValues } from "./components/ActionDialog";
 import { backendPlan, modulePages, navItems, roles, todos } from "./data/console";
@@ -13,8 +13,10 @@ import {
   createPlan,
   createRoute,
   createUser,
+  invokeLLM,
   loadPlatformSnapshot,
   resolveTodo,
+  type LLMInvokeResponse,
   type PlatformSnapshot,
 } from "./lib/api";
 import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
@@ -231,7 +233,7 @@ function App() {
           />
         ) : null}
         {activePage ? (
-          <ModulePage notice={notice} onPrimaryAction={handleModuleAction} page={activePage} />
+          <ModulePage notice={notice} onPrimaryAction={handleModuleAction} page={activePage} role={role} />
         ) : null}
       </ConsoleShell>
 
@@ -485,10 +487,12 @@ function ModulePage({
   notice,
   onPrimaryAction,
   page,
+  role,
 }: {
   notice: string;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   page: ModulePageDefinition;
+  role: RoleId;
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("全部状态");
@@ -551,6 +555,7 @@ function ModulePage({
         </Panel>
 
         <div className="side-panels">
+          {page.id === "gateway" ? <LLMInvokePanel role={role} /> : null}
           {page.panels.map((panel) => (
             <Panel eyebrow={panel.eyebrow} key={panel.title} title={panel.title}>
               <div className="key-list">
@@ -567,6 +572,62 @@ function ModulePage({
         </div>
       </section>
     </main>
+  );
+}
+
+function LLMInvokePanel({ role }: { role: RoleId }) {
+  const [modelAlias, setModelAlias] = useState("chat-default");
+  const [input, setInput] = useState("帮我生成一段客服欢迎语");
+  const [result, setResult] = useState<LLMInvokeResponse>();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+
+    try {
+      const response = await invokeLLM({ modelAlias, input }, role);
+      setResult(response);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "调用失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel eyebrow="LLM" title="调用测试">
+      <form className="invoke-form" onSubmit={handleSubmit}>
+        <label>
+          <span>Model Alias</span>
+          <select onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
+            <option value="chat-default">chat-default</option>
+            <option value="embedding-default">embedding-default</option>
+          </select>
+        </label>
+        <label>
+          <span>Input</span>
+          <textarea onChange={(event) => setInput(event.target.value)} rows={4} value={input} />
+        </label>
+        {error ? <p className="form-error">{error}</p> : null}
+        <button className="button button--primary" disabled={busy} type="submit">
+          {busy ? "调用中" : "发送调用"}
+        </button>
+      </form>
+
+      {result ? (
+        <div className="invoke-result">
+          <span>{result.provider}</span>
+          <strong>{result.model}</strong>
+          <p>{result.content}</p>
+          <small>
+            fallback {result.fallback} · {result.usage.totalTokens} tokens
+          </small>
+        </div>
+      ) : null}
+    </Panel>
   );
 }
 

@@ -127,6 +127,26 @@ export interface RequestLog {
   createdAt: string;
 }
 
+export interface LLMInvokeResponse {
+  id: string;
+  modelAlias: string;
+  provider: string;
+  model: string;
+  fallback: string;
+  content: string;
+  finishReason: string;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+  };
+}
+
+export interface LLMInvokeInput {
+  modelAlias: string;
+  input: string;
+}
+
 export interface BillingPlan {
   id: string;
   name: string;
@@ -283,6 +303,13 @@ export function resolveTodo(id: string, role?: RoleId): Promise<OpsTodo> {
   return requestJson<OpsTodo>("/api/ops/todos/resolve", {
     method: "POST",
     body: JSON.stringify({ id }),
+  }, role);
+}
+
+export function invokeLLM(input: LLMInvokeInput, role?: RoleId): Promise<LLMInvokeResponse> {
+  return requestJson<LLMInvokeResponse>("/api/gateway/llm/invoke", {
+    method: "POST",
+    body: JSON.stringify(input),
   }, role);
 }
 

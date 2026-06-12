@@ -790,6 +790,73 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
+.invoke-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.invoke-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.invoke-form label span,
+.invoke-result span,
+.invoke-result small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.invoke-form select,
+.invoke-form textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.invoke-form select {
+  min-height: 40px;
+}
+
+.invoke-form textarea {
+  min-height: 96px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.invoke-form select:focus,
+.invoke-form textarea:focus {
+  border-color: var(--ink);
+  outline: none;
+}
+
+.invoke-form .button {
+  justify-content: center;
+}
+
+.invoke-result {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.invoke-result strong {
+  font-size: 1rem;
+}
+
+.invoke-result p {
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
 .status {
   display: inline-flex;
   min-height: 26px;
