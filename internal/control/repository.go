@@ -16,9 +16,22 @@ type CreateUserInput struct {
 	Role  string
 }
 
+type CreateApplicationInput struct {
+	Name         string
+	Owner        string
+	Environment  string
+	DefaultRoute string
+	Plan         string
+}
+
 type UserRepository interface {
 	ListUsers(ctx context.Context) ([]store.User, error)
 	CreateUser(ctx context.Context, input CreateUserInput) (store.User, error)
+}
+
+type ApplicationRepository interface {
+	ListApplications(ctx context.Context) ([]store.Application, error)
+	CreateApplication(ctx context.Context, input CreateApplicationInput) (store.Application, error)
 }
 
 type RoleRepository interface {
@@ -34,18 +47,20 @@ type CredentialRepository interface {
 }
 
 type Repositories struct {
-	Users       UserRepository
-	Roles       RoleRepository
-	APIKeys     APIKeyRepository
-	Credentials CredentialRepository
+	Users        UserRepository
+	Applications ApplicationRepository
+	Roles        RoleRepository
+	APIKeys      APIKeyRepository
+	Credentials  CredentialRepository
 }
 
 func NewMemoryRepositories(st *store.Store) Repositories {
 	return Repositories{
-		Users:       NewMemoryUserRepository(st),
-		Roles:       NewMemoryRoleRepository(st),
-		APIKeys:     NewMemoryAPIKeyRepository(st),
-		Credentials: NewMemoryCredentialRepository(st),
+		Users:        NewMemoryUserRepository(st),
+		Applications: NewMemoryApplicationRepository(st),
+		Roles:        NewMemoryRoleRepository(st),
+		APIKeys:      NewMemoryAPIKeyRepository(st),
+		Credentials:  NewMemoryCredentialRepository(st),
 	}
 }
 
@@ -63,6 +78,22 @@ func (repo MemoryUserRepository) ListUsers(context.Context) ([]store.User, error
 
 func (repo MemoryUserRepository) CreateUser(_ context.Context, input CreateUserInput) (store.User, error) {
 	return repo.store.CreateUser(input.Email, input.Org, input.Role), nil
+}
+
+type MemoryApplicationRepository struct {
+	store *store.Store
+}
+
+func NewMemoryApplicationRepository(st *store.Store) MemoryApplicationRepository {
+	return MemoryApplicationRepository{store: st}
+}
+
+func (repo MemoryApplicationRepository) ListApplications(context.Context) ([]store.Application, error) {
+	return repo.store.ListApplications(), nil
+}
+
+func (repo MemoryApplicationRepository) CreateApplication(_ context.Context, input CreateApplicationInput) (store.Application, error) {
+	return repo.store.CreateApplication(input.Name, input.Owner, input.Environment, input.DefaultRoute, input.Plan), nil
 }
 
 type MemoryRoleRepository struct {
@@ -159,6 +190,107 @@ func scanUser(row pgx.CollectableRow) (store.User, error) {
 	}
 	user.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return user, nil
+}
+
+type PostgresApplicationRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresApplicationRepository(pool *pgxpool.Pool) PostgresApplicationRepository {
+	return PostgresApplicationRepository{pool: pool}
+}
+
+func (repo PostgresApplicationRepository) ListApplications(ctx context.Context) ([]store.Application, error) {
+	rows, err := repo.pool.Query(ctx, `
+		select id, name, owner, environment, api_key, default_route, plan, status, created_at
+		from applications
+		order by created_at desc
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query applications: %w", err)
+	}
+	defer rows.Close()
+
+	items, err := pgx.CollectRows(rows, scanApplication)
+	if err != nil {
+		return nil, fmt.Errorf("collect applications: %w", err)
+	}
+
+	return items, nil
+}
+
+func (repo PostgresApplicationRepository) CreateApplication(ctx context.Context, input CreateApplicationInput) (store.Application, error) {
+	if input.Environment == "" {
+		input.Environment = "Sandbox"
+	}
+	if input.DefaultRoute == "" {
+		input.DefaultRoute = "/api/v1/llm/**"
+	}
+	if input.Plan == "" {
+		input.Plan = "Free"
+	}
+
+	app := store.Application{
+		ID:           fmt.Sprintf("app_%d", time.Now().UnixNano()),
+		Name:         input.Name,
+		Owner:        input.Owner,
+		Environment:  input.Environment,
+		APIKey:       fmt.Sprintf("ak_live_%d", time.Now().UnixNano()),
+		DefaultRoute: input.DefaultRoute,
+		Plan:         input.Plan,
+		Status:       "Provisioning",
+	}
+
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.Application{}, fmt.Errorf("begin create application: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var createdAt time.Time
+	if err := tx.QueryRow(ctx, `
+		insert into applications(id, name, owner, environment, api_key, default_route, plan, status)
+		values($1, $2, $3, $4, $5, $6, $7, $8)
+		returning created_at
+	`, app.ID, app.Name, app.Owner, app.Environment, app.APIKey, app.DefaultRoute, app.Plan, app.Status).Scan(&createdAt); err != nil {
+		return store.Application{}, fmt.Errorf("insert application: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, `
+		insert into api_keys(id, name, project, scope, status)
+		values($1, $2, $3, $4, $5)
+		on conflict (id) do nothing
+	`, fmt.Sprintf("key_%d", time.Now().UnixNano()), app.APIKey, app.Name, "llm:chat skill:invoke", app.Status)
+	if err != nil {
+		return store.Application{}, fmt.Errorf("insert application api key: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.Application{}, fmt.Errorf("commit create application: %w", err)
+	}
+
+	app.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	return app, nil
+}
+
+func scanApplication(row pgx.CollectableRow) (store.Application, error) {
+	var item store.Application
+	var createdAt time.Time
+	if err := row.Scan(
+		&item.ID,
+		&item.Name,
+		&item.Owner,
+		&item.Environment,
+		&item.APIKey,
+		&item.DefaultRoute,
+		&item.Plan,
+		&item.Status,
+		&createdAt,
+	); err != nil {
+		return store.Application{}, err
+	}
+	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
+	return item, nil
 }
 
 type PostgresRoleRepository struct {

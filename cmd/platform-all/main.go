@@ -31,6 +31,7 @@ func main() {
 		defer pool.Close()
 		controlRepos := control.NewMemoryRepositories(st)
 		controlRepos.Users = control.NewPostgresUserRepository(pool)
+		controlRepos.Applications = control.NewPostgresApplicationRepository(pool)
 		controlRepos.Roles = control.NewPostgresRoleRepository(pool)
 		controlRepos.APIKeys = control.NewPostgresAPIKeyRepository(pool)
 		controlRepos.Credentials = control.NewPostgresCredentialRepository(pool)

@@ -161,11 +161,13 @@ func authenticate(cfg Config, r *http.Request) (Principal, bool) {
 func allowUser(method, path string) bool {
 	if method == http.MethodGet {
 		return path == "/api/ops/dashboard" ||
+			path == "/api/control/applications" ||
 			strings.HasPrefix(path, "/api/billing/")
 	}
 
 	if method == http.MethodPost {
-		return path == "/api/gateway/llm/invoke"
+		return path == "/api/control/applications" ||
+			path == "/api/gateway/llm/invoke"
 	}
 
 	return false
@@ -175,6 +177,7 @@ func allowDeveloper(method, path string) bool {
 	if method == http.MethodGet {
 		return strings.HasPrefix(path, "/api/ops/") ||
 			strings.HasPrefix(path, "/api/gateway/") ||
+			path == "/api/control/applications" ||
 			path == "/api/control/roles" ||
 			path == "/api/control/api-keys" ||
 			path == "/api/control/credentials" ||
@@ -182,7 +185,8 @@ func allowDeveloper(method, path string) bool {
 	}
 
 	if method == http.MethodPost {
-		return path == "/api/gateway/routes" ||
+		return path == "/api/control/applications" ||
+			path == "/api/gateway/routes" ||
 			path == "/api/gateway/llm/invoke"
 	}
 

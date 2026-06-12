@@ -59,6 +59,18 @@ export interface ControlUser {
   createdAt: string;
 }
 
+export interface Application {
+  id: string;
+  name: string;
+  owner: string;
+  environment: string;
+  apiKey: string;
+  defaultRoute: string;
+  plan: string;
+  status: string;
+  createdAt: string;
+}
+
 export interface RolePolicy {
   id: string;
   name: string;
@@ -178,6 +190,7 @@ export interface BudgetAlert {
 export interface PlatformSnapshot {
   dashboard?: OpsDashboard;
   users?: ControlUser[];
+  applications?: Application[];
   roles?: RolePolicy[];
   apiKeys?: APIKey[];
   credentials?: Credential[];
@@ -201,6 +214,14 @@ export interface CreateUserInput {
   email: string;
   org: string;
   role: string;
+}
+
+export interface CreateApplicationInput {
+  name: string;
+  owner: string;
+  environment: string;
+  defaultRoute: string;
+  plan: string;
 }
 
 export interface CreateRouteInput {
@@ -227,6 +248,7 @@ const demoTokens: Record<RoleId, string> = {
 const endpoints = {
   dashboard: "/api/ops/dashboard",
   users: "/api/control/users",
+  applications: "/api/control/applications",
   roles: "/api/control/roles",
   apiKeys: "/api/control/api-keys",
   credentials: "/api/control/credentials",
@@ -280,6 +302,13 @@ export function metricFromApi(metric: ApiMetric, tone: StatusTone = "neutral"): 
 
 export function createUser(input: CreateUserInput, role?: RoleId): Promise<ControlUser> {
   return requestJson<ControlUser>("/api/control/users", {
+    method: "POST",
+    body: JSON.stringify(input),
+  }, role);
+}
+
+export function createApplication(input: CreateApplicationInput, role?: RoleId): Promise<Application> {
+  return requestJson<Application>("/api/control/applications", {
     method: "POST",
     body: JSON.stringify(input),
   }, role);

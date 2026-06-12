@@ -10,6 +10,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 import { ActionDialog, type ActionMode, type ActionValues } from "./components/ActionDialog";
 import { backendPlan, modulePages, navItems, roles, todos } from "./data/console";
 import {
+  createApplication,
   createPlan,
   createRoute,
   createUser,
@@ -157,7 +158,10 @@ function App() {
       return;
     }
 
-    setNotice("接入应用创建会在下一步接入后端 app 模型。");
+    if (pageId === "docs") {
+      setActionMode(pageId);
+      return;
+    }
   }
 
   async function handleActionSubmit(values: ActionValues) {
@@ -203,6 +207,20 @@ function App() {
           role,
         );
         setNotice(`已创建套餐：${values.name}`);
+      }
+
+      if (actionMode === "docs") {
+        await createApplication(
+          {
+            name: values.name,
+            owner: values.owner,
+            environment: values.environment,
+            defaultRoute: values.defaultRoute,
+            plan: values.plan,
+          },
+          role,
+        );
+        setNotice(`已创建接入应用：${values.name}`);
       }
 
       setActionMode(null);

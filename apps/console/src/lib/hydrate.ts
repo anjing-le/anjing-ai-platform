@@ -138,6 +138,32 @@ export function hydrateModulePages(
       };
     }
 
+    if (page.id === "docs" && snapshot.applications) {
+      const activeCount = snapshot.applications.filter((app) => app.status === "Active").length;
+      const productionCount = snapshot.applications.filter((app) => app.environment === "Production").length;
+      return {
+        ...page,
+        metrics: [
+          metric("接入应用", `${snapshot.applications.length}`, "Go API live"),
+          metric("生产应用", `${productionCount}`, "production"),
+          metric("Active", `${activeCount}`, "ready to call", activeCount > 0 ? "good" : "watch"),
+          metric("API Key", `${snapshot.apiKeys?.length || 0}`, "issued keys"),
+        ],
+        table: {
+          ...page.table,
+          eyebrow: "Applications",
+          title: "接入应用",
+          columns: ["应用", "Owner", "环境", "默认路由", "套餐", "状态"],
+          rows: snapshot.applications.map((app) => ({
+            id: app.id,
+            cells: [app.name, app.owner, app.environment, app.defaultRoute, app.plan, app.status],
+            status: app.status,
+            tone: toneForStatus(app.status),
+          })),
+        },
+      };
+    }
+
     return page;
   });
 }

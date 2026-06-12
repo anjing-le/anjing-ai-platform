@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -9,10 +10,11 @@ import (
 type Store struct {
 	mu sync.RWMutex
 
-	users       []User
-	roles       []RolePolicy
-	apiKeys     []APIKey
-	credentials []Credential
+	users        []User
+	applications []Application
+	roles        []RolePolicy
+	apiKeys      []APIKey
+	credentials  []Credential
 
 	routes      []GatewayRoute
 	modelRoutes []ModelRoute
@@ -36,6 +38,18 @@ type User struct {
 	MFA       string `json:"mfa"`
 	Status    string `json:"status"`
 	CreatedAt string `json:"createdAt"`
+}
+
+type Application struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Owner        string `json:"owner"`
+	Environment  string `json:"environment"`
+	APIKey       string `json:"apiKey"`
+	DefaultRoute string `json:"defaultRoute"`
+	Plan         string `json:"plan"`
+	Status       string `json:"status"`
+	CreatedAt    string `json:"createdAt"`
 }
 
 type RolePolicy struct {
@@ -181,6 +195,11 @@ func NewSeedStore() *Store {
 			{ID: "usr_admin", Email: "lin.chen@anjing.ai", Org: "Platform", Role: "Administrator", MFA: "Enabled", Status: "Active", CreatedAt: now},
 			{ID: "usr_dev", Email: "dev-api@anjing.ai", Org: "Engineering", Role: "Developer", MFA: "Enabled", Status: "Active", CreatedAt: now},
 		},
+		applications: []Application{
+			{ID: "app_customer", Name: "customer-service-agent", Owner: "lin.chen@anjing.ai", Environment: "Production", APIKey: "ak_live_customer", DefaultRoute: "/api/v1/llm/**", Plan: "Business", Status: "Active", CreatedAt: now},
+			{ID: "app_knowledge", Name: "knowledge-rag", Owner: "dev-api@anjing.ai", Environment: "Production", APIKey: "ak_live_knowledge", DefaultRoute: "/api/v1/skills/**", Plan: "Business", Status: "Active", CreatedAt: now},
+			{ID: "app_aigc", Name: "aigc-lab", Owner: "dev-api@anjing.ai", Environment: "Sandbox", APIKey: "ak_live_aigc_lab", DefaultRoute: "/api/v1/llm/**", Plan: "Free", Status: "Warning", CreatedAt: now},
+		},
 		roles: []RolePolicy{
 			{ID: "role_admin", Name: "Administrator", VisibleEntries: "all", ConfigScope: "all", Restriction: "none", Status: "Active"},
 			{ID: "role_user", Name: "User", VisibleEntries: "overview,quota,docs", ConfigScope: "self-service", Restriction: "no runtime config", Status: "Active"},
@@ -254,6 +273,58 @@ func (s *Store) CreateUser(email, org, role string) User {
 	s.addAuditLocked("用户与权限", "invite user", email, "Success")
 	s.todos = append([]OpsTodo{{ID: nextID("todo"), Title: email + " 完成首次登录", Source: "用户与权限", Owner: role, Status: "Pending", UpdatedAt: nowLabel()}}, s.todos...)
 	return user
+}
+
+func (s *Store) ListApplications() []Application {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]Application(nil), s.applications...)
+}
+
+func (s *Store) CreateApplication(name, owner, environment, defaultRoute, plan string) Application {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if environment == "" {
+		environment = "Sandbox"
+	}
+	if defaultRoute == "" {
+		defaultRoute = "/api/v1/llm/**"
+	}
+	if plan == "" {
+		plan = "Free"
+	}
+	now := nowLabel()
+	apiKey := "ak_live_" + slugKey(name)
+	app := Application{
+		ID:           nextID("app"),
+		Name:         name,
+		Owner:        owner,
+		Environment:  environment,
+		APIKey:       apiKey,
+		DefaultRoute: defaultRoute,
+		Plan:         plan,
+		Status:       "Provisioning",
+		CreatedAt:    now,
+	}
+	s.applications = append([]Application{app}, s.applications...)
+	s.apiKeys = append([]APIKey{{
+		ID:        nextID("key"),
+		Name:      apiKey,
+		Project:   name,
+		Scope:     "llm:chat skill:invoke",
+		ExpiresAt: "",
+		Status:    "Provisioning",
+	}}, s.apiKeys...)
+	s.todos = append([]OpsTodo{{
+		ID:        nextID("todo"),
+		Title:     name + " 完成接入校验",
+		Source:    "帮助文档",
+		Owner:     owner,
+		Status:    "Pending",
+		UpdatedAt: now,
+	}}, s.todos...)
+	s.addAuditLocked("帮助文档", "create application", name, "Success")
+	return app
 }
 
 func (s *Store) ListRoles() []RolePolicy {
@@ -410,4 +481,27 @@ func nowLabel() string {
 
 func nextID(prefix string) string {
 	return fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
+}
+
+func slugKey(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	var builder strings.Builder
+	lastUnderscore := false
+	for _, char := range value {
+		isWord := char >= 'a' && char <= 'z' || char >= '0' && char <= '9'
+		if isWord {
+			builder.WriteRune(char)
+			lastUnderscore = false
+			continue
+		}
+		if !lastUnderscore {
+			builder.WriteByte('_')
+			lastUnderscore = true
+		}
+	}
+	slug := strings.Trim(builder.String(), "_")
+	if slug == "" {
+		return "app"
+	}
+	return slug
 }

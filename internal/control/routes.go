@@ -25,6 +25,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 		httpjson.OK(w, map[string]string{"service": "control-api", "status": "ok"})
 	})
 	mux.HandleFunc("/api/control/users", usersHandler(repos.Users))
+	mux.HandleFunc("/api/control/applications", applicationsHandler(repos.Applications))
 	mux.HandleFunc("/api/control/roles", rolesHandler(repos.Roles))
 	mux.HandleFunc("/api/control/api-keys", apiKeysHandler(repos.APIKeys))
 	mux.HandleFunc("/api/control/credentials", credentialsHandler(repos.Credentials))
@@ -72,6 +73,55 @@ func usersHandler(users UserRepository) http.HandlerFunc {
 				return
 			}
 			httpjson.Created(w, user)
+		default:
+			httpjson.MethodNotAllowed(w)
+		}
+	}
+}
+
+func applicationsHandler(applications ApplicationRepository) http.HandlerFunc {
+	type createApplicationRequest struct {
+		Name         string `json:"name"`
+		Owner        string `json:"owner"`
+		Environment  string `json:"environment"`
+		DefaultRoute string `json:"defaultRoute"`
+		Plan         string `json:"plan"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			items, err := applications.ListApplications(r.Context())
+			if err != nil {
+				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+				return
+			}
+			httpjson.OK(w, items)
+		case http.MethodPost:
+			var req createApplicationRequest
+			if err := httpjson.Decode(r, &req); err != nil {
+				httpjson.BadRequest(w, err.Error())
+				return
+			}
+			if req.Name == "" {
+				httpjson.BadRequest(w, "name is required")
+				return
+			}
+			if req.Owner == "" {
+				req.Owner = "self-service"
+			}
+			item, err := applications.CreateApplication(r.Context(), CreateApplicationInput{
+				Name:         req.Name,
+				Owner:        req.Owner,
+				Environment:  req.Environment,
+				DefaultRoute: req.DefaultRoute,
+				Plan:         req.Plan,
+			})
+			if err != nil {
+				httpjson.BadRequest(w, err.Error())
+				return
+			}
+			httpjson.Created(w, item)
 		default:
 			httpjson.MethodNotAllowed(w)
 		}

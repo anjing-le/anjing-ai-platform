@@ -26,7 +26,7 @@ tags:
   - name: platform
     description: Shared runtime health.
   - name: control
-    description: Users, role policies, API keys and credential references.
+    description: Applications, users, role policies, API keys and credential references.
   - name: gateway
     description: API routes, model routes, skill bindings and request logs.
   - name: billing
@@ -103,6 +103,59 @@ paths:
                     properties:
                       data:
                         $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/control/applications:
+    get:
+      tags: [control]
+      operationId: listApplications
+      summary: List onboarding applications.
+      x-anjing-roles: [Administrator, User, Developer]
+      responses:
+        "200":
+          description: Applications returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Application"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [control]
+      operationId: createApplication
+      summary: Create an onboarding application and default API key reference.
+      x-anjing-roles: [Administrator, User, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApplicationRequest"
+      responses:
+        "201":
+          description: Application created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Application"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -725,6 +778,48 @@ components:
           type: string
           enum: [Administrator, User, Developer, Operator]
           default: User
+    Application:
+      type: object
+      required: [id, name, owner, environment, apiKey, defaultRoute, plan, status, createdAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        owner:
+          type: string
+        environment:
+          type: string
+          enum: [Sandbox, Production]
+        apiKey:
+          type: string
+        defaultRoute:
+          type: string
+        plan:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+    CreateApplicationRequest:
+      type: object
+      required: [name, owner]
+      properties:
+        name:
+          type: string
+        owner:
+          type: string
+          format: email
+        environment:
+          type: string
+          enum: [Sandbox, Production]
+          default: Sandbox
+        defaultRoute:
+          type: string
+          default: /api/v1/llm/**
+        plan:
+          type: string
+          default: Free
     RolePolicy:
       type: object
       required: [id, name, visibleEntries, configScope, restriction, status]

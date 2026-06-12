@@ -53,6 +53,26 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 	}
 }
 
+func TestUserAndDeveloperCanCreateApplications(t *testing.T) {
+	handler := Middleware(testConfig(), okHandler())
+
+	userReq := httptest.NewRequest(http.MethodPost, "/api/control/applications", nil)
+	userReq.Header.Set("Authorization", "Bearer user-test-token")
+	userRec := httptest.NewRecorder()
+	handler.ServeHTTP(userRec, userReq)
+	if userRec.Code != http.StatusOK {
+		t.Fatalf("expected user self-service application create to be allowed, got %d", userRec.Code)
+	}
+
+	developerReq := httptest.NewRequest(http.MethodPost, "/api/control/applications", nil)
+	developerReq.Header.Set("Authorization", "Bearer developer-test-token")
+	developerRec := httptest.NewRecorder()
+	handler.ServeHTTP(developerRec, developerReq)
+	if developerRec.Code != http.StatusOK {
+		t.Fatalf("expected developer application create to be allowed, got %d", developerRec.Code)
+	}
+}
+
 func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler := Middleware(testConfig(), okHandler())
 
@@ -70,6 +90,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler.ServeHTTP(deniedRec, denied)
 	if deniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected gateway config to be forbidden, got %d", deniedRec.Code)
+	}
+
+	appDenied := httptest.NewRequest(http.MethodGet, "/api/control/applications", nil)
+	appDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	appDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(appDeniedRec, appDenied)
+	if appDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected application config to be forbidden for operator, got %d", appDeniedRec.Code)
 	}
 }
 
@@ -100,6 +128,11 @@ func testConfig() Config {
 			"admin-test-token": {
 				Subject: "admin",
 				Role:    RoleAdministrator,
+				Method:  "bearer",
+			},
+			"user-test-token": {
+				Subject: "user",
+				Role:    RoleUser,
 				Method:  "bearer",
 			},
 			"developer-test-token": {

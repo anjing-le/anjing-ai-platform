@@ -1,7 +1,7 @@
 import { X } from "lucide-react";
 import type { FormEvent } from "react";
 
-export type ActionMode = "iam" | "gateway" | "quota";
+export type ActionMode = "iam" | "gateway" | "quota" | "docs";
 
 export type ActionValues = Record<string, string>;
 
@@ -119,6 +119,49 @@ const actionCopy: Record<
         label: "Token / day",
         name: "tokenPerDay",
         placeholder: "2M",
+        required: true,
+      },
+    ],
+  },
+  docs: {
+    title: "创建接入应用",
+    description: "创建一个应用主体，生成默认 API Key 引用，并把它纳入网关、用量和接入校验流程。",
+    submit: "创建应用",
+    fields: [
+      {
+        kind: "input",
+        label: "应用名",
+        name: "name",
+        placeholder: "agent-workbench",
+        required: true,
+      },
+      {
+        kind: "input",
+        label: "Owner",
+        name: "owner",
+        placeholder: "owner@anjing.ai",
+        required: true,
+        type: "email",
+      },
+      {
+        kind: "select",
+        label: "环境",
+        name: "environment",
+        options: ["Sandbox", "Production"],
+        required: true,
+      },
+      {
+        kind: "input",
+        label: "默认路由",
+        name: "defaultRoute",
+        placeholder: "/api/v1/llm/**",
+        required: true,
+      },
+      {
+        kind: "select",
+        label: "套餐",
+        name: "plan",
+        options: ["Free", "Business"],
         required: true,
       },
     ],

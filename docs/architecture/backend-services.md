@@ -204,6 +204,8 @@ go run ./cmd/console-web      # :1818
 - `GET /api/control/healthz`
 - `GET /api/control/users`
 - `POST /api/control/users`
+- `GET /api/control/applications`
+- `POST /api/control/applications`
 - `GET /api/control/roles`
 - `GET /api/control/api-keys`
 - `GET /api/control/credentials`
