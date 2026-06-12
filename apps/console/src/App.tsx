@@ -5,10 +5,18 @@ import {
   CircleAlert,
   Search,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { backendPlan, homeMetrics, modulePages, navItems, roles, todos } from "./data/console";
-import { loadPlatformSnapshot, type PlatformSnapshot } from "./lib/api";
+import { ActionDialog, type ActionMode, type ActionValues } from "./components/ActionDialog";
+import { backendPlan, modulePages, navItems, roles, todos } from "./data/console";
+import {
+  createPlan,
+  createRoute,
+  createUser,
+  loadPlatformSnapshot,
+  resolveTodo,
+  type PlatformSnapshot,
+} from "./lib/api";
 import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
 import type {
   ConsoleRoute,
@@ -52,6 +60,10 @@ function App() {
   const [snapshot, setSnapshot] = useState<PlatformSnapshot>();
   const [apiState, setApiState] = useState<ApiState>("loading");
   const [apiDetail, setApiDetail] = useState("正在连接 Go API");
+  const [actionMode, setActionMode] = useState<ActionMode | null>(null);
+  const [actionError, setActionError] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     const onHashChange = () => setRoute(parseRoute());
@@ -64,23 +76,31 @@ function App() {
     [role],
   );
 
+  const refreshSnapshot = useCallback(async () => {
+    const result = await loadPlatformSnapshot();
+
+    if (result.ok) {
+      setSnapshot(result.snapshot);
+      setApiState("live");
+      setApiDetail(`${result.loaded} 个接口已连接`);
+    } else {
+      setApiState("fallback");
+      setApiDetail("未连接后端，使用页面默认数据");
+    }
+
+    return result;
+  }, []);
+
   useEffect(() => {
     let active = true;
 
-    loadPlatformSnapshot()
+    refreshSnapshot()
       .then((result) => {
         if (!active) {
           return;
         }
 
-        if (result.ok) {
-          setSnapshot(result.snapshot);
-          setApiState("live");
-          setApiDetail(`${result.loaded} 个接口已连接`);
-        } else {
-          setApiState("fallback");
-          setApiDetail("未连接后端，使用页面默认数据");
-        }
+        setApiState(result.ok ? "live" : "fallback");
       })
       .catch(() => {
         if (!active) {
@@ -93,7 +113,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [refreshSnapshot]);
 
   useEffect(() => {
     if (route === "landing") {
@@ -114,25 +134,108 @@ function App() {
   const hydratedPages = hydrateModulePages(modulePages, snapshot);
   const activePage = hydratedPages.find((page) => page.id === activeRoute);
 
+  async function handleModuleAction(pageId: ConsoleRoute) {
+    setNotice("");
+    setActionError("");
+
+    if (pageId === "overview") {
+      const pendingTodo = snapshot?.dashboard?.todos.find((todo) => todo.status !== "Resolved");
+      if (!pendingTodo) {
+        setNotice("当前没有待处理事项。");
+        return;
+      }
+      await resolveTodo(pendingTodo.id);
+      await refreshSnapshot();
+      setNotice(`已处理：${pendingTodo.title}`);
+      return;
+    }
+
+    if (pageId === "iam" || pageId === "gateway" || pageId === "quota") {
+      setActionMode(pageId);
+      return;
+    }
+
+    setNotice("接入应用创建会在下一步接入后端 app 模型。");
+  }
+
+  async function handleActionSubmit(values: ActionValues) {
+    if (!actionMode) {
+      return;
+    }
+
+    setActionBusy(true);
+    setActionError("");
+
+    try {
+      if (actionMode === "iam") {
+        await createUser({
+          email: values.email,
+          org: values.org,
+          role: values.role,
+        });
+        setNotice(`已邀请用户：${values.email}`);
+      }
+
+      if (actionMode === "gateway") {
+        await createRoute({
+          route: values.route,
+          upstream: values.upstream,
+          limit: values.limit,
+        });
+        setNotice(`已创建路由：${values.route}`);
+      }
+
+      if (actionMode === "quota") {
+        await createPlan({
+          name: values.name,
+          rps: values.rps,
+          tokenPerDay: values.tokenPerDay,
+        });
+        setNotice(`已创建套餐：${values.name}`);
+      }
+
+      setActionMode(null);
+      await refreshSnapshot();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "操作失败");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
   return (
-    <ConsoleShell
-      apiDetail={apiDetail}
-      apiState={apiState}
-      activeRoute={activeRoute}
-      role={role}
-      setRole={setRole}
-      visibleItems={visibleItems}
-    >
-      {activeRoute === "home" ? (
-        <ConsoleHome
-          metrics={hydrateHomeMetrics(snapshot)}
-          role={role}
-          snapshot={snapshot}
-          visibleItems={visibleItems}
+    <>
+      <ConsoleShell
+        apiDetail={apiDetail}
+        apiState={apiState}
+        activeRoute={activeRoute}
+        role={role}
+        setRole={setRole}
+        visibleItems={visibleItems}
+      >
+        {activeRoute === "home" ? (
+          <ConsoleHome
+            metrics={hydrateHomeMetrics(snapshot)}
+            role={role}
+            snapshot={snapshot}
+            visibleItems={visibleItems}
+          />
+        ) : null}
+        {activePage ? (
+          <ModulePage notice={notice} onPrimaryAction={handleModuleAction} page={activePage} />
+        ) : null}
+      </ConsoleShell>
+
+      {actionMode ? (
+        <ActionDialog
+          busy={actionBusy}
+          error={actionError}
+          mode={actionMode}
+          onClose={() => setActionMode(null)}
+          onSubmit={handleActionSubmit}
         />
       ) : null}
-      {activePage ? <ModulePage page={activePage} /> : null}
-    </ConsoleShell>
+    </>
   );
 }
 
@@ -369,7 +472,15 @@ function ConsoleHome({
   );
 }
 
-function ModulePage({ page }: { page: ModulePageDefinition }) {
+function ModulePage({
+  notice,
+  onPrimaryAction,
+  page,
+}: {
+  notice: string;
+  onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
+  page: ModulePageDefinition;
+}) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("全部状态");
 
@@ -392,11 +503,13 @@ function ModulePage({ page }: { page: ModulePageDefinition }) {
           <h2>{page.title}</h2>
           <p>{page.description}</p>
         </div>
-        <button className="button button--primary" type="button">
+        <button className="button button--primary" onClick={() => void onPrimaryAction(page.id)} type="button">
           {page.primaryAction}
           <ChevronRight size={16} />
         </button>
       </section>
+
+      {notice ? <p className="inline-notice">{notice}</p> : null}
 
       <div className="tab-row" aria-label={`${page.title} 页面视图`}>
         {page.tabs.map((tab, index) => (

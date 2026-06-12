@@ -684,6 +684,16 @@ a {
   gap: 8px;
 }
 
+.inline-notice {
+  margin: -8px 0 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(24, 121, 78, 0.22);
+  border-radius: 8px;
+  background: rgba(24, 121, 78, 0.08);
+  color: #18794e;
+  font-weight: 800;
+}
+
 .side-panels {
   display: grid;
   gap: 16px;
@@ -813,6 +823,118 @@ tbody tr:last-child td {
 .status--neutral {
   background: #f8f8f8;
   color: var(--ink-soft);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(17, 17, 19, 0.42);
+  backdrop-filter: blur(12px);
+}
+
+.action-dialog {
+  width: min(520px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.24);
+}
+
+.action-dialog header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.action-dialog h2 {
+  margin: 6px 0 8px;
+  font-size: 1.55rem;
+}
+
+.action-dialog p {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  border-color: var(--line-strong);
+  outline: none;
+}
+
+.action-form {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 20px;
+}
+
+.action-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.action-form label span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.action-form input,
+.action-form select {
+  min-height: 40px;
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.action-form input:focus,
+.action-form select:focus {
+  border-color: var(--ink);
+  outline: none;
+}
+
+.form-error {
+  padding: 10px 12px;
+  border: 1px solid rgba(161, 92, 0, 0.24);
+  border-radius: 8px;
+  background: rgba(161, 92, 0, 0.08);
+  color: #8a4f00;
+  font-weight: 800;
+}
+
+.action-form footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.action-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 @media (max-width: 1040px) {

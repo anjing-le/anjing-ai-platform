@@ -177,6 +177,24 @@ export interface SnapshotResult {
   failed: number;
 }
 
+export interface CreateUserInput {
+  email: string;
+  org: string;
+  role: string;
+}
+
+export interface CreateRouteInput {
+  route: string;
+  upstream: string;
+  limit: string;
+}
+
+export interface CreatePlanInput {
+  name: string;
+  rps: string;
+  tokenPerDay: string;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const endpoints = {
@@ -233,8 +251,42 @@ export function metricFromApi(metric: ApiMetric, tone: StatusTone = "neutral"): 
   };
 }
 
-async function requestJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+export function createUser(input: CreateUserInput): Promise<ControlUser> {
+  return requestJson<ControlUser>("/api/control/users", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function createRoute(input: CreateRouteInput): Promise<GatewayRoute> {
+  return requestJson<GatewayRoute>("/api/gateway/routes", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function createPlan(input: CreatePlanInput): Promise<BillingPlan> {
+  return requestJson<BillingPlan>("/api/billing/plans", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function resolveTodo(id: string): Promise<OpsTodo> {
+  return requestJson<OpsTodo>("/api/ops/todos/resolve", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  });
+}
+
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+  });
   const payload = (await response.json()) as ApiEnvelope<T>;
 
   if (!response.ok || !payload.success) {
