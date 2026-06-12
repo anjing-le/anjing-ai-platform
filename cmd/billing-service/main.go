@@ -22,9 +22,12 @@ func main() {
 			panic(err)
 		}
 		defer pool.Close()
-		plans := billing.NewPostgresPlanRepository(pool)
+		repos := billing.NewMemoryRepositories(st)
+		repos.Plans = billing.NewPostgresPlanRepository(pool)
+		repos.Usage = billing.NewPostgresUsageRepository(pool)
+		repos.BudgetAlerts = billing.NewPostgresBudgetAlertRepository(pool)
 		billingRegister = func(mux *http.ServeMux, st *store.Store) {
-			billing.RegisterWithPlans(mux, st, plans)
+			billing.RegisterWithRepositories(mux, st, repos)
 		}
 	}
 

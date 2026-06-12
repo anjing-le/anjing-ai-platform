@@ -45,9 +45,12 @@ func main() {
 		gatewayRegister = func(mux *http.ServeMux, st *store.Store) {
 			gateway.RegisterWithRepositories(mux, st, gatewayRepos)
 		}
-		plans := billing.NewPostgresPlanRepository(pool)
+		billingRepos := billing.NewMemoryRepositories(st)
+		billingRepos.Plans = billing.NewPostgresPlanRepository(pool)
+		billingRepos.Usage = billing.NewPostgresUsageRepository(pool)
+		billingRepos.BudgetAlerts = billing.NewPostgresBudgetAlertRepository(pool)
 		billingRegister = func(mux *http.ServeMux, st *store.Store) {
-			billing.RegisterWithPlans(mux, st, plans)
+			billing.RegisterWithRepositories(mux, st, billingRepos)
 		}
 		todos := ops.NewPostgresTodoRepository(pool)
 		opsRegister = func(mux *http.ServeMux, st *store.Store) {
