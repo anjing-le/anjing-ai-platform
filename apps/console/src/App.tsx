@@ -17,6 +17,7 @@ import {
   invokeLLM,
   loadPlatformSnapshot,
   resolveTodo,
+  type Application,
   type LLMInvokeResponse,
   type PlatformSnapshot,
 } from "./lib/api";
@@ -251,7 +252,13 @@ function App() {
           />
         ) : null}
         {activePage ? (
-          <ModulePage notice={notice} onPrimaryAction={handleModuleAction} page={activePage} role={role} />
+          <ModulePage
+            notice={notice}
+            onPrimaryAction={handleModuleAction}
+            page={activePage}
+            role={role}
+            snapshot={snapshot}
+          />
         ) : null}
       </ConsoleShell>
 
@@ -506,14 +513,17 @@ function ModulePage({
   onPrimaryAction,
   page,
   role,
+  snapshot,
 }: {
   notice: string;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   page: ModulePageDefinition;
   role: RoleId;
+  snapshot?: PlatformSnapshot;
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("全部状态");
+  const [selectedRowId, setSelectedRowId] = useState("");
 
   const statuses = useMemo(
     () => ["全部状态", ...Array.from(new Set(page.table.rows.map((row) => row.status)))],
@@ -525,6 +535,29 @@ function ModulePage({
     const matchesStatus = status === "全部状态" || row.status === status;
     return matchesQuery && matchesStatus;
   });
+
+  const selectedApplication = useMemo(() => {
+    if (page.id !== "docs" || !snapshot?.applications?.length) {
+      return undefined;
+    }
+
+    return (
+      snapshot.applications.find((application) => application.id === selectedRowId) ||
+      snapshot.applications[0]
+    );
+  }, [page.id, selectedRowId, snapshot?.applications]);
+
+  useEffect(() => {
+    if (!rows.length) {
+      setSelectedRowId("");
+      return;
+    }
+
+    const stillVisible = rows.some((row) => row.id === selectedRowId);
+    if (!stillVisible) {
+      setSelectedRowId(rows[0].id);
+    }
+  }, [rows, selectedRowId]);
 
   return (
     <main className="page">
@@ -569,11 +602,19 @@ function ModulePage({
               ))}
             </select>
           </div>
-          <DataTable columns={page.table.columns} rows={rows} />
+          <DataTable
+            columns={page.table.columns}
+            onRowSelect={page.id === "docs" ? setSelectedRowId : undefined}
+            rows={rows}
+            selectedRowId={page.id === "docs" ? selectedApplication?.id : undefined}
+          />
         </Panel>
 
         <div className="side-panels">
           {page.id === "gateway" ? <LLMInvokePanel role={role} /> : null}
+          {page.id === "docs" ? (
+            <ApplicationJourneyPanel application={selectedApplication} snapshot={snapshot} />
+          ) : null}
           {page.panels.map((panel) => (
             <Panel eyebrow={panel.eyebrow} key={panel.title} title={panel.title}>
               <div className="key-list">
@@ -590,6 +631,119 @@ function ModulePage({
         </div>
       </section>
     </main>
+  );
+}
+
+function ApplicationJourneyPanel({
+  application,
+  snapshot,
+}: {
+  application?: Application;
+  snapshot?: PlatformSnapshot;
+}) {
+  if (!application) {
+    return (
+      <Panel eyebrow="Onboarding" title="应用接入详情">
+        <div className="empty-panel">
+          <strong>暂无应用</strong>
+          <p>创建接入应用后，这里会展示 API Key、路由、用量和审计链路。</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  const apiKey = snapshot?.apiKeys?.find(
+    (item) => item.project === application.name || item.name === application.apiKey,
+  );
+  const usage = snapshot?.usage?.find((item) => item.project === application.name);
+  const budget = snapshot?.budgetAlerts?.find((item) => item.project === application.name);
+  const logs = snapshot?.requestLogs?.filter((item) => item.consumer === application.name).slice(0, 3) || [];
+
+  const steps = [
+    {
+      label: "Application",
+      value: application.name,
+      note: `${application.environment} · ${application.status}`,
+      tone: application.status,
+    },
+    {
+      label: "API Key",
+      value: apiKey?.name || application.apiKey,
+      note: apiKey?.scope || "llm:chat skill:invoke",
+      tone: apiKey?.status || application.status,
+    },
+    {
+      label: "Gateway",
+      value: application.defaultRoute,
+      note: "API Key auth · model/skill route",
+      tone: "Active",
+    },
+    {
+      label: "Quota",
+      value: application.plan,
+      note: budget ? `${budget.current} / ${budget.budget}` : "waiting first usage",
+      tone: budget?.status || "Ready",
+    },
+  ];
+
+  return (
+    <Panel eyebrow="Onboarding" title="应用接入详情">
+      <div className="application-summary">
+        <div>
+          <span>Selected App</span>
+          <strong>{application.name}</strong>
+          <p>{application.owner}</p>
+        </div>
+        <StatusBadge tone={toneForStatus(application.status)}>{application.status}</StatusBadge>
+      </div>
+
+      <div className="journey-list">
+        {steps.map((step, index) => (
+          <article key={step.label}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <div>
+              <small>{step.label}</small>
+              <strong>{step.value}</strong>
+              <p>{step.note}</p>
+            </div>
+            <StatusBadge tone={toneForStatus(step.tone)}>{step.tone}</StatusBadge>
+          </article>
+        ))}
+      </div>
+
+      <div className="application-usage">
+        <article>
+          <span>Tokens</span>
+          <strong>{usage?.tokens || "0"}</strong>
+          <p>{usage?.status || "No usage yet"}</p>
+        </article>
+        <article>
+          <span>Skill Calls</span>
+          <strong>{usage?.skillCalls || "0"}</strong>
+          <p>{usage?.cost || "$0"}</p>
+        </article>
+      </div>
+
+      <div className="mini-log-list">
+        {logs.length ? (
+          logs.map((log) => (
+            <article key={log.id}>
+              <span>{log.request}</span>
+              <strong>{log.result}</strong>
+              <p>
+                {log.latency} · {log.status}
+              </p>
+            </article>
+          ))
+        ) : (
+          <article>
+            <span>Request Log</span>
+            <strong>Waiting</strong>
+            <p>首次调用后这里会出现最近请求。</p>
+          </article>
+        )}
+      </div>
+    </Panel>
   );
 }
 
@@ -686,7 +840,17 @@ function Panel({
   );
 }
 
-function DataTable({ columns, rows }: { columns: string[]; rows: TableRow[] }) {
+function DataTable({
+  columns,
+  onRowSelect,
+  rows,
+  selectedRowId,
+}: {
+  columns: string[];
+  onRowSelect?: (id: string) => void;
+  rows: TableRow[];
+  selectedRowId?: string;
+}) {
   return (
     <div className="table-wrap">
       <table>
@@ -699,7 +863,22 @@ function DataTable({ columns, rows }: { columns: string[]; rows: TableRow[] }) {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id}>
+            <tr
+              className={row.id === selectedRowId ? "is-selected" : ""}
+              key={row.id}
+              onClick={onRowSelect ? () => onRowSelect(row.id) : undefined}
+              onKeyDown={
+                onRowSelect
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onRowSelect(row.id);
+                      }
+                    }
+                  : undefined
+              }
+              tabIndex={onRowSelect ? 0 : undefined}
+            >
               {row.cells.map((cell, index) => (
                 <td key={`${row.id}-${cell}`}>
                   {index === row.cells.length - 1 ? (
@@ -734,6 +913,24 @@ function StatusDot({ tone }: { tone: StatusTone }) {
   }
 
   return <CircleAlert className={`status-dot status-dot--${tone}`} size={16} />;
+}
+
+function toneForStatus(status = ""): StatusTone {
+  const normalized = status.toLowerCase();
+
+  if (["active", "success", "normal", "ready", "published"].includes(normalized)) {
+    return "good";
+  }
+
+  if (["warning", "degraded", "expiring"].includes(normalized)) {
+    return "warn";
+  }
+
+  if (["watching", "pending", "draft", "guarded", "invited", "provisioning"].includes(normalized)) {
+    return "watch";
+  }
+
+  return "neutral";
 }
 
 export default App;
