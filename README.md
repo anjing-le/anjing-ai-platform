@@ -70,6 +70,13 @@ http://localhost:18080/api/gateway/routes
 http://localhost:18080/api/billing/plans
 ```
 
+使用 PostgreSQL 用户仓储启动：
+
+```bash
+ANJING_DATABASE_URL='postgres://anjing:anjing@localhost:54329/anjing_ai_platform?sslmode=disable' \
+go run ./cmd/platform-all
+```
+
 如果要让 `platform-all` 服务最新前端，先运行：
 
 ```bash

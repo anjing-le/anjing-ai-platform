@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
+	"net/http"
+
 	"github.com/anjing-le/anjing-ai-platform/internal/billing"
 	"github.com/anjing-le/anjing-ai-platform/internal/consoleweb"
 	"github.com/anjing-le/anjing-ai-platform/internal/control"
 	"github.com/anjing-le/anjing-ai-platform/internal/gateway"
 	"github.com/anjing-le/anjing-ai-platform/internal/ops"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/config"
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/db"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/service"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
@@ -14,8 +18,22 @@ import (
 func main() {
 	cfg := config.Load("platform-all", "18080")
 	st := store.NewSeedStore()
+	controlRegister := control.Register
+
+	if cfg.DatabaseURL != "" {
+		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
+		if err != nil {
+			panic(err)
+		}
+		defer pool.Close()
+		users := control.NewPostgresUserRepository(pool)
+		controlRegister = func(mux *http.ServeMux, st *store.Store) {
+			control.RegisterWithUsers(mux, st, users)
+		}
+	}
+
 	mux := service.NewMux(cfg.ServiceName, st,
-		control.Register,
+		controlRegister,
 		gateway.Register,
 		billing.Register,
 		ops.Register,
