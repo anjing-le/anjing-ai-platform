@@ -497,6 +497,23 @@ func (s *Store) ListModelRoutes() []ModelRoute {
 	return append([]ModelRoute(nil), s.modelRoutes...)
 }
 
+func (s *Store) CreateModelRoute(alias, scenario, primary, fallback string) ModelRoute {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	route := ModelRoute{
+		ID:        nextID("model"),
+		Alias:     alias,
+		Scenario:  scenario,
+		Primary:   primary,
+		Fallback:  fallback,
+		Status:    "Draft",
+		UpdatedAt: nowLabel(),
+	}
+	s.modelRoutes = append([]ModelRoute{route}, s.modelRoutes...)
+	s.addAuditLocked("网关与模型", "create model route", alias, "Success")
+	return route
+}
+
 func (s *Store) ListSkills() []SkillBinding {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

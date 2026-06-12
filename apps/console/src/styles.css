@@ -805,19 +805,22 @@ tbody tr.is-selected td:first-child {
   border-bottom: 0;
 }
 
-.invoke-form {
+.invoke-form,
+.model-route-form {
   display: grid;
   gap: 12px;
   padding: 16px;
   border-bottom: 1px solid var(--line);
 }
 
-.invoke-form label {
+.invoke-form label,
+.model-route-form label {
   display: grid;
   gap: 7px;
 }
 
 .invoke-form label span,
+.model-route-form label span,
 .invoke-result span,
 .invoke-result small {
   color: var(--muted);
@@ -827,7 +830,8 @@ tbody tr.is-selected td:first-child {
 }
 
 .invoke-form select,
-.invoke-form textarea {
+.invoke-form textarea,
+.model-route-form input {
   width: 100%;
   padding: 9px 11px;
   border: 1px solid var(--line);
@@ -837,7 +841,8 @@ tbody tr.is-selected td:first-child {
   font: inherit;
 }
 
-.invoke-form select {
+.invoke-form select,
+.model-route-form input {
   min-height: 40px;
 }
 
@@ -848,12 +853,14 @@ tbody tr.is-selected td:first-child {
 }
 
 .invoke-form select:focus,
-.invoke-form textarea:focus {
+.invoke-form textarea:focus,
+.model-route-form input:focus {
   border-color: var(--ink);
   outline: none;
 }
 
-.invoke-form .button {
+.invoke-form .button,
+.model-route-form .button {
   justify-content: center;
 }
 
@@ -904,6 +911,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-summary,
+.model-summary,
 .plan-summary,
 .api-key-summary,
 .credential-summary {
@@ -916,6 +924,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-summary div,
+.model-summary div,
 .plan-summary div,
 .api-key-summary div,
 .credential-summary div {
@@ -926,6 +935,7 @@ tbody tr.is-selected td:first-child {
 
 .application-summary span,
 .route-summary span,
+.model-summary span,
 .plan-summary span,
 .api-key-summary span,
 .credential-summary span,
@@ -933,6 +943,7 @@ tbody tr.is-selected td:first-child {
 .application-usage span,
 .mini-log-list span,
 .route-checks span,
+.model-checks span,
 .plan-checks span,
 .api-key-checks span,
 .credential-checks span {
@@ -945,6 +956,7 @@ tbody tr.is-selected td:first-child {
 
 .application-summary strong,
 .route-summary strong,
+.model-summary strong,
 .plan-summary strong,
 .api-key-summary strong,
 .credential-summary strong {
@@ -954,6 +966,7 @@ tbody tr.is-selected td:first-child {
 
 .application-summary p,
 .route-summary p,
+.model-summary p,
 .plan-summary p,
 .api-key-summary p,
 .credential-summary p,
@@ -961,6 +974,7 @@ tbody tr.is-selected td:first-child {
 .application-usage p,
 .mini-log-list p,
 .route-checks p,
+.model-checks p,
 .plan-checks p,
 .api-key-checks p,
 .credential-checks p {
@@ -971,6 +985,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks,
+.model-checks,
 .plan-checks,
 .api-key-checks,
 .credential-checks {
@@ -978,6 +993,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks article,
+.model-checks article,
 .plan-checks article,
 .api-key-checks article,
 .credential-checks article {
@@ -990,6 +1006,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks article:last-child,
+.model-checks article:last-child,
 .plan-checks article:last-child,
 .api-key-checks article:last-child,
 .credential-checks article:last-child {
@@ -997,6 +1014,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks .status-dot,
+.model-checks .status-dot,
 .plan-checks .status-dot,
 .api-key-checks .status-dot,
 .credential-checks .status-dot {

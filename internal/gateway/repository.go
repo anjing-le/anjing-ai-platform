@@ -16,6 +16,13 @@ type CreateRouteInput struct {
 	Limit    string
 }
 
+type CreateModelRouteInput struct {
+	Alias    string
+	Scenario string
+	Primary  string
+	Fallback string
+}
+
 type RouteRepository interface {
 	ListRoutes(ctx context.Context) ([]store.GatewayRoute, error)
 	CreateRoute(ctx context.Context, input CreateRouteInput) (store.GatewayRoute, error)
@@ -24,6 +31,7 @@ type RouteRepository interface {
 
 type ModelRouteRepository interface {
 	ListModelRoutes(ctx context.Context) ([]store.ModelRoute, error)
+	CreateModelRoute(ctx context.Context, input CreateModelRouteInput) (store.ModelRoute, error)
 }
 
 type SkillRepository interface {
@@ -81,6 +89,10 @@ func NewMemoryModelRouteRepository(st *store.Store) MemoryModelRouteRepository {
 
 func (repo MemoryModelRouteRepository) ListModelRoutes(context.Context) ([]store.ModelRoute, error) {
 	return repo.store.ListModelRoutes(), nil
+}
+
+func (repo MemoryModelRouteRepository) CreateModelRoute(_ context.Context, input CreateModelRouteInput) (store.ModelRoute, error) {
+	return repo.store.CreateModelRoute(input.Alias, input.Scenario, input.Primary, input.Fallback), nil
 }
 
 type MemorySkillRepository struct {
@@ -205,6 +217,29 @@ func (repo PostgresModelRouteRepository) ListModelRoutes(ctx context.Context) ([
 	}
 
 	return items, nil
+}
+
+func (repo PostgresModelRouteRepository) CreateModelRoute(ctx context.Context, input CreateModelRouteInput) (store.ModelRoute, error) {
+	item := store.ModelRoute{
+		ID:       fmt.Sprintf("model_%d", time.Now().UnixNano()),
+		Alias:    input.Alias,
+		Scenario: input.Scenario,
+		Primary:  input.Primary,
+		Fallback: input.Fallback,
+		Status:   "Draft",
+	}
+
+	var updatedAt time.Time
+	if err := repo.pool.QueryRow(ctx, `
+		insert into model_routes(id, alias, scenario, primary_model, fallback_model, status)
+		values($1, $2, $3, $4, $5, $6)
+		returning updated_at
+	`, item.ID, item.Alias, item.Scenario, item.Primary, item.Fallback, item.Status).Scan(&updatedAt); err != nil {
+		return store.ModelRoute{}, fmt.Errorf("insert model route: %w", err)
+	}
+
+	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
+	return item, nil
 }
 
 func scanModelRoute(row pgx.CollectableRow) (store.ModelRoute, error) {

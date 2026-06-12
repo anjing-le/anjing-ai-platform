@@ -13,6 +13,7 @@ import {
   activateApplication,
   activatePlan,
   createApplication,
+  createModelRoute,
   createPlan,
   createRoute,
   createUser,
@@ -26,9 +27,11 @@ import {
   type APIKey,
   type Application,
   type BillingPlan,
+  type CreateModelRouteInput,
   type Credential,
   type GatewayRoute,
   type LLMInvokeResponse,
+  type ModelRoute,
   type PlatformSnapshot,
 } from "./lib/api";
 import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
@@ -294,6 +297,18 @@ function App() {
     }
   }
 
+  async function handleModelRouteCreate(input: CreateModelRouteInput) {
+    setNotice("");
+
+    try {
+      const modelRoute = await createModelRoute(input, role);
+      await refreshSnapshot();
+      setNotice(`已创建模型路由：${modelRoute.alias}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "模型路由创建失败");
+    }
+  }
+
   async function handlePlanActivate(id: string) {
     setNotice("");
     setActivatingPlanId(id);
@@ -364,6 +379,7 @@ function App() {
             onApplicationActivate={handleApplicationActivate}
             onApplicationKeyRotate={handleApplicationKeyRotate}
             onCredentialRotate={handleCredentialRotate}
+            onModelRouteCreate={handleModelRouteCreate}
             onPlanActivate={handlePlanActivate}
             onRoutePublish={handleRoutePublish}
             activatingApplicationId={activatingApplicationId}
@@ -633,6 +649,7 @@ function ModulePage({
   onApplicationActivate,
   onApplicationKeyRotate,
   onCredentialRotate,
+  onModelRouteCreate,
   onPlanActivate,
   onPrimaryAction,
   onRoutePublish,
@@ -651,6 +668,7 @@ function ModulePage({
   onApplicationActivate: (id: string) => Promise<void>;
   onApplicationKeyRotate: (id: string) => Promise<void>;
   onCredentialRotate: (id: string) => Promise<void>;
+  onModelRouteCreate: (input: CreateModelRouteInput) => Promise<void>;
   onPlanActivate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   onRoutePublish: (id: string) => Promise<void>;
@@ -698,6 +716,17 @@ function ModulePage({
       snapshot.routes.find((route) => route.id === selectedRowId) || snapshot.routes[0]
     );
   }, [page.id, selectedRowId, snapshot?.routes]);
+
+  const selectedModelRoute = useMemo(() => {
+    if (page.id !== "gateway" || !snapshot?.modelRoutes?.length) {
+      return undefined;
+    }
+
+    return (
+      snapshot.modelRoutes.find((route) => route.alias === "chat-default") ||
+      snapshot.modelRoutes[0]
+    );
+  }, [page.id, snapshot?.modelRoutes]);
 
   const selectedPlan = useMemo(() => {
     if (page.id !== "quota" || !snapshot?.plans?.length) {
@@ -826,7 +855,14 @@ function ModulePage({
               route={selectedRoute}
             />
           ) : null}
-          {page.id === "gateway" ? <LLMInvokePanel role={role} /> : null}
+          {page.id === "gateway" ? (
+            <ModelRoutePanel
+              modelRoute={selectedModelRoute}
+              onCreate={onModelRouteCreate}
+              role={role}
+            />
+          ) : null}
+          {page.id === "gateway" ? <LLMInvokePanel modelRoutes={snapshot?.modelRoutes} role={role} /> : null}
           {page.id === "quota" ? (
             <BillingPlanPanel
               activating={activatingPlanId === selectedPlan?.id}
@@ -1073,6 +1109,98 @@ function GatewayRoutePanel({
   );
 }
 
+function ModelRoutePanel({
+  modelRoute,
+  onCreate,
+  role,
+}: {
+  modelRoute?: ModelRoute;
+  onCreate: (input: CreateModelRouteInput) => Promise<void>;
+  role: RoleId;
+}) {
+  const [alias, setAlias] = useState("agent-default");
+  const [scenario, setScenario] = useState("Agent");
+  const [primary, setPrimary] = useState("gpt-4.1-mini");
+  const [fallback, setFallback] = useState("local-fallback");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+
+    try {
+      await onCreate({ alias, scenario, primary, fallback });
+      setAlias(`${alias}-next`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "模型路由创建失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel eyebrow="Model Route" title="模型路由">
+      {modelRoute ? (
+        <>
+          <div className="model-summary">
+            <div>
+              <span>Default Alias</span>
+              <strong>{modelRoute.alias}</strong>
+              <p>{modelRoute.scenario}</p>
+            </div>
+            <StatusBadge tone={toneForStatus(modelRoute.status)}>{modelRoute.status}</StatusBadge>
+          </div>
+
+          <div className="model-checks">
+            <article>
+              <span>Primary</span>
+              <strong>{modelRoute.primary}</strong>
+              <p>默认供应商模型</p>
+              <StatusDot tone="good" />
+            </article>
+            <article>
+              <span>Fallback</span>
+              <strong>{modelRoute.fallback}</strong>
+              <p>失败切换目标</p>
+              <StatusDot tone="watch" />
+            </article>
+          </div>
+        </>
+      ) : (
+        <div className="empty-panel">
+          <strong>暂无模型路由</strong>
+          <p>创建模型别名后，LLM 调用会通过 alias 进入路由策略。</p>
+        </div>
+      )}
+
+      <form className="model-route-form" onSubmit={handleSubmit}>
+        <label>
+          <span>Alias</span>
+          <input onChange={(event) => setAlias(event.target.value)} required value={alias} />
+        </label>
+        <label>
+          <span>Scenario</span>
+          <input onChange={(event) => setScenario(event.target.value)} required value={scenario} />
+        </label>
+        <label>
+          <span>Primary</span>
+          <input onChange={(event) => setPrimary(event.target.value)} required value={primary} />
+        </label>
+        <label>
+          <span>Fallback</span>
+          <input onChange={(event) => setFallback(event.target.value)} required value={fallback} />
+        </label>
+        {error ? <p className="form-error">{error}</p> : null}
+        <button className="button button--primary" disabled={busy || role === "operator"} type="submit">
+          {busy ? "创建中" : "创建模型路由"}
+        </button>
+      </form>
+    </Panel>
+  );
+}
+
 function BillingPlanPanel({
   activating,
   onActivate,
@@ -1271,12 +1399,15 @@ function CredentialRefPanel({
   );
 }
 
-function LLMInvokePanel({ role }: { role: RoleId }) {
+function LLMInvokePanel({ modelRoutes, role }: { modelRoutes?: ModelRoute[]; role: RoleId }) {
   const [modelAlias, setModelAlias] = useState("chat-default");
   const [input, setInput] = useState("帮我生成一段客服欢迎语");
   const [result, setResult] = useState<LLMInvokeResponse>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const aliases = modelRoutes?.length
+    ? modelRoutes.map((route) => route.alias)
+    : ["chat-default", "embedding-default"];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1299,8 +1430,11 @@ function LLMInvokePanel({ role }: { role: RoleId }) {
         <label>
           <span>Model Alias</span>
           <select onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
-            <option value="chat-default">chat-default</option>
-            <option value="embedding-default">embedding-default</option>
+            {aliases.map((alias) => (
+              <option key={alias} value={alias}>
+                {alias}
+              </option>
+            ))}
           </select>
         </label>
         <label>

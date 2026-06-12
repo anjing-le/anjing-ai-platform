@@ -105,6 +105,39 @@ func TestInvokeLLMUsesModelRoute(t *testing.T) {
 	}
 }
 
+func TestCreateModelRouteAddsDraftAlias(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{
+		"alias":"vision-default",
+		"scenario":"AIGC",
+		"primary":"gpt-4.1-mini",
+		"fallback":"local-vision"
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/model-routes", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool             `json:"success"`
+		Data    store.ModelRoute `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Alias != "vision-default" || payload.Data.Status != "Draft" {
+		t.Fatalf("expected draft model route, got %+v", payload)
+	}
+}
+
 func TestInvokeLLMRejectsUnknownModelRoute(t *testing.T) {
 	st := store.NewSeedStore()
 	mux := http.NewServeMux()

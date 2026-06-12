@@ -118,16 +118,56 @@ func publishRouteHandler(routes RouteRepository) http.HandlerFunc {
 }
 
 func modelRoutesHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {
+	type createModelRouteRequest struct {
+		Alias    string `json:"alias"`
+		Scenario string `json:"scenario"`
+		Primary  string `json:"primary"`
+		Fallback string `json:"fallback"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !httpjson.RequireMethod(w, r, http.MethodGet) {
-			return
+		switch r.Method {
+		case http.MethodGet:
+			items, err := modelRoutes.ListModelRoutes(r.Context())
+			if err != nil {
+				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+				return
+			}
+			httpjson.OK(w, items)
+		case http.MethodPost:
+			var req createModelRouteRequest
+			if err := httpjson.Decode(r, &req); err != nil {
+				httpjson.BadRequest(w, err.Error())
+				return
+			}
+			if req.Alias == "" {
+				httpjson.BadRequest(w, "alias is required")
+				return
+			}
+			if req.Primary == "" {
+				httpjson.BadRequest(w, "primary is required")
+				return
+			}
+			if req.Scenario == "" {
+				req.Scenario = "General"
+			}
+			if req.Fallback == "" {
+				req.Fallback = "local-fallback"
+			}
+			route, err := modelRoutes.CreateModelRoute(r.Context(), CreateModelRouteInput{
+				Alias:    req.Alias,
+				Scenario: req.Scenario,
+				Primary:  req.Primary,
+				Fallback: req.Fallback,
+			})
+			if err != nil {
+				httpjson.BadRequest(w, err.Error())
+				return
+			}
+			httpjson.Created(w, route)
+		default:
+			httpjson.MethodNotAllowed(w)
 		}
-		items, err := modelRoutes.ListModelRoutes(r.Context())
-		if err != nil {
-			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
-			return
-		}
-		httpjson.OK(w, items)
 	}
 }
 

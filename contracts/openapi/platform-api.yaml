@@ -480,6 +480,35 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [gateway]
+      operationId: createModelRoute
+      summary: Create a model route alias draft.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateModelRouteRequest"
+      responses:
+        "201":
+          description: Model route created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ModelRoute"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/gateway/skills:
     get:
       tags: [gateway]
@@ -1141,6 +1170,22 @@ components:
           type: string
         updatedAt:
           type: string
+    CreateModelRouteRequest:
+      type: object
+      required: [alias, primary]
+      properties:
+        alias:
+          type: string
+          examples: [chat-default]
+        scenario:
+          type: string
+          default: General
+        primary:
+          type: string
+          examples: [gpt-4.1-mini]
+        fallback:
+          type: string
+          default: local-fallback
     SkillBinding:
       type: object
       required: [id, name, protocol, route, timeout, status, updatedAt]

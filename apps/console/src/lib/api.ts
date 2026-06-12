@@ -230,6 +230,13 @@ export interface CreateRouteInput {
   limit: string;
 }
 
+export interface CreateModelRouteInput {
+  alias: string;
+  scenario: string;
+  primary: string;
+  fallback: string;
+}
+
 export interface CreatePlanInput {
   name: string;
   rps: string;
@@ -339,6 +346,13 @@ export function publishRoute(id: string, role?: RoleId): Promise<GatewayRoute> {
   return requestJson<GatewayRoute>("/api/gateway/routes/publish", {
     method: "POST",
     body: JSON.stringify({ id }),
+  }, role);
+}
+
+export function createModelRoute(input: CreateModelRouteInput, role?: RoleId): Promise<ModelRoute> {
+  return requestJson<ModelRoute>("/api/gateway/model-routes", {
+    method: "POST",
+    body: JSON.stringify(input),
   }, role);
 }
 
