@@ -19,6 +19,7 @@ func main() {
 	cfg := config.Load("platform-all", "18080")
 	st := store.NewSeedStore()
 	controlRegister := control.Register
+	gatewayRegister := gateway.Register
 
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
@@ -30,11 +31,15 @@ func main() {
 		controlRegister = func(mux *http.ServeMux, st *store.Store) {
 			control.RegisterWithUsers(mux, st, users)
 		}
+		routes := gateway.NewPostgresRouteRepository(pool)
+		gatewayRegister = func(mux *http.ServeMux, st *store.Store) {
+			gateway.RegisterWithRoutes(mux, st, routes)
+		}
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st,
 		controlRegister,
-		gateway.Register,
+		gatewayRegister,
 		billing.Register,
 		ops.Register,
 	)
