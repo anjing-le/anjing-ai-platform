@@ -20,6 +20,7 @@ func main() {
 	st := store.NewSeedStore()
 	controlRegister := control.Register
 	gatewayRegister := gateway.Register
+	billingRegister := billing.Register
 
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
@@ -35,12 +36,16 @@ func main() {
 		gatewayRegister = func(mux *http.ServeMux, st *store.Store) {
 			gateway.RegisterWithRoutes(mux, st, routes)
 		}
+		plans := billing.NewPostgresPlanRepository(pool)
+		billingRegister = func(mux *http.ServeMux, st *store.Store) {
+			billing.RegisterWithPlans(mux, st, plans)
+		}
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st,
 		controlRegister,
 		gatewayRegister,
-		billing.Register,
+		billingRegister,
 		ops.Register,
 	)
 	consoleweb.Register(mux, cfg.StaticDir)

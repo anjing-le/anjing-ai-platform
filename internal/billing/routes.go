@@ -8,18 +8,22 @@ import (
 )
 
 func Register(mux *http.ServeMux, st *store.Store) {
+	RegisterWithPlans(mux, st, NewMemoryPlanRepository(st))
+}
+
+func RegisterWithPlans(mux *http.ServeMux, st *store.Store, plans PlanRepository) {
 	mux.HandleFunc("/api/billing/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
 			return
 		}
 		httpjson.OK(w, map[string]string{"service": "billing-service", "status": "ok"})
 	})
-	mux.HandleFunc("/api/billing/plans", plansHandler(st))
+	mux.HandleFunc("/api/billing/plans", plansHandler(plans))
 	mux.HandleFunc("/api/billing/usage", listHandler(st.ListUsage))
 	mux.HandleFunc("/api/billing/budget-alerts", listHandler(st.ListBudgetAlerts))
 }
 
-func plansHandler(st *store.Store) http.HandlerFunc {
+func plansHandler(plans PlanRepository) http.HandlerFunc {
 	type createPlanRequest struct {
 		Name        string `json:"name"`
 		RPS         string `json:"rps"`
@@ -29,7 +33,12 @@ func plansHandler(st *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			httpjson.OK(w, st.ListPlans())
+			items, err := plans.ListPlans(r.Context())
+			if err != nil {
+				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+				return
+			}
+			httpjson.OK(w, items)
 		case http.MethodPost:
 			var req createPlanRequest
 			if err := httpjson.Decode(r, &req); err != nil {
@@ -46,7 +55,16 @@ func plansHandler(st *store.Store) http.HandlerFunc {
 			if req.TokenPerDay == "" {
 				req.TokenPerDay = "1M"
 			}
-			httpjson.Created(w, st.CreatePlan(req.Name, req.RPS, req.TokenPerDay))
+			plan, err := plans.CreatePlan(r.Context(), CreatePlanInput{
+				Name:        req.Name,
+				RPS:         req.RPS,
+				TokenPerDay: req.TokenPerDay,
+			})
+			if err != nil {
+				httpjson.BadRequest(w, err.Error())
+				return
+			}
+			httpjson.Created(w, plan)
 		default:
 			httpjson.MethodNotAllowed(w)
 		}
