@@ -400,6 +400,21 @@ func (s *Store) ListAPIKeys() []APIKey {
 	return append([]APIKey(nil), s.apiKeys...)
 }
 
+func (s *Store) RevokeAPIKey(id string) (APIKey, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.apiKeys {
+		if s.apiKeys[index].ID != id {
+			continue
+		}
+
+		s.apiKeys[index].Status = "Revoked"
+		s.addAuditLocked("用户与权限", "revoke api key", s.apiKeys[index].Name, "Success")
+		return s.apiKeys[index], true
+	}
+	return APIKey{}, false
+}
+
 func (s *Store) ListCredentials() []Credential {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

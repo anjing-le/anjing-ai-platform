@@ -363,6 +363,13 @@ export function rotateCredential(id: string, role?: RoleId): Promise<Credential>
   }, role);
 }
 
+export function revokeAPIKey(id: string, role?: RoleId): Promise<APIKey> {
+  return requestJson<APIKey>("/api/control/api-keys/revoke", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function resolveTodo(id: string, role?: RoleId): Promise<OpsTodo> {
   return requestJson<OpsTodo>("/api/ops/todos/resolve", {
     method: "POST",

@@ -30,6 +30,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/control/applications/rotate-key", rotateApplicationKeyHandler(repos.Applications))
 	mux.HandleFunc("/api/control/roles", rolesHandler(repos.Roles))
 	mux.HandleFunc("/api/control/api-keys", apiKeysHandler(repos.APIKeys))
+	mux.HandleFunc("/api/control/api-keys/revoke", revokeAPIKeyHandler(repos.APIKeys))
 	mux.HandleFunc("/api/control/credentials", credentialsHandler(repos.Credentials))
 	mux.HandleFunc("/api/control/credentials/rotate", rotateCredentialHandler(repos.Credentials))
 }
@@ -222,6 +223,39 @@ func apiKeysHandler(apiKeys APIKeyRepository) http.HandlerFunc {
 			return
 		}
 		httpjson.OK(w, items)
+	}
+}
+
+func revokeAPIKeyHandler(apiKeys APIKeyRepository) http.HandlerFunc {
+	type revokeAPIKeyRequest struct {
+		ID string `json:"id"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req revokeAPIKeyRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+
+		key, ok, err := apiKeys.RevokeAPIKey(r.Context(), req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "api key not found")
+			return
+		}
+		httpjson.OK(w, key)
 	}
 }
 

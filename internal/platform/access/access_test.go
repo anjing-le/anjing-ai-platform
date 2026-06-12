@@ -111,6 +111,14 @@ func TestUserAndDeveloperCanCreateApplications(t *testing.T) {
 	if credentialRotateDeniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected credential rotation to be forbidden for developer, got %d", credentialRotateDeniedRec.Code)
 	}
+
+	keyRevokeDenied := httptest.NewRequest(http.MethodPost, "/api/control/api-keys/revoke", nil)
+	keyRevokeDenied.Header.Set("Authorization", "Bearer developer-test-token")
+	keyRevokeDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(keyRevokeDeniedRec, keyRevokeDenied)
+	if keyRevokeDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected api key revoke to be forbidden for developer, got %d", keyRevokeDeniedRec.Code)
+	}
 }
 
 func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {

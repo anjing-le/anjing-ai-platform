@@ -905,6 +905,7 @@ tbody tr.is-selected td:first-child {
 
 .route-summary,
 .plan-summary,
+.api-key-summary,
 .credential-summary {
   display: flex;
   align-items: flex-start;
@@ -916,6 +917,7 @@ tbody tr.is-selected td:first-child {
 
 .route-summary div,
 .plan-summary div,
+.api-key-summary div,
 .credential-summary div {
   display: grid;
   min-width: 0;
@@ -925,12 +927,14 @@ tbody tr.is-selected td:first-child {
 .application-summary span,
 .route-summary span,
 .plan-summary span,
+.api-key-summary span,
 .credential-summary span,
 .journey-list small,
 .application-usage span,
 .mini-log-list span,
 .route-checks span,
 .plan-checks span,
+.api-key-checks span,
 .credential-checks span {
   color: var(--muted);
   font-size: 0.74rem;
@@ -942,6 +946,7 @@ tbody tr.is-selected td:first-child {
 .application-summary strong,
 .route-summary strong,
 .plan-summary strong,
+.api-key-summary strong,
 .credential-summary strong {
   overflow-wrap: anywhere;
   font-size: 1.28rem;
@@ -950,12 +955,14 @@ tbody tr.is-selected td:first-child {
 .application-summary p,
 .route-summary p,
 .plan-summary p,
+.api-key-summary p,
 .credential-summary p,
 .journey-list p,
 .application-usage p,
 .mini-log-list p,
 .route-checks p,
 .plan-checks p,
+.api-key-checks p,
 .credential-checks p {
   margin: 0;
   color: var(--ink-soft);
@@ -965,12 +972,14 @@ tbody tr.is-selected td:first-child {
 
 .route-checks,
 .plan-checks,
+.api-key-checks,
 .credential-checks {
   display: grid;
 }
 
 .route-checks article,
 .plan-checks article,
+.api-key-checks article,
 .credential-checks article {
   position: relative;
   display: grid;
@@ -982,12 +991,14 @@ tbody tr.is-selected td:first-child {
 
 .route-checks article:last-child,
 .plan-checks article:last-child,
+.api-key-checks article:last-child,
 .credential-checks article:last-child {
   border-bottom: 0;
 }
 
 .route-checks .status-dot,
 .plan-checks .status-dot,
+.api-key-checks .status-dot,
 .credential-checks .status-dot {
   position: absolute;
   top: 16px;

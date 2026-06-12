@@ -139,3 +139,36 @@ func TestCredentialCanBeRotated(t *testing.T) {
 		t.Fatalf("expected rotated credential, got %+v", rotated)
 	}
 }
+
+func TestAPIKeyCanBeRevoked(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	keys := st.ListAPIKeys()
+	if len(keys) == 0 {
+		t.Fatal("seed store should contain api keys")
+	}
+
+	body := bytes.NewBufferString(`{"id":"` + keys[0].ID + `"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/control/api-keys/revoke", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var revoked struct {
+		Success bool         `json:"success"`
+		Data    store.APIKey `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &revoked); err != nil {
+		t.Fatalf("decode revoke response: %v", err)
+	}
+	if !revoked.Success || revoked.Data.Status != "Revoked" {
+		t.Fatalf("expected revoked api key, got %+v", revoked)
+	}
+}

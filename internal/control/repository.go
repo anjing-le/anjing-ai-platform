@@ -42,6 +42,7 @@ type RoleRepository interface {
 
 type APIKeyRepository interface {
 	ListAPIKeys(ctx context.Context) ([]store.APIKey, error)
+	RevokeAPIKey(ctx context.Context, id string) (store.APIKey, bool, error)
 }
 
 type CredentialRepository interface {
@@ -131,6 +132,11 @@ func NewMemoryAPIKeyRepository(st *store.Store) MemoryAPIKeyRepository {
 
 func (repo MemoryAPIKeyRepository) ListAPIKeys(context.Context) ([]store.APIKey, error) {
 	return repo.store.ListAPIKeys(), nil
+}
+
+func (repo MemoryAPIKeyRepository) RevokeAPIKey(_ context.Context, id string) (store.APIKey, bool, error) {
+	key, ok := repo.store.RevokeAPIKey(id)
+	return key, ok, nil
 }
 
 type MemoryCredentialRepository struct {
@@ -482,6 +488,29 @@ func (repo PostgresAPIKeyRepository) ListAPIKeys(ctx context.Context) ([]store.A
 	}
 
 	return items, nil
+}
+
+func (repo PostgresAPIKeyRepository) RevokeAPIKey(ctx context.Context, id string) (store.APIKey, bool, error) {
+	rows, err := repo.pool.Query(ctx, `
+		update api_keys
+		set status = 'Revoked'
+		where id = $1
+		returning id, name, project, scope, coalesce(expires_at::text, ''), status
+	`, id)
+	if err != nil {
+		return store.APIKey{}, false, fmt.Errorf("revoke api key: %w", err)
+	}
+	defer rows.Close()
+
+	key, err := pgx.CollectOneRow(rows, scanAPIKey)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.APIKey{}, false, nil
+		}
+		return store.APIKey{}, false, fmt.Errorf("collect revoked api key: %w", err)
+	}
+
+	return key, true, nil
 }
 
 func scanAPIKey(row pgx.CollectableRow) (store.APIKey, error) {

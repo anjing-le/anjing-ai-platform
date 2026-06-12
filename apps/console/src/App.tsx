@@ -21,7 +21,9 @@ import {
   publishRoute,
   resolveTodo,
   rotateCredential,
+  revokeAPIKey,
   rotateApplicationKey,
+  type APIKey,
   type Application,
   type BillingPlan,
   type Credential,
@@ -80,6 +82,7 @@ function App() {
   const [publishingRouteId, setPublishingRouteId] = useState("");
   const [activatingPlanId, setActivatingPlanId] = useState("");
   const [rotatingCredentialId, setRotatingCredentialId] = useState("");
+  const [revokingAPIKeyId, setRevokingAPIKeyId] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -321,6 +324,21 @@ function App() {
     }
   }
 
+  async function handleAPIKeyRevoke(id: string) {
+    setNotice("");
+    setRevokingAPIKeyId(id);
+
+    try {
+      const key = await revokeAPIKey(id, role);
+      await refreshSnapshot();
+      setNotice(`已撤销 API Key：${key.name}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "API Key 撤销失败");
+    } finally {
+      setRevokingAPIKeyId("");
+    }
+  }
+
   return (
     <>
       <ConsoleShell
@@ -342,6 +360,7 @@ function App() {
         {activePage ? (
           <ModulePage
             notice={notice}
+            onAPIKeyRevoke={handleAPIKeyRevoke}
             onApplicationActivate={handleApplicationActivate}
             onApplicationKeyRotate={handleApplicationKeyRotate}
             onCredentialRotate={handleCredentialRotate}
@@ -353,6 +372,7 @@ function App() {
             page={activePage}
             publishingRouteId={publishingRouteId}
             role={role}
+            revokingAPIKeyId={revokingAPIKeyId}
             rotatingCredentialId={rotatingCredentialId}
             rotatingApplicationId={rotatingApplicationId}
             snapshot={snapshot}
@@ -609,6 +629,7 @@ function ConsoleHome({
 function ModulePage({
   activatingApplicationId,
   notice,
+  onAPIKeyRevoke,
   onApplicationActivate,
   onApplicationKeyRotate,
   onCredentialRotate,
@@ -618,6 +639,7 @@ function ModulePage({
   page,
   activatingPlanId,
   publishingRouteId,
+  revokingAPIKeyId,
   role,
   rotatingCredentialId,
   rotatingApplicationId,
@@ -625,6 +647,7 @@ function ModulePage({
 }: {
   activatingApplicationId: string;
   notice: string;
+  onAPIKeyRevoke: (id: string) => Promise<void>;
   onApplicationActivate: (id: string) => Promise<void>;
   onApplicationKeyRotate: (id: string) => Promise<void>;
   onCredentialRotate: (id: string) => Promise<void>;
@@ -634,6 +657,7 @@ function ModulePage({
   activatingPlanId: string;
   page: ModulePageDefinition;
   publishingRouteId: string;
+  revokingAPIKeyId: string;
   role: RoleId;
   rotatingCredentialId: string;
   rotatingApplicationId: string;
@@ -694,6 +718,14 @@ function ModulePage({
       snapshot.credentials[0]
     );
   }, [page.id, snapshot?.credentials]);
+
+  const selectedAPIKey = useMemo(() => {
+    if (page.id !== "iam" || !snapshot?.apiKeys?.length) {
+      return undefined;
+    }
+
+    return snapshot.apiKeys.find((key) => key.status === "Active") || snapshot.apiKeys[0];
+  }, [page.id, snapshot?.apiKeys]);
 
   const selectableTable = page.id === "docs" || page.id === "gateway" || page.id === "quota";
   let selectedTableRowId: string | undefined;
@@ -771,6 +803,14 @@ function ModulePage({
         </Panel>
 
         <div className="side-panels">
+          {page.id === "iam" ? (
+            <APIKeyPanel
+              apiKey={selectedAPIKey}
+              onRevoke={onAPIKeyRevoke}
+              revoking={revokingAPIKeyId === selectedAPIKey?.id}
+              role={role}
+            />
+          ) : null}
           {page.id === "iam" ? (
             <CredentialRefPanel
               credential={selectedCredential}
@@ -1092,6 +1132,72 @@ function BillingPlanPanel({
           type="button"
         >
           {plan.status === "Active" ? "已启用" : activating ? "启用中" : "启用套餐"}
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    </Panel>
+  );
+}
+
+function APIKeyPanel({
+  apiKey,
+  onRevoke,
+  revoking,
+  role,
+}: {
+  apiKey?: APIKey;
+  onRevoke: (id: string) => Promise<void>;
+  revoking: boolean;
+  role: RoleId;
+}) {
+  if (!apiKey) {
+    return (
+      <Panel eyebrow="API Key" title="密钥详情">
+        <div className="empty-panel">
+          <strong>暂无 API Key</strong>
+          <p>创建接入应用后，这里会展示 API Key、scope、项目归属和撤销动作。</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  const canRevoke = role === "admin";
+  const checks = [
+    { label: "Project", value: apiKey.project, note: "项目归属", tone: "neutral" },
+    { label: "Scope", value: apiKey.scope, note: "授权范围", tone: "neutral" },
+    { label: "Expires", value: apiKey.expiresAt || "No expiry", note: "到期时间", tone: "watch" },
+  ] as const;
+
+  return (
+    <Panel eyebrow="API Key" title="密钥详情">
+      <div className="api-key-summary">
+        <div>
+          <span>Selected Key</span>
+          <strong>{apiKey.name}</strong>
+          <p>{canRevoke ? "管理员可撤销密钥" : "当前角色只读 API Key"}</p>
+        </div>
+        <StatusBadge tone={toneForStatus(apiKey.status)}>{apiKey.status}</StatusBadge>
+      </div>
+
+      <div className="api-key-checks">
+        {checks.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.note}</p>
+            <StatusDot tone={item.tone} />
+          </article>
+        ))}
+      </div>
+
+      <div className="application-actions">
+        <button
+          className="button button--primary"
+          disabled={!canRevoke || revoking || apiKey.status === "Revoked"}
+          onClick={() => void onRevoke(apiKey.id)}
+          type="button"
+        >
+          {apiKey.status === "Revoked" ? "已撤销" : revoking ? "撤销中" : "撤销 API Key"}
           <ChevronRight size={16} />
         </button>
       </div>
