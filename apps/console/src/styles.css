@@ -806,7 +806,8 @@ tbody tr.is-selected td:first-child {
 }
 
 .invoke-form,
-.model-route-form {
+.model-route-form,
+.skill-binding-form {
   display: grid;
   gap: 12px;
   padding: 16px;
@@ -814,13 +815,15 @@ tbody tr.is-selected td:first-child {
 }
 
 .invoke-form label,
-.model-route-form label {
+.model-route-form label,
+.skill-binding-form label {
   display: grid;
   gap: 7px;
 }
 
 .invoke-form label span,
 .model-route-form label span,
+.skill-binding-form label span,
 .invoke-result span,
 .invoke-result small {
   color: var(--muted);
@@ -831,7 +834,9 @@ tbody tr.is-selected td:first-child {
 
 .invoke-form select,
 .invoke-form textarea,
-.model-route-form input {
+.model-route-form input,
+.skill-binding-form input,
+.skill-binding-form select {
   width: 100%;
   padding: 9px 11px;
   border: 1px solid var(--line);
@@ -842,7 +847,9 @@ tbody tr.is-selected td:first-child {
 }
 
 .invoke-form select,
-.model-route-form input {
+.model-route-form input,
+.skill-binding-form input,
+.skill-binding-form select {
   min-height: 40px;
 }
 
@@ -854,13 +861,16 @@ tbody tr.is-selected td:first-child {
 
 .invoke-form select:focus,
 .invoke-form textarea:focus,
-.model-route-form input:focus {
+.model-route-form input:focus,
+.skill-binding-form input:focus,
+.skill-binding-form select:focus {
   border-color: var(--ink);
   outline: none;
 }
 
 .invoke-form .button,
-.model-route-form .button {
+.model-route-form .button,
+.skill-binding-form .button {
   justify-content: center;
 }
 
@@ -912,6 +922,7 @@ tbody tr.is-selected td:first-child {
 
 .route-summary,
 .model-summary,
+.skill-summary,
 .plan-summary,
 .api-key-summary,
 .credential-summary {
@@ -925,6 +936,7 @@ tbody tr.is-selected td:first-child {
 
 .route-summary div,
 .model-summary div,
+.skill-summary div,
 .plan-summary div,
 .api-key-summary div,
 .credential-summary div {
@@ -936,6 +948,7 @@ tbody tr.is-selected td:first-child {
 .application-summary span,
 .route-summary span,
 .model-summary span,
+.skill-summary span,
 .plan-summary span,
 .api-key-summary span,
 .credential-summary span,
@@ -944,6 +957,7 @@ tbody tr.is-selected td:first-child {
 .mini-log-list span,
 .route-checks span,
 .model-checks span,
+.skill-checks span,
 .plan-checks span,
 .api-key-checks span,
 .credential-checks span {
@@ -957,6 +971,7 @@ tbody tr.is-selected td:first-child {
 .application-summary strong,
 .route-summary strong,
 .model-summary strong,
+.skill-summary strong,
 .plan-summary strong,
 .api-key-summary strong,
 .credential-summary strong {
@@ -967,6 +982,7 @@ tbody tr.is-selected td:first-child {
 .application-summary p,
 .route-summary p,
 .model-summary p,
+.skill-summary p,
 .plan-summary p,
 .api-key-summary p,
 .credential-summary p,
@@ -975,6 +991,7 @@ tbody tr.is-selected td:first-child {
 .mini-log-list p,
 .route-checks p,
 .model-checks p,
+.skill-checks p,
 .plan-checks p,
 .api-key-checks p,
 .credential-checks p {
@@ -986,6 +1003,7 @@ tbody tr.is-selected td:first-child {
 
 .route-checks,
 .model-checks,
+.skill-checks,
 .plan-checks,
 .api-key-checks,
 .credential-checks {
@@ -994,6 +1012,7 @@ tbody tr.is-selected td:first-child {
 
 .route-checks article,
 .model-checks article,
+.skill-checks article,
 .plan-checks article,
 .api-key-checks article,
 .credential-checks article {
@@ -1007,6 +1026,7 @@ tbody tr.is-selected td:first-child {
 
 .route-checks article:last-child,
 .model-checks article:last-child,
+.skill-checks article:last-child,
 .plan-checks article:last-child,
 .api-key-checks article:last-child,
 .credential-checks article:last-child {
@@ -1015,6 +1035,7 @@ tbody tr.is-selected td:first-child {
 
 .route-checks .status-dot,
 .model-checks .status-dot,
+.skill-checks .status-dot,
 .plan-checks .status-dot,
 .api-key-checks .status-dot,
 .credential-checks .status-dot {

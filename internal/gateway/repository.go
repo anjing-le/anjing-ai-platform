@@ -23,6 +23,13 @@ type CreateModelRouteInput struct {
 	Fallback string
 }
 
+type CreateSkillBindingInput struct {
+	Name     string
+	Protocol string
+	Route    string
+	Timeout  string
+}
+
 type RouteRepository interface {
 	ListRoutes(ctx context.Context) ([]store.GatewayRoute, error)
 	CreateRoute(ctx context.Context, input CreateRouteInput) (store.GatewayRoute, error)
@@ -36,6 +43,7 @@ type ModelRouteRepository interface {
 
 type SkillRepository interface {
 	ListSkills(ctx context.Context) ([]store.SkillBinding, error)
+	CreateSkillBinding(ctx context.Context, input CreateSkillBindingInput) (store.SkillBinding, error)
 }
 
 type RequestLogRepository interface {
@@ -105,6 +113,10 @@ func NewMemorySkillRepository(st *store.Store) MemorySkillRepository {
 
 func (repo MemorySkillRepository) ListSkills(context.Context) ([]store.SkillBinding, error) {
 	return repo.store.ListSkills(), nil
+}
+
+func (repo MemorySkillRepository) CreateSkillBinding(_ context.Context, input CreateSkillBindingInput) (store.SkillBinding, error) {
+	return repo.store.CreateSkillBinding(input.Name, input.Protocol, input.Route, input.Timeout), nil
 }
 
 type MemoryRequestLogRepository struct {
@@ -277,6 +289,29 @@ func (repo PostgresSkillRepository) ListSkills(ctx context.Context) ([]store.Ski
 	}
 
 	return items, nil
+}
+
+func (repo PostgresSkillRepository) CreateSkillBinding(ctx context.Context, input CreateSkillBindingInput) (store.SkillBinding, error) {
+	item := store.SkillBinding{
+		ID:       fmt.Sprintf("skill_%d", time.Now().UnixNano()),
+		Name:     input.Name,
+		Protocol: input.Protocol,
+		Route:    input.Route,
+		Timeout:  input.Timeout,
+		Status:   "Draft",
+	}
+
+	var updatedAt time.Time
+	if err := repo.pool.QueryRow(ctx, `
+		insert into skill_bindings(id, name, protocol, route, timeout, status)
+		values($1, $2, $3, $4, $5, $6)
+		returning updated_at
+	`, item.ID, item.Name, item.Protocol, item.Route, item.Timeout, item.Status).Scan(&updatedAt); err != nil {
+		return store.SkillBinding{}, fmt.Errorf("insert skill binding: %w", err)
+	}
+
+	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
+	return item, nil
 }
 
 func scanSkillBinding(row pgx.CollectableRow) (store.SkillBinding, error) {

@@ -138,6 +138,39 @@ func TestCreateModelRouteAddsDraftAlias(t *testing.T) {
 	}
 }
 
+func TestCreateSkillBindingAddsDraftSkill(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{
+		"name":"summarize-ticket",
+		"protocol":"HTTP",
+		"route":"/api/v1/skills/summarize",
+		"timeout":"6s"
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/skills", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool               `json:"success"`
+		Data    store.SkillBinding `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Name != "summarize-ticket" || payload.Data.Status != "Draft" {
+		t.Fatalf("expected draft skill binding, got %+v", payload)
+	}
+}
+
 func TestInvokeLLMRejectsUnknownModelRoute(t *testing.T) {
 	st := store.NewSeedStore()
 	mux := http.NewServeMux()

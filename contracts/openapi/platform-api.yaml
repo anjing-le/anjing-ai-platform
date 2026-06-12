@@ -533,6 +533,35 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [gateway]
+      operationId: createSkillBinding
+      summary: Create a skill binding draft.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSkillBindingRequest"
+      responses:
+        "201":
+          description: Skill binding created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SkillBinding"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/gateway/request-logs:
     get:
       tags: [gateway]
@@ -1204,6 +1233,23 @@ components:
           type: string
         updatedAt:
           type: string
+    CreateSkillBindingRequest:
+      type: object
+      required: [name, route]
+      properties:
+        name:
+          type: string
+          examples: [search-knowledge]
+        protocol:
+          type: string
+          enum: [HTTP, MCP]
+          default: HTTP
+        route:
+          type: string
+          examples: [/api/v1/skills/search]
+        timeout:
+          type: string
+          default: 8s
     RequestLog:
       type: object
       required: [id, request, consumer, latency, result, status, createdAt]

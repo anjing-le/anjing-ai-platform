@@ -520,6 +520,23 @@ func (s *Store) ListSkills() []SkillBinding {
 	return append([]SkillBinding(nil), s.skills...)
 }
 
+func (s *Store) CreateSkillBinding(name, protocol, route, timeout string) SkillBinding {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	skill := SkillBinding{
+		ID:        nextID("skill"),
+		Name:      name,
+		Protocol:  protocol,
+		Route:     route,
+		Timeout:   timeout,
+		Status:    "Draft",
+		UpdatedAt: nowLabel(),
+	}
+	s.skills = append([]SkillBinding{skill}, s.skills...)
+	s.addAuditLocked("网关与模型", "create skill binding", name, "Success")
+	return skill
+}
+
 func (s *Store) ListRequestLogs() []RequestLog {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

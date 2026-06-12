@@ -60,6 +60,14 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 		t.Fatalf("expected model route write to be allowed, got %d", modelRouteAllowedRec.Code)
 	}
 
+	skillAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/skills", nil)
+	skillAllowed.Header.Set("Authorization", "Bearer developer-test-token")
+	skillAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(skillAllowedRec, skillAllowed)
+	if skillAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected skill binding write to be allowed, got %d", skillAllowedRec.Code)
+	}
+
 	denied := httptest.NewRequest(http.MethodPost, "/api/billing/plans", nil)
 	denied.Header.Set("Authorization", "Bearer developer-test-token")
 	deniedRec := httptest.NewRecorder()
@@ -162,6 +170,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler.ServeHTTP(modelRouteDeniedRec, modelRouteDenied)
 	if modelRouteDeniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected model route write to be forbidden for operator, got %d", modelRouteDeniedRec.Code)
+	}
+
+	skillDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/skills", nil)
+	skillDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	skillDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(skillDeniedRec, skillDenied)
+	if skillDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected skill binding write to be forbidden for operator, got %d", skillDeniedRec.Code)
 	}
 
 	appDenied := httptest.NewRequest(http.MethodGet, "/api/control/applications", nil)

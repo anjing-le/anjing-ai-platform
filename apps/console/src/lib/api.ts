@@ -237,6 +237,13 @@ export interface CreateModelRouteInput {
   fallback: string;
 }
 
+export interface CreateSkillBindingInput {
+  name: string;
+  protocol: string;
+  route: string;
+  timeout: string;
+}
+
 export interface CreatePlanInput {
   name: string;
   rps: string;
@@ -351,6 +358,13 @@ export function publishRoute(id: string, role?: RoleId): Promise<GatewayRoute> {
 
 export function createModelRoute(input: CreateModelRouteInput, role?: RoleId): Promise<ModelRoute> {
   return requestJson<ModelRoute>("/api/gateway/model-routes", {
+    method: "POST",
+    body: JSON.stringify(input),
+  }, role);
+}
+
+export function createSkillBinding(input: CreateSkillBindingInput, role?: RoleId): Promise<SkillBinding> {
+  return requestJson<SkillBinding>("/api/gateway/skills", {
     method: "POST",
     body: JSON.stringify(input),
   }, role);

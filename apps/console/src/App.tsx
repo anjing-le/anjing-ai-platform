@@ -16,6 +16,7 @@ import {
   createModelRoute,
   createPlan,
   createRoute,
+  createSkillBinding,
   createUser,
   invokeLLM,
   loadPlatformSnapshot,
@@ -28,11 +29,13 @@ import {
   type Application,
   type BillingPlan,
   type CreateModelRouteInput,
+  type CreateSkillBindingInput,
   type Credential,
   type GatewayRoute,
   type LLMInvokeResponse,
   type ModelRoute,
   type PlatformSnapshot,
+  type SkillBinding,
 } from "./lib/api";
 import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
 import type {
@@ -309,6 +312,18 @@ function App() {
     }
   }
 
+  async function handleSkillBindingCreate(input: CreateSkillBindingInput) {
+    setNotice("");
+
+    try {
+      const skill = await createSkillBinding(input, role);
+      await refreshSnapshot();
+      setNotice(`已创建 Skill 绑定：${skill.name}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Skill 绑定创建失败");
+    }
+  }
+
   async function handlePlanActivate(id: string) {
     setNotice("");
     setActivatingPlanId(id);
@@ -382,6 +397,7 @@ function App() {
             onModelRouteCreate={handleModelRouteCreate}
             onPlanActivate={handlePlanActivate}
             onRoutePublish={handleRoutePublish}
+            onSkillBindingCreate={handleSkillBindingCreate}
             activatingApplicationId={activatingApplicationId}
             activatingPlanId={activatingPlanId}
             onPrimaryAction={handleModuleAction}
@@ -653,6 +669,7 @@ function ModulePage({
   onPlanActivate,
   onPrimaryAction,
   onRoutePublish,
+  onSkillBindingCreate,
   page,
   activatingPlanId,
   publishingRouteId,
@@ -672,6 +689,7 @@ function ModulePage({
   onPlanActivate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   onRoutePublish: (id: string) => Promise<void>;
+  onSkillBindingCreate: (input: CreateSkillBindingInput) => Promise<void>;
   activatingPlanId: string;
   page: ModulePageDefinition;
   publishingRouteId: string;
@@ -727,6 +745,17 @@ function ModulePage({
       snapshot.modelRoutes[0]
     );
   }, [page.id, snapshot?.modelRoutes]);
+
+  const selectedSkill = useMemo(() => {
+    if (page.id !== "gateway" || !snapshot?.skills?.length) {
+      return undefined;
+    }
+
+    return (
+      snapshot.skills.find((skill) => skill.status === "Published") ||
+      snapshot.skills[0]
+    );
+  }, [page.id, snapshot?.skills]);
 
   const selectedPlan = useMemo(() => {
     if (page.id !== "quota" || !snapshot?.plans?.length) {
@@ -860,6 +889,13 @@ function ModulePage({
               modelRoute={selectedModelRoute}
               onCreate={onModelRouteCreate}
               role={role}
+            />
+          ) : null}
+          {page.id === "gateway" ? (
+            <SkillBindingPanel
+              onCreate={onSkillBindingCreate}
+              role={role}
+              skill={selectedSkill}
             />
           ) : null}
           {page.id === "gateway" ? <LLMInvokePanel modelRoutes={snapshot?.modelRoutes} role={role} /> : null}
@@ -1195,6 +1231,101 @@ function ModelRoutePanel({
         {error ? <p className="form-error">{error}</p> : null}
         <button className="button button--primary" disabled={busy || role === "operator"} type="submit">
           {busy ? "创建中" : "创建模型路由"}
+        </button>
+      </form>
+    </Panel>
+  );
+}
+
+function SkillBindingPanel({
+  onCreate,
+  role,
+  skill,
+}: {
+  onCreate: (input: CreateSkillBindingInput) => Promise<void>;
+  role: RoleId;
+  skill?: SkillBinding;
+}) {
+  const [name, setName] = useState("summarize-ticket");
+  const [protocol, setProtocol] = useState("HTTP");
+  const [route, setRoute] = useState("/api/v1/skills/summarize");
+  const [timeout, setTimeoutValue] = useState("8s");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+
+    try {
+      await onCreate({ name, protocol, route, timeout });
+      setName(`${name}-next`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Skill 绑定创建失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel eyebrow="Skill" title="Skill 绑定">
+      {skill ? (
+        <>
+          <div className="skill-summary">
+            <div>
+              <span>Selected Skill</span>
+              <strong>{skill.name}</strong>
+              <p>{skill.route}</p>
+            </div>
+            <StatusBadge tone={toneForStatus(skill.status)}>{skill.status}</StatusBadge>
+          </div>
+
+          <div className="skill-checks">
+            <article>
+              <span>Protocol</span>
+              <strong>{skill.protocol}</strong>
+              <p>调用协议</p>
+              <StatusDot tone="neutral" />
+            </article>
+            <article>
+              <span>Timeout</span>
+              <strong>{skill.timeout}</strong>
+              <p>治理超时</p>
+              <StatusDot tone="watch" />
+            </article>
+          </div>
+        </>
+      ) : (
+        <div className="empty-panel">
+          <strong>暂无 Skill</strong>
+          <p>创建 Skill 绑定后，网关会把它纳入统一调用和治理入口。</p>
+        </div>
+      )}
+
+      <form className="skill-binding-form" onSubmit={handleSubmit}>
+        <label>
+          <span>Name</span>
+          <input onChange={(event) => setName(event.target.value)} required value={name} />
+        </label>
+        <label>
+          <span>Protocol</span>
+          <select onChange={(event) => setProtocol(event.target.value)} value={protocol}>
+            <option value="HTTP">HTTP</option>
+            <option value="MCP">MCP</option>
+          </select>
+        </label>
+        <label>
+          <span>Route</span>
+          <input onChange={(event) => setRoute(event.target.value)} required value={route} />
+        </label>
+        <label>
+          <span>Timeout</span>
+          <input onChange={(event) => setTimeoutValue(event.target.value)} required value={timeout} />
+        </label>
+        {error ? <p className="form-error">{error}</p> : null}
+        <button className="button button--primary" disabled={busy || role === "operator"} type="submit">
+          {busy ? "创建中" : "创建 Skill 绑定"}
         </button>
       </form>
     </Panel>

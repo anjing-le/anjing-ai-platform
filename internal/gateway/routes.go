@@ -172,16 +172,56 @@ func modelRoutesHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {
 }
 
 func skillsHandler(skills SkillRepository) http.HandlerFunc {
+	type createSkillBindingRequest struct {
+		Name     string `json:"name"`
+		Protocol string `json:"protocol"`
+		Route    string `json:"route"`
+		Timeout  string `json:"timeout"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !httpjson.RequireMethod(w, r, http.MethodGet) {
-			return
+		switch r.Method {
+		case http.MethodGet:
+			items, err := skills.ListSkills(r.Context())
+			if err != nil {
+				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+				return
+			}
+			httpjson.OK(w, items)
+		case http.MethodPost:
+			var req createSkillBindingRequest
+			if err := httpjson.Decode(r, &req); err != nil {
+				httpjson.BadRequest(w, err.Error())
+				return
+			}
+			if req.Name == "" {
+				httpjson.BadRequest(w, "name is required")
+				return
+			}
+			if req.Route == "" {
+				httpjson.BadRequest(w, "route is required")
+				return
+			}
+			if req.Protocol == "" {
+				req.Protocol = "HTTP"
+			}
+			if req.Timeout == "" {
+				req.Timeout = "8s"
+			}
+			skill, err := skills.CreateSkillBinding(r.Context(), CreateSkillBindingInput{
+				Name:     req.Name,
+				Protocol: req.Protocol,
+				Route:    req.Route,
+				Timeout:  req.Timeout,
+			})
+			if err != nil {
+				httpjson.BadRequest(w, err.Error())
+				return
+			}
+			httpjson.Created(w, skill)
+		default:
+			httpjson.MethodNotAllowed(w)
 		}
-		items, err := skills.ListSkills(r.Context())
-		if err != nil {
-			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
-			return
-		}
-		httpjson.OK(w, items)
 	}
 }
 
