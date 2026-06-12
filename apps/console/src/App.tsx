@@ -967,6 +967,7 @@ function ModulePage({
               snapshot={snapshot}
             />
           ) : null}
+          {page.id === "overview" ? <OperationsSignalPanel snapshot={snapshot} /> : null}
           {page.panels.map((panel) => (
             <Panel eyebrow={panel.eyebrow} key={panel.title} title={panel.title}>
               <div className="key-list">
@@ -983,6 +984,57 @@ function ModulePage({
         </div>
       </section>
     </main>
+  );
+}
+
+function OperationsSignalPanel({ snapshot }: { snapshot?: PlatformSnapshot }) {
+  const health = snapshot?.dashboard?.health?.slice(0, 3) || [];
+  const audit = snapshot?.dashboard?.audit?.slice(0, 4) || [];
+
+  return (
+    <>
+      <Panel eyebrow="Health" title="服务健康">
+        {health.length ? (
+          <div className="operations-signal-list">
+            {health.map((item) => (
+              <article key={item.id}>
+                <div>
+                  <span>{item.name}</span>
+                  <strong>{item.p95}</strong>
+                  <p>SLO {item.slo}</p>
+                </div>
+                <StatusBadge tone={toneForStatus(item.status)}>{item.status}</StatusBadge>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-panel">
+            <strong>暂无健康数据</strong>
+            <p>连接 ops-api 后，这里会展示核心服务的 SLO、P95 和状态。</p>
+          </div>
+        )}
+      </Panel>
+
+      <Panel eyebrow="Audit" title="最近审计">
+        {audit.length ? (
+          <div className="audit-event-list">
+            {audit.map((item) => (
+              <article key={item.id}>
+                <span>{item.module}</span>
+                <strong>{item.action}</strong>
+                <p>{item.object}</p>
+                <small>{item.requestId}</small>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-panel">
+            <strong>暂无审计事件</strong>
+            <p>配置变更、权限操作和运行期动作会写入这里。</p>
+          </div>
+        )}
+      </Panel>
+    </>
   );
 }
 
