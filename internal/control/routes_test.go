@@ -63,6 +63,27 @@ func TestApplicationsCanBeCreatedAndListed(t *testing.T) {
 		t.Fatalf("expected activated application, got %+v", activated)
 	}
 
+	rotateBody := bytes.NewBufferString(`{"id":"` + created.Data.ID + `"}`)
+	rotateReq := httptest.NewRequest(http.MethodPost, "/api/control/applications/rotate-key", rotateBody)
+	rotateReq.Header.Set("Content-Type", "application/json")
+	rotateRec := httptest.NewRecorder()
+	mux.ServeHTTP(rotateRec, rotateReq)
+
+	if rotateRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rotateRec.Code, rotateRec.Body.String())
+	}
+
+	var rotated struct {
+		Success bool              `json:"success"`
+		Data    store.Application `json:"data"`
+	}
+	if err := json.Unmarshal(rotateRec.Body.Bytes(), &rotated); err != nil {
+		t.Fatalf("decode rotate response: %v", err)
+	}
+	if !rotated.Success || rotated.Data.APIKey == created.Data.APIKey {
+		t.Fatalf("expected rotated api key, got %+v", rotated)
+	}
+
 	listReq := httptest.NewRequest(http.MethodGet, "/api/control/applications", nil)
 	listRec := httptest.NewRecorder()
 	mux.ServeHTTP(listRec, listReq)
@@ -81,7 +102,7 @@ func TestApplicationsCanBeCreatedAndListed(t *testing.T) {
 	if !listed.Success || len(listed.Data) == 0 || listed.Data[0].Name != "agent-workbench" {
 		t.Fatalf("expected newly created application first, got %+v", listed.Data)
 	}
-	if listed.Data[0].Status != "Active" {
-		t.Fatalf("expected listed application to be active, got %s", listed.Data[0].Status)
+	if listed.Data[0].Status != "Active" || listed.Data[0].APIKey != rotated.Data.APIKey {
+		t.Fatalf("expected listed application to be active with rotated key, got %+v", listed.Data[0])
 	}
 }

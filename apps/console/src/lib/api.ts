@@ -321,6 +321,13 @@ export function activateApplication(id: string, role?: RoleId): Promise<Applicat
   }, role);
 }
 
+export function rotateApplicationKey(id: string, role?: RoleId): Promise<Application> {
+  return requestJson<Application>("/api/control/applications/rotate-key", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function createRoute(input: CreateRouteInput, role?: RoleId): Promise<GatewayRoute> {
   return requestJson<GatewayRoute>("/api/gateway/routes", {
     method: "POST",

@@ -357,6 +357,37 @@ func (s *Store) ActivateApplication(id string) (Application, bool) {
 	return Application{}, false
 }
 
+func (s *Store) RotateApplicationKey(id string) (Application, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.applications {
+		if s.applications[index].ID != id {
+			continue
+		}
+
+		oldKey := s.applications[index].APIKey
+		newKey := oldKey + "_rot_" + time.Now().UTC().Format("20060102150405")
+		s.applications[index].APIKey = newKey
+		for keyIndex := range s.apiKeys {
+			if s.apiKeys[keyIndex].Project == s.applications[index].Name ||
+				s.apiKeys[keyIndex].Name == oldKey {
+				s.apiKeys[keyIndex].Status = "Rotated"
+			}
+		}
+		s.apiKeys = append([]APIKey{{
+			ID:        nextID("key"),
+			Name:      newKey,
+			Project:   s.applications[index].Name,
+			Scope:     "llm:chat skill:invoke",
+			ExpiresAt: "",
+			Status:    "Active",
+		}}, s.apiKeys...)
+		s.addAuditLocked("用户与权限", "rotate api key", s.applications[index].Name, "Success")
+		return s.applications[index], true
+	}
+	return Application{}, false
+}
+
 func (s *Store) ListRoles() []RolePolicy {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

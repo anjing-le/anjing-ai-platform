@@ -194,6 +194,38 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/control/applications/rotate-key:
+    post:
+      tags: [control]
+      operationId: rotateApplicationKey
+      summary: Rotate the default API key for an onboarding application.
+      x-anjing-roles: [Administrator, User, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RotateApplicationKeyRequest"
+      responses:
+        "200":
+          description: Application API key rotated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Application"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/control/roles:
     get:
       tags: [control]
@@ -853,6 +885,12 @@ components:
           type: string
           default: Free
     ActivateApplicationRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+    RotateApplicationKeyRequest:
       type: object
       required: [id]
       properties:

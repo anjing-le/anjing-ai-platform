@@ -79,6 +79,14 @@ func TestUserAndDeveloperCanCreateApplications(t *testing.T) {
 	if activateRec.Code != http.StatusOK {
 		t.Fatalf("expected developer application activation to be allowed, got %d", activateRec.Code)
 	}
+
+	rotateReq := httptest.NewRequest(http.MethodPost, "/api/control/applications/rotate-key", nil)
+	rotateReq.Header.Set("Authorization", "Bearer developer-test-token")
+	rotateRec := httptest.NewRecorder()
+	handler.ServeHTTP(rotateRec, rotateReq)
+	if rotateRec.Code != http.StatusOK {
+		t.Fatalf("expected developer application key rotation to be allowed, got %d", rotateRec.Code)
+	}
 }
 
 func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
@@ -114,6 +122,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler.ServeHTTP(appActivateDeniedRec, appActivateDenied)
 	if appActivateDeniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected application activation to be forbidden for operator, got %d", appActivateDeniedRec.Code)
+	}
+
+	appRotateDenied := httptest.NewRequest(http.MethodPost, "/api/control/applications/rotate-key", nil)
+	appRotateDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	appRotateDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(appRotateDeniedRec, appRotateDenied)
+	if appRotateDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected application key rotation to be forbidden for operator, got %d", appRotateDeniedRec.Code)
 	}
 }
 

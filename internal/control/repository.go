@@ -33,6 +33,7 @@ type ApplicationRepository interface {
 	ListApplications(ctx context.Context) ([]store.Application, error)
 	CreateApplication(ctx context.Context, input CreateApplicationInput) (store.Application, error)
 	ActivateApplication(ctx context.Context, id string) (store.Application, bool, error)
+	RotateApplicationKey(ctx context.Context, id string) (store.Application, bool, error)
 }
 
 type RoleRepository interface {
@@ -99,6 +100,11 @@ func (repo MemoryApplicationRepository) CreateApplication(_ context.Context, inp
 
 func (repo MemoryApplicationRepository) ActivateApplication(_ context.Context, id string) (store.Application, bool, error) {
 	item, ok := repo.store.ActivateApplication(id)
+	return item, ok, nil
+}
+
+func (repo MemoryApplicationRepository) RotateApplicationKey(_ context.Context, id string) (store.Application, bool, error) {
+	item, ok := repo.store.RotateApplicationKey(id)
 	return item, ok, nil
 }
 
@@ -316,6 +322,75 @@ func (repo PostgresApplicationRepository) ActivateApplication(ctx context.Contex
 
 	if err := tx.Commit(ctx); err != nil {
 		return store.Application{}, false, fmt.Errorf("commit activate application: %w", err)
+	}
+
+	return app, true, nil
+}
+
+func (repo PostgresApplicationRepository) RotateApplicationKey(ctx context.Context, id string) (store.Application, bool, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.Application{}, false, fmt.Errorf("begin rotate application key: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
+		select id, name, owner, environment, api_key, default_route, plan, status, created_at
+		from applications
+		where id = $1
+	`, id)
+	if err != nil {
+		return store.Application{}, false, fmt.Errorf("query application for key rotation: %w", err)
+	}
+	defer rows.Close()
+
+	app, err := pgx.CollectOneRow(rows, scanApplication)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.Application{}, false, nil
+		}
+		return store.Application{}, false, fmt.Errorf("collect application for key rotation: %w", err)
+	}
+	rows.Close()
+
+	oldKey := app.APIKey
+	app.APIKey = fmt.Sprintf("%s_rot_%d", oldKey, time.Now().Unix())
+
+	rows, err = tx.Query(ctx, `
+		update applications
+		set api_key = $2
+		where id = $1
+		returning id, name, owner, environment, api_key, default_route, plan, status, created_at
+	`, id, app.APIKey)
+	if err != nil {
+		return store.Application{}, false, fmt.Errorf("update application api key: %w", err)
+	}
+	defer rows.Close()
+
+	app, err = pgx.CollectOneRow(rows, scanApplication)
+	if err != nil {
+		return store.Application{}, false, fmt.Errorf("collect rotated application: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, `
+		update api_keys
+		set status = 'Rotated'
+		where project = $1 or name = $2
+	`, app.Name, oldKey)
+	if err != nil {
+		return store.Application{}, false, fmt.Errorf("mark old application api keys rotated: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, `
+		insert into api_keys(id, name, project, scope, status)
+		values($1, $2, $3, $4, $5)
+	`, fmt.Sprintf("key_%d", time.Now().UnixNano()), app.APIKey, app.Name, "llm:chat skill:invoke", "Active")
+	if err != nil {
+		return store.Application{}, false, fmt.Errorf("insert rotated application api key: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.Application{}, false, fmt.Errorf("commit rotate application key: %w", err)
 	}
 
 	return app, true, nil

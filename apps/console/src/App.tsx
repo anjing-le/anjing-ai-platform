@@ -18,6 +18,7 @@ import {
   invokeLLM,
   loadPlatformSnapshot,
   resolveTodo,
+  rotateApplicationKey,
   type Application,
   type LLMInvokeResponse,
   type PlatformSnapshot,
@@ -69,6 +70,7 @@ function App() {
   const [actionError, setActionError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
   const [activatingApplicationId, setActivatingApplicationId] = useState("");
+  const [rotatingApplicationId, setRotatingApplicationId] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -250,6 +252,21 @@ function App() {
     }
   }
 
+  async function handleApplicationKeyRotate(id: string) {
+    setNotice("");
+    setRotatingApplicationId(id);
+
+    try {
+      const application = await rotateApplicationKey(id, role);
+      await refreshSnapshot();
+      setNotice(`已轮换 API Key：${application.name}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "API Key 轮换失败");
+    } finally {
+      setRotatingApplicationId("");
+    }
+  }
+
   return (
     <>
       <ConsoleShell
@@ -272,10 +289,12 @@ function App() {
           <ModulePage
             notice={notice}
             onApplicationActivate={handleApplicationActivate}
+            onApplicationKeyRotate={handleApplicationKeyRotate}
             activatingApplicationId={activatingApplicationId}
             onPrimaryAction={handleModuleAction}
             page={activePage}
             role={role}
+            rotatingApplicationId={rotatingApplicationId}
             snapshot={snapshot}
           />
         ) : null}
@@ -531,17 +550,21 @@ function ModulePage({
   activatingApplicationId,
   notice,
   onApplicationActivate,
+  onApplicationKeyRotate,
   onPrimaryAction,
   page,
   role,
+  rotatingApplicationId,
   snapshot,
 }: {
   activatingApplicationId: string;
   notice: string;
   onApplicationActivate: (id: string) => Promise<void>;
+  onApplicationKeyRotate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   page: ModulePageDefinition;
   role: RoleId;
+  rotatingApplicationId: string;
   snapshot?: PlatformSnapshot;
 }) {
   const [query, setQuery] = useState("");
@@ -640,6 +663,8 @@ function ModulePage({
               activating={activatingApplicationId === selectedApplication?.id}
               application={selectedApplication}
               onActivate={onApplicationActivate}
+              onRotateKey={onApplicationKeyRotate}
+              rotating={rotatingApplicationId === selectedApplication?.id}
               snapshot={snapshot}
             />
           ) : null}
@@ -666,11 +691,15 @@ function ApplicationJourneyPanel({
   activating,
   application,
   onActivate,
+  onRotateKey,
+  rotating,
   snapshot,
 }: {
   activating: boolean;
   application?: Application;
   onActivate: (id: string) => Promise<void>;
+  onRotateKey: (id: string) => Promise<void>;
+  rotating: boolean;
   snapshot?: PlatformSnapshot;
 }) {
   if (!application) {
@@ -777,6 +806,14 @@ function ApplicationJourneyPanel({
       </div>
 
       <div className="application-actions">
+        <button
+          className="button"
+          disabled={rotating}
+          onClick={() => void onRotateKey(application.id)}
+          type="button"
+        >
+          {rotating ? "轮换中" : "轮换 API Key"}
+        </button>
         <button
           className="button button--primary"
           disabled={activating || application.status === "Active"}
