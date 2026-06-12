@@ -24,7 +24,7 @@
 
 ## 对当前仓库的影响
 
-当前 `frontend/admin-console` 仍是 Vue 原型，用来快速验证后台信息架构。后续真正按 DVSkyFolding 落地时，建议迁移为：
+当前 `frontend/admin-console` 作为 Vue 原型保留，用来追溯早期信息架构。正式工程已开始按 DVSkyFolding 落在：
 
 ```text
 apps/console        React + TypeScript + Vite

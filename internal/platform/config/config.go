@@ -15,7 +15,7 @@ func Load(serviceName, defaultPort string) Config {
 	return Config{
 		ServiceName: serviceName,
 		Addr:        env("ANJING_ADDR", fmt.Sprintf(":%s", defaultPort)),
-		StaticDir:   env("ANJING_CONSOLE_DIST", "frontend/admin-console/dist"),
+		StaticDir:   env("ANJING_CONSOLE_DIST", "apps/console/dist"),
 	}
 }
 

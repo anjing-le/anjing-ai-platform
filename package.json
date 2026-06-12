@@ -1,0 +1,14 @@
+{
+  "name": "anjing-ai-platform",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.10.0",
+  "scripts": {
+    "dev:console": "pnpm --filter @anjing-ai-platform/console dev",
+    "build:console": "pnpm --filter @anjing-ai-platform/console build",
+    "preview:console": "pnpm --filter @anjing-ai-platform/console preview",
+    "build:go": "go build ./cmd/...",
+    "test:go": "go test ./...",
+    "verify": "pnpm build:console && go test ./..."
+  }
+}
