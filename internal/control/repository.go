@@ -21,6 +21,28 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, input CreateUserInput) (store.User, error)
 }
 
+type APIKeyRepository interface {
+	ListAPIKeys(ctx context.Context) ([]store.APIKey, error)
+}
+
+type CredentialRepository interface {
+	ListCredentials(ctx context.Context) ([]store.Credential, error)
+}
+
+type Repositories struct {
+	Users       UserRepository
+	APIKeys     APIKeyRepository
+	Credentials CredentialRepository
+}
+
+func NewMemoryRepositories(st *store.Store) Repositories {
+	return Repositories{
+		Users:       NewMemoryUserRepository(st),
+		APIKeys:     NewMemoryAPIKeyRepository(st),
+		Credentials: NewMemoryCredentialRepository(st),
+	}
+}
+
 type MemoryUserRepository struct {
 	store *store.Store
 }
@@ -35,6 +57,30 @@ func (repo MemoryUserRepository) ListUsers(context.Context) ([]store.User, error
 
 func (repo MemoryUserRepository) CreateUser(_ context.Context, input CreateUserInput) (store.User, error) {
 	return repo.store.CreateUser(input.Email, input.Org, input.Role), nil
+}
+
+type MemoryAPIKeyRepository struct {
+	store *store.Store
+}
+
+func NewMemoryAPIKeyRepository(st *store.Store) MemoryAPIKeyRepository {
+	return MemoryAPIKeyRepository{store: st}
+}
+
+func (repo MemoryAPIKeyRepository) ListAPIKeys(context.Context) ([]store.APIKey, error) {
+	return repo.store.ListAPIKeys(), nil
+}
+
+type MemoryCredentialRepository struct {
+	store *store.Store
+}
+
+func NewMemoryCredentialRepository(st *store.Store) MemoryCredentialRepository {
+	return MemoryCredentialRepository{store: st}
+}
+
+func (repo MemoryCredentialRepository) ListCredentials(context.Context) ([]store.Credential, error) {
+	return repo.store.ListCredentials(), nil
 }
 
 type PostgresUserRepository struct {
@@ -95,4 +141,74 @@ func scanUser(row pgx.CollectableRow) (store.User, error) {
 	}
 	user.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return user, nil
+}
+
+type PostgresAPIKeyRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresAPIKeyRepository(pool *pgxpool.Pool) PostgresAPIKeyRepository {
+	return PostgresAPIKeyRepository{pool: pool}
+}
+
+func (repo PostgresAPIKeyRepository) ListAPIKeys(ctx context.Context) ([]store.APIKey, error) {
+	rows, err := repo.pool.Query(ctx, `
+		select id, name, project, scope, coalesce(expires_at::text, ''), status
+		from api_keys
+		order by created_at desc
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query api keys: %w", err)
+	}
+	defer rows.Close()
+
+	items, err := pgx.CollectRows(rows, scanAPIKey)
+	if err != nil {
+		return nil, fmt.Errorf("collect api keys: %w", err)
+	}
+
+	return items, nil
+}
+
+func scanAPIKey(row pgx.CollectableRow) (store.APIKey, error) {
+	var item store.APIKey
+	if err := row.Scan(&item.ID, &item.Name, &item.Project, &item.Scope, &item.ExpiresAt, &item.Status); err != nil {
+		return store.APIKey{}, err
+	}
+	return item, nil
+}
+
+type PostgresCredentialRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresCredentialRepository(pool *pgxpool.Pool) PostgresCredentialRepository {
+	return PostgresCredentialRepository{pool: pool}
+}
+
+func (repo PostgresCredentialRepository) ListCredentials(ctx context.Context) ([]store.Credential, error) {
+	rows, err := repo.pool.Query(ctx, `
+		select id, ref, purpose, scope, coalesce(expires_at::text, ''), status, masked_preview
+		from credentials
+		order by ref asc
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query credentials: %w", err)
+	}
+	defer rows.Close()
+
+	items, err := pgx.CollectRows(rows, scanCredential)
+	if err != nil {
+		return nil, fmt.Errorf("collect credentials: %w", err)
+	}
+
+	return items, nil
+}
+
+func scanCredential(row pgx.CollectableRow) (store.Credential, error) {
+	var item store.Credential
+	if err := row.Scan(&item.ID, &item.Ref, &item.Purpose, &item.Scope, &item.ExpiresAt, &item.Status, &item.MaskedPreview); err != nil {
+		return store.Credential{}, err
+	}
+	return item, nil
 }
