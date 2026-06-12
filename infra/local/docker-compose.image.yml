@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: anjing-ai-platform-image-postgres
+    environment:
+      POSTGRES_DB: anjing_ai_platform
+      POSTGRES_USER: anjing
+      POSTGRES_PASSWORD: anjing
+    ports:
+      - "54329:5432"
+    volumes:
+      - image-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anjing -d anjing_ai_platform"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: anjing-ai-platform:local
+    command: ["/app/migrate-db"]
+    environment:
+      ANJING_DATABASE_URL: postgres://anjing:anjing@postgres:5432/anjing_ai_platform?sslmode=disable
+      ANJING_MIGRATIONS_DIR: /app/infra/postgres/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  platform:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: anjing-ai-platform:local
+    environment:
+      ANJING_DATABASE_URL: postgres://anjing:anjing@postgres:5432/anjing_ai_platform?sslmode=disable
+      ANJING_ADDR: :18080
+      ANJING_CONSOLE_DIST: /app/apps/console/dist
+    ports:
+      - "18080:18080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  image-postgres-data:

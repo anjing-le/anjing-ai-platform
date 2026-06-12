@@ -85,6 +85,18 @@ pnpm build:console
 go run ./cmd/platform-all
 ```
 
+单镜像本地预览：
+
+```bash
+pnpm image:up
+```
+
+默认访问：
+
+```text
+http://localhost:18080/
+```
+
 单服务启动：
 
 ```bash

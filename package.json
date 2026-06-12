@@ -15,6 +15,10 @@
     "preview:console": "pnpm --filter @anjing-ai-platform/console preview",
     "build:go": "go build ./cmd/...",
     "test:go": "go test ./...",
+    "image:build": "docker build -t anjing-ai-platform:local .",
+    "image:up": "docker compose -f infra/local/docker-compose.image.yml up -d --build",
+    "image:down": "docker compose -f infra/local/docker-compose.image.yml down",
+    "image:logs": "docker compose -f infra/local/docker-compose.image.yml logs -f platform",
     "verify": "pnpm build:console && go test ./..."
   }
 }
