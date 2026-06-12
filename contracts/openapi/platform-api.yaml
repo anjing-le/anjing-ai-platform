@@ -1,0 +1,961 @@
+openapi: 3.1.0
+info:
+  title: Anjing AI Platform API
+  version: 0.1.0
+  summary: V1 control, gateway, billing and operations API contract.
+  description: >
+    Anjing AI Platform V1 keeps a modular Go service boundary while allowing
+    local development through the platform-all command. Business APIs return a
+    unified envelope and can be protected by Bearer token or X-API-Key when
+    ANJING_AUTH_MODE=enforced.
+servers:
+  - url: http://localhost:18080
+    description: platform-all local server
+  - url: http://localhost:1820
+    description: control-api local server
+  - url: http://localhost:1821
+    description: gateway-api local server
+  - url: http://localhost:1822
+    description: billing-service local server
+  - url: http://localhost:1823
+    description: ops-api local server
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+tags:
+  - name: platform
+    description: Shared runtime health.
+  - name: control
+    description: Users, role policies, API keys and credential references.
+  - name: gateway
+    description: API routes, model routes, skill bindings and request logs.
+  - name: billing
+    description: Plans, usage records and budget alerts.
+  - name: operations
+    description: Dashboard, todos, service health and audit events.
+paths:
+  /healthz:
+    get:
+      tags: [platform]
+      operationId: getPlatformHealth
+      summary: Platform health check.
+      security: []
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /api/control/healthz:
+    get:
+      tags: [control]
+      operationId: getControlHealth
+      summary: Control API health check.
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/HealthOK"
+  /api/control/users:
+    get:
+      tags: [control]
+      operationId: listUsers
+      summary: List console users.
+      x-anjing-roles: [Administrator]
+      responses:
+        "200":
+          description: Users returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [control]
+      operationId: createUser
+      summary: Invite a new console user.
+      x-anjing-roles: [Administrator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User invited.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/control/roles:
+    get:
+      tags: [control]
+      operationId: listRolePolicies
+      summary: List role policies.
+      x-anjing-roles: [Administrator, Developer]
+      responses:
+        "200":
+          description: Role policies returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RolePolicy"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/control/api-keys:
+    get:
+      tags: [control]
+      operationId: listAPIKeys
+      summary: List masked API keys.
+      x-anjing-roles: [Administrator, Developer]
+      responses:
+        "200":
+          description: API keys returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/APIKey"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/control/credentials:
+    get:
+      tags: [control]
+      operationId: listCredentials
+      summary: List credential references.
+      x-anjing-roles: [Administrator, Developer]
+      responses:
+        "200":
+          description: Credential references returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Credential"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/gateway/healthz:
+    get:
+      tags: [gateway]
+      operationId: getGatewayHealth
+      summary: Gateway API health check.
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/HealthOK"
+  /api/gateway/routes:
+    get:
+      tags: [gateway]
+      operationId: listGatewayRoutes
+      summary: List API gateway routes.
+      x-anjing-roles: [Administrator, Developer]
+      responses:
+        "200":
+          description: Gateway routes returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/GatewayRoute"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [gateway]
+      operationId: createGatewayRoute
+      summary: Create a gateway route draft.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGatewayRouteRequest"
+      responses:
+        "201":
+          description: Gateway route created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/GatewayRoute"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/gateway/model-routes:
+    get:
+      tags: [gateway]
+      operationId: listModelRoutes
+      summary: List model route aliases.
+      x-anjing-roles: [Administrator, Developer]
+      responses:
+        "200":
+          description: Model routes returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ModelRoute"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/gateway/skills:
+    get:
+      tags: [gateway]
+      operationId: listSkillBindings
+      summary: List skill bindings.
+      x-anjing-roles: [Administrator, Developer]
+      responses:
+        "200":
+          description: Skill bindings returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SkillBinding"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/gateway/request-logs:
+    get:
+      tags: [gateway]
+      operationId: listRequestLogs
+      summary: List request logs.
+      x-anjing-roles: [Administrator, Developer, Operator]
+      responses:
+        "200":
+          description: Request logs returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/RequestLog"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/billing/healthz:
+    get:
+      tags: [billing]
+      operationId: getBillingHealth
+      summary: Billing service health check.
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/HealthOK"
+  /api/billing/plans:
+    get:
+      tags: [billing]
+      operationId: listBillingPlans
+      summary: List billing plans.
+      x-anjing-roles: [Administrator, User, Developer, Operator]
+      responses:
+        "200":
+          description: Billing plans returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BillingPlan"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [billing]
+      operationId: createBillingPlan
+      summary: Create a billing plan draft.
+      x-anjing-roles: [Administrator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBillingPlanRequest"
+      responses:
+        "201":
+          description: Billing plan created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/BillingPlan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/billing/usage:
+    get:
+      tags: [billing]
+      operationId: listUsageRecords
+      summary: List usage records.
+      x-anjing-roles: [Administrator, User, Developer, Operator]
+      responses:
+        "200":
+          description: Usage records returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/UsageRecord"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/billing/budget-alerts:
+    get:
+      tags: [billing]
+      operationId: listBudgetAlerts
+      summary: List budget alerts.
+      x-anjing-roles: [Administrator, User, Developer, Operator]
+      responses:
+        "200":
+          description: Budget alerts returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BudgetAlert"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/ops/healthz:
+    get:
+      tags: [operations]
+      operationId: getOpsHealth
+      summary: Operations API health check.
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/HealthOK"
+  /api/ops/dashboard:
+    get:
+      tags: [operations]
+      operationId: getOpsDashboard
+      summary: Get the operations dashboard.
+      x-anjing-roles: [Administrator, User, Developer, Operator]
+      responses:
+        "200":
+          description: Dashboard returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/OpsDashboard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/ops/todos:
+    get:
+      tags: [operations]
+      operationId: listOpsTodos
+      summary: List operations todos.
+      x-anjing-roles: [Administrator, Developer, Operator]
+      responses:
+        "200":
+          description: Todos returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/OpsTodo"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/ops/todos/resolve:
+    post:
+      tags: [operations]
+      operationId: resolveOpsTodo
+      summary: Resolve an operations todo.
+      x-anjing-roles: [Administrator, Operator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveTodoRequest"
+      responses:
+        "200":
+          description: Todo resolved.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/OpsTodo"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/ops/service-health:
+    get:
+      tags: [operations]
+      operationId: listServiceHealth
+      summary: List service health signals.
+      x-anjing-roles: [Administrator, Developer, Operator]
+      responses:
+        "200":
+          description: Service health signals returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ServiceHealth"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/ops/audit-events:
+    get:
+      tags: [operations]
+      operationId: listAuditEvents
+      summary: List audit events.
+      x-anjing-roles: [Administrator, Developer, Operator]
+      responses:
+        "200":
+          description: Audit events returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AuditEvent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: demo-token
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  responses:
+    HealthOK:
+      description: Service is healthy.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/HealthResponse"
+    BadRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unauthorized:
+      description: Missing or invalid credential.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Forbidden:
+      description: Credential is valid but the role is not allowed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          description: Operation payload.
+    ErrorEnvelope:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          const: false
+        error:
+          $ref: "#/components/schemas/APIError"
+    APIError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          examples: [bad_request, unauthorized, forbidden, not_found, internal_error]
+        message:
+          type: string
+    HealthResponse:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                service:
+                  type: string
+                status:
+                  type: string
+                time:
+                  type: string
+                  format: date-time
+    Metric:
+      type: object
+      required: [label, value, note]
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+        note:
+          type: string
+    User:
+      type: object
+      required: [id, email, org, role, mfa, status, createdAt]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        org:
+          type: string
+        role:
+          type: string
+          enum: [Administrator, User, Developer, Operator]
+        mfa:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+    CreateUserRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        org:
+          type: string
+          default: Platform
+        role:
+          type: string
+          enum: [Administrator, User, Developer, Operator]
+          default: User
+    RolePolicy:
+      type: object
+      required: [id, name, visibleEntries, configScope, restriction, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        visibleEntries:
+          type: string
+        configScope:
+          type: string
+        restriction:
+          type: string
+        status:
+          type: string
+    APIKey:
+      type: object
+      required: [id, name, project, scope, expiresAt, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        project:
+          type: string
+        scope:
+          type: string
+        expiresAt:
+          type: string
+        status:
+          type: string
+    Credential:
+      type: object
+      required: [id, ref, purpose, scope, expiresAt, status, maskedPreview]
+      properties:
+        id:
+          type: string
+        ref:
+          type: string
+        purpose:
+          type: string
+        scope:
+          type: string
+        expiresAt:
+          type: string
+        status:
+          type: string
+        maskedPreview:
+          type: string
+    GatewayRoute:
+      type: object
+      required: [id, route, upstream, auth, limit, status, updatedAt]
+      properties:
+        id:
+          type: string
+        route:
+          type: string
+        upstream:
+          type: string
+        auth:
+          type: string
+        limit:
+          type: string
+        status:
+          type: string
+        updatedAt:
+          type: string
+    CreateGatewayRouteRequest:
+      type: object
+      required: [route]
+      properties:
+        route:
+          type: string
+          examples: [/api/v1/llm/**]
+        upstream:
+          type: string
+          default: gateway-api
+        limit:
+          type: string
+          default: 600/min
+    ModelRoute:
+      type: object
+      required: [id, alias, scenario, primary, fallback, status, updatedAt]
+      properties:
+        id:
+          type: string
+        alias:
+          type: string
+        scenario:
+          type: string
+        primary:
+          type: string
+        fallback:
+          type: string
+        status:
+          type: string
+        updatedAt:
+          type: string
+    SkillBinding:
+      type: object
+      required: [id, name, protocol, route, timeout, status, updatedAt]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        protocol:
+          type: string
+        route:
+          type: string
+        timeout:
+          type: string
+        status:
+          type: string
+        updatedAt:
+          type: string
+    RequestLog:
+      type: object
+      required: [id, request, consumer, latency, result, status, createdAt]
+      properties:
+        id:
+          type: string
+        request:
+          type: string
+        consumer:
+          type: string
+        latency:
+          type: string
+        result:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+    BillingPlan:
+      type: object
+      required: [id, name, target, rps, tokenPerDay, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        target:
+          type: string
+        rps:
+          type: string
+        tokenPerDay:
+          type: string
+        status:
+          type: string
+    CreateBillingPlanRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        rps:
+          type: string
+          default: "100"
+        tokenPerDay:
+          type: string
+          default: 1M
+    UsageRecord:
+      type: object
+      required: [id, project, tokens, skillCalls, cost, status, updatedAt]
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+        tokens:
+          type: string
+        skillCalls:
+          type: string
+        cost:
+          type: string
+        status:
+          type: string
+        updatedAt:
+          type: string
+    BudgetAlert:
+      type: object
+      required: [id, project, budget, current, threshold, status]
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+        budget:
+          type: string
+        current:
+          type: string
+        threshold:
+          type: string
+        status:
+          type: string
+    OpsDashboard:
+      type: object
+      required: [metrics, todos, health, audit]
+      properties:
+        metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Metric"
+        todos:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpsTodo"
+        health:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceHealth"
+        audit:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+    OpsTodo:
+      type: object
+      required: [id, title, source, owner, status, updatedAt]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        source:
+          type: string
+        owner:
+          type: string
+        status:
+          type: string
+        updatedAt:
+          type: string
+    ResolveTodoRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+    ServiceHealth:
+      type: object
+      required: [id, name, slo, p95, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slo:
+          type: string
+        p95:
+          type: string
+        status:
+          type: string
+    AuditEvent:
+      type: object
+      required: [id, time, module, action, object, status, requestId]
+      properties:
+        id:
+          type: string
+        time:
+          type: string
+        module:
+          type: string
+        action:
+          type: string
+        object:
+          type: string
+        status:
+          type: string
+        requestId:
+          type: string

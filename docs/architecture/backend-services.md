@@ -181,7 +181,7 @@ internal/ops/
 
 ## 当前已实现的 V1 API
 
-当前 Go 后端先以内存 seed 数据跑通控制台核心路径，PostgreSQL schema 已放在 `infra/postgres/migrations/001_core.sql`，下一步再接 `pgx/v5` 持久化。
+当前 Go 后端已支持内存 seed 数据和 PostgreSQL 仓储。V1 API 合约放在 `contracts/openapi/platform-api.yaml`，覆盖当前控制台正在调用的 control、gateway、billing 和 ops 接口。
 
 完整后端本地启动：
 
