@@ -21,6 +21,10 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, input CreateUserInput) (store.User, error)
 }
 
+type RoleRepository interface {
+	ListRoles(ctx context.Context) ([]store.RolePolicy, error)
+}
+
 type APIKeyRepository interface {
 	ListAPIKeys(ctx context.Context) ([]store.APIKey, error)
 }
@@ -31,6 +35,7 @@ type CredentialRepository interface {
 
 type Repositories struct {
 	Users       UserRepository
+	Roles       RoleRepository
 	APIKeys     APIKeyRepository
 	Credentials CredentialRepository
 }
@@ -38,6 +43,7 @@ type Repositories struct {
 func NewMemoryRepositories(st *store.Store) Repositories {
 	return Repositories{
 		Users:       NewMemoryUserRepository(st),
+		Roles:       NewMemoryRoleRepository(st),
 		APIKeys:     NewMemoryAPIKeyRepository(st),
 		Credentials: NewMemoryCredentialRepository(st),
 	}
@@ -57,6 +63,18 @@ func (repo MemoryUserRepository) ListUsers(context.Context) ([]store.User, error
 
 func (repo MemoryUserRepository) CreateUser(_ context.Context, input CreateUserInput) (store.User, error) {
 	return repo.store.CreateUser(input.Email, input.Org, input.Role), nil
+}
+
+type MemoryRoleRepository struct {
+	store *store.Store
+}
+
+func NewMemoryRoleRepository(st *store.Store) MemoryRoleRepository {
+	return MemoryRoleRepository{store: st}
+}
+
+func (repo MemoryRoleRepository) ListRoles(context.Context) ([]store.RolePolicy, error) {
+	return repo.store.ListRoles(), nil
 }
 
 type MemoryAPIKeyRepository struct {
@@ -141,6 +159,41 @@ func scanUser(row pgx.CollectableRow) (store.User, error) {
 	}
 	user.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return user, nil
+}
+
+type PostgresRoleRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresRoleRepository(pool *pgxpool.Pool) PostgresRoleRepository {
+	return PostgresRoleRepository{pool: pool}
+}
+
+func (repo PostgresRoleRepository) ListRoles(ctx context.Context) ([]store.RolePolicy, error) {
+	rows, err := repo.pool.Query(ctx, `
+		select id, name, visible_entries, config_scope, restriction, status
+		from role_policies
+		order by name asc
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query role policies: %w", err)
+	}
+	defer rows.Close()
+
+	items, err := pgx.CollectRows(rows, scanRolePolicy)
+	if err != nil {
+		return nil, fmt.Errorf("collect role policies: %w", err)
+	}
+
+	return items, nil
+}
+
+func scanRolePolicy(row pgx.CollectableRow) (store.RolePolicy, error) {
+	var item store.RolePolicy
+	if err := row.Scan(&item.ID, &item.Name, &item.VisibleEntries, &item.ConfigScope, &item.Restriction, &item.Status); err != nil {
+		return store.RolePolicy{}, err
+	}
+	return item, nil
 }
 
 type PostgresAPIKeyRepository struct {

@@ -24,6 +24,7 @@ func main() {
 		defer pool.Close()
 		repos := control.NewMemoryRepositories(st)
 		repos.Users = control.NewPostgresUserRepository(pool)
+		repos.Roles = control.NewPostgresRoleRepository(pool)
 		repos.APIKeys = control.NewPostgresAPIKeyRepository(pool)
 		repos.Credentials = control.NewPostgresCredentialRepository(pool)
 		controlRegister = func(mux *http.ServeMux, st *store.Store) {

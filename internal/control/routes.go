@@ -25,7 +25,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 		httpjson.OK(w, map[string]string{"service": "control-api", "status": "ok"})
 	})
 	mux.HandleFunc("/api/control/users", usersHandler(repos.Users))
-	mux.HandleFunc("/api/control/roles", listHandler(st.ListRoles))
+	mux.HandleFunc("/api/control/roles", rolesHandler(repos.Roles))
 	mux.HandleFunc("/api/control/api-keys", apiKeysHandler(repos.APIKeys))
 	mux.HandleFunc("/api/control/credentials", credentialsHandler(repos.Credentials))
 }
@@ -75,6 +75,20 @@ func usersHandler(users UserRepository) http.HandlerFunc {
 		default:
 			httpjson.MethodNotAllowed(w)
 		}
+	}
+}
+
+func rolesHandler(roles RoleRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodGet) {
+			return
+		}
+		items, err := roles.ListRoles(r.Context())
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		httpjson.OK(w, items)
 	}
 }
 
