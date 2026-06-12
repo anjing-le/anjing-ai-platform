@@ -76,12 +76,12 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 func TestAPIKeyUsesUserRoleBoundary(t *testing.T) {
 	handler := Middleware(testConfig(), okHandler())
 
-	allowed := httptest.NewRequest(http.MethodGet, "/api/billing/usage", nil)
+	allowed := httptest.NewRequest(http.MethodPost, "/api/gateway/llm/invoke", nil)
 	allowed.Header.Set("X-API-Key", "customer-test-key")
 	allowedRec := httptest.NewRecorder()
 	handler.ServeHTTP(allowedRec, allowed)
 	if allowedRec.Code != http.StatusOK {
-		t.Fatalf("expected billing usage to be allowed, got %d", allowedRec.Code)
+		t.Fatalf("expected llm invoke to be allowed, got %d", allowedRec.Code)
 	}
 
 	denied := httptest.NewRequest(http.MethodPost, "/api/ops/todos/resolve", nil)

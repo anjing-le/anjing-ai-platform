@@ -315,6 +315,43 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/llm/invoke:
+    post:
+      tags: [gateway]
+      operationId: invokeLLM
+      summary: Invoke an LLM through the gateway mock provider.
+      description: >
+        V1 starts with a deterministic mock provider. The endpoint already uses
+        model route aliases and returns token usage so the console, examples and
+        future SDKs can integrate against a stable boundary before real providers
+        are wired in.
+      x-anjing-roles: [Administrator, User, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LLMInvokeRequest"
+      responses:
+        "200":
+          description: LLM invocation completed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/LLMInvokeResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/billing/healthz:
     get:
       tags: [billing]
@@ -823,6 +860,60 @@ components:
           type: string
         createdAt:
           type: string
+    LLMInvokeRequest:
+      type: object
+      required: [input]
+      properties:
+        modelAlias:
+          type: string
+          default: chat-default
+        input:
+          type: string
+        temperature:
+          type: number
+          format: double
+          default: 0
+    LLMUsage:
+      type: object
+      required: [inputTokens, outputTokens, totalTokens]
+      properties:
+        inputTokens:
+          type: integer
+          minimum: 0
+        outputTokens:
+          type: integer
+          minimum: 0
+        totalTokens:
+          type: integer
+          minimum: 0
+    LLMInvokeResponse:
+      type: object
+      required:
+        - id
+        - modelAlias
+        - provider
+        - model
+        - fallback
+        - content
+        - finishReason
+        - usage
+      properties:
+        id:
+          type: string
+        modelAlias:
+          type: string
+        provider:
+          type: string
+        model:
+          type: string
+        fallback:
+          type: string
+        content:
+          type: string
+        finishReason:
+          type: string
+        usage:
+          $ref: "#/components/schemas/LLMUsage"
     BillingPlan:
       type: object
       required: [id, name, target, rps, tokenPerDay, status]

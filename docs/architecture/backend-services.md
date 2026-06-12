@@ -82,8 +82,8 @@ internal/platform/
 | 角色 | 允许范围 |
 | --- | --- |
 | `Administrator` | 全部接口 |
-| `User` | 运营首页只读、计费与用量只读 |
-| `Developer` | 运营只读、网关与模型配置、API Key / credentialRef 只读、计费只读 |
+| `User` | 运营首页只读、计费与用量只读、LLM 调用 |
+| `Developer` | 运营只读、网关与模型配置、API Key / credentialRef 只读、计费只读、LLM 调用 |
 | `Operator` | 运营处理、服务健康、审计、计费只读、请求日志；不看网关配置 |
 
 Demo bearer token：
@@ -216,6 +216,7 @@ go run ./cmd/console-web      # :1818
 - `GET /api/gateway/model-routes`
 - `GET /api/gateway/skills`
 - `GET /api/gateway/request-logs`
+- `POST /api/gateway/llm/invoke`
 
 ### `billing-service`
 
