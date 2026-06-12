@@ -4,6 +4,11 @@
   "private": true,
   "packageManager": "pnpm@10.10.0",
   "scripts": {
+    "db:up": "docker compose -f infra/local/docker-compose.yml up -d",
+    "db:down": "docker compose -f infra/local/docker-compose.yml down",
+    "db:logs": "docker compose -f infra/local/docker-compose.yml logs -f postgres",
+    "db:psql": "docker compose -f infra/local/docker-compose.yml exec postgres psql -U anjing -d anjing_ai_platform",
+    "db:migrate": "ANJING_DATABASE_URL='postgres://anjing:anjing@localhost:54329/anjing_ai_platform?sslmode=disable' go run ./cmd/migrate-db",
     "dev:console": "pnpm --filter @anjing-ai-platform/console dev",
     "build:console": "pnpm --filter @anjing-ai-platform/console build",
     "preview:console": "pnpm --filter @anjing-ai-platform/console preview",

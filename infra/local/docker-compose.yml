@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: anjing-ai-platform-postgres
+    environment:
+      POSTGRES_DB: anjing_ai_platform
+      POSTGRES_USER: anjing
+      POSTGRES_PASSWORD: anjing
+    ports:
+      - "54329:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anjing -d anjing_ai_platform"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres-data:
