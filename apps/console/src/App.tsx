@@ -46,6 +46,7 @@ import type {
   RoleId,
   StatusTone,
   TableRow,
+  TodoItem,
 } from "./types";
 
 type ApiState = "loading" | "live" | "fallback";
@@ -89,6 +90,7 @@ function App() {
   const [activatingPlanId, setActivatingPlanId] = useState("");
   const [rotatingCredentialId, setRotatingCredentialId] = useState("");
   const [revokingAPIKeyId, setRevokingAPIKeyId] = useState("");
+  const [resolvingTodoId, setResolvingTodoId] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -170,9 +172,7 @@ function App() {
         setNotice("当前没有待处理事项。");
         return;
       }
-      await resolveTodo(pendingTodo.id, role);
-      await refreshSnapshot();
-      setNotice(`已处理：${pendingTodo.title}`);
+      await handleTodoResolve(pendingTodo);
       return;
     }
 
@@ -324,6 +324,32 @@ function App() {
     }
   }
 
+  async function handleTodoResolve(todo: { id: string; title: string; status?: string }) {
+    setNotice("");
+
+    if (todo.status === "Resolved") {
+      setNotice(`已处理：${todo.title}`);
+      return;
+    }
+
+    if (role !== "admin" && role !== "operator") {
+      setNotice("当前角色只能查看运营事项，处理动作需要管理员或运维人员。");
+      return;
+    }
+
+    setResolvingTodoId(todo.id);
+
+    try {
+      const resolved = await resolveTodo(todo.id, role);
+      await refreshSnapshot();
+      setNotice(`已处理：${resolved.title}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "事项处理失败");
+    } finally {
+      setResolvingTodoId("");
+    }
+  }
+
   async function handlePlanActivate(id: string) {
     setNotice("");
     setActivatingPlanId(id);
@@ -382,7 +408,10 @@ function App() {
         {activeRoute === "home" ? (
           <ConsoleHome
             metrics={hydrateHomeMetrics(snapshot)}
+            notice={notice}
+            onTodoResolve={handleTodoResolve}
             role={role}
+            resolvingTodoId={resolvingTodoId}
             snapshot={snapshot}
             visibleItems={visibleItems}
           />
@@ -565,18 +594,25 @@ function ConsoleShell({
 
 function ConsoleHome({
   metrics,
+  notice,
+  onTodoResolve,
   role,
+  resolvingTodoId,
   snapshot,
   visibleItems,
 }: {
   metrics: MetricItem[];
+  notice: string;
+  onTodoResolve: (todo: TodoItem) => Promise<void>;
   role: RoleId;
+  resolvingTodoId: string;
   snapshot?: PlatformSnapshot;
   visibleItems: NavItem[];
 }) {
   const businessItems = visibleItems.filter((item) => item.id !== "home");
   const roleLabel = roles.find((item) => item.id === role)?.label || "管理员";
   const liveTodos = hydrateTodos(snapshot) || todos;
+  const canResolveTodo = role === "admin" || role === "operator";
 
   return (
     <main className="page">
@@ -595,6 +631,8 @@ function ConsoleHome({
       </section>
 
       <MetricGrid metrics={metrics} />
+
+      {notice ? <p className="inline-notice">{notice}</p> : null}
 
       <section className="home-grid">
         <Panel title="模块入口" eyebrow="Modules" className="home-grid__main">
@@ -620,14 +658,26 @@ function ConsoleHome({
         <Panel title="今日待办" eyebrow="Focus">
           <div className="todo-list">
             {liveTodos.slice(0, 4).map((todo) => (
-              <a className="todo-item" href={routeHash[todo.moduleId]} key={todo.id}>
-                <span>{todo.moduleLabel}</span>
-                <strong>{todo.title}</strong>
-                <p>
-                  {todo.status} · {todo.owner}
-                </p>
+              <article className="todo-item" key={todo.id}>
+                <div>
+                  <span>{todo.moduleLabel}</span>
+                  <strong>{todo.title}</strong>
+                  <p>
+                    {todo.status} · {todo.owner}
+                  </p>
+                </div>
                 <StatusBadge tone={todo.tone}>{todo.status}</StatusBadge>
-              </a>
+                <div className="todo-item__actions">
+                  <a href={routeHash[todo.moduleId]}>查看</a>
+                  <button
+                    disabled={!canResolveTodo || todo.status === "Resolved" || resolvingTodoId === todo.id}
+                    onClick={() => void onTodoResolve(todo)}
+                    type="button"
+                  >
+                    {todo.status === "Resolved" ? "已处理" : resolvingTodoId === todo.id ? "处理中" : "处理"}
+                  </button>
+                </div>
+              </article>
             ))}
           </div>
         </Panel>

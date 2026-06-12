@@ -580,8 +580,7 @@ a {
 
 .module-card:hover,
 .module-card:focus-visible,
-.todo-item:hover,
-.todo-item:focus-visible {
+.todo-item:hover {
   background: #ffffff;
   outline: none;
 }
@@ -621,8 +620,8 @@ a {
 .todo-item {
   position: relative;
   display: grid;
-  gap: 4px;
-  min-height: 104px;
+  gap: 12px;
+  min-height: 128px;
   padding: 15px 16px;
   border-bottom: 1px solid var(--line);
 }
@@ -639,6 +638,42 @@ a {
   position: absolute;
   top: 15px;
   right: 16px;
+}
+
+.todo-item__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.todo-item__actions a,
+.todo-item__actions button {
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.todo-item__actions button {
+  cursor: pointer;
+}
+
+.todo-item__actions a:hover,
+.todo-item__actions a:focus-visible,
+.todo-item__actions button:hover,
+.todo-item__actions button:focus-visible {
+  border-color: #1f1f1f;
+  outline: none;
+}
+
+.todo-item__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .role-summary {
@@ -1425,5 +1460,9 @@ tbody tr.is-selected td:first-child {
   .todo-item .status {
     position: static;
     justify-self: start;
+  }
+
+  .todo-item__actions {
+    justify-content: flex-start;
   }
 }
