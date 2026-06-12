@@ -8,6 +8,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { backendPlan, homeMetrics, modulePages, navItems, roles, todos } from "./data/console";
+import { loadPlatformSnapshot, type PlatformSnapshot } from "./lib/api";
+import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
 import type {
   ConsoleRoute,
   MetricItem,
@@ -17,6 +19,8 @@ import type {
   StatusTone,
   TableRow,
 } from "./types";
+
+type ApiState = "loading" | "live" | "fallback";
 
 const routeHash: Record<ConsoleRoute, string> = {
   home: "#/console/home",
@@ -45,6 +49,9 @@ function parseRoute(): ConsoleRoute | "landing" {
 function App() {
   const [route, setRoute] = useState<ConsoleRoute | "landing">(parseRoute);
   const [role, setRole] = useState<RoleId>("admin");
+  const [snapshot, setSnapshot] = useState<PlatformSnapshot>();
+  const [apiState, setApiState] = useState<ApiState>("loading");
+  const [apiDetail, setApiDetail] = useState("正在连接 Go API");
 
   useEffect(() => {
     const onHashChange = () => setRoute(parseRoute());
@@ -56,6 +63,37 @@ function App() {
     () => navItems.filter((item) => item.roles.includes(role)),
     [role],
   );
+
+  useEffect(() => {
+    let active = true;
+
+    loadPlatformSnapshot()
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
+        if (result.ok) {
+          setSnapshot(result.snapshot);
+          setApiState("live");
+          setApiDetail(`${result.loaded} 个接口已连接`);
+        } else {
+          setApiState("fallback");
+          setApiDetail("未连接后端，使用页面默认数据");
+        }
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+        setApiState("fallback");
+        setApiDetail("未连接后端，使用页面默认数据");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (route === "landing") {
@@ -73,16 +111,26 @@ function App() {
   }
 
   const activeRoute = route;
-  const activePage = modulePages.find((page) => page.id === activeRoute);
+  const hydratedPages = hydrateModulePages(modulePages, snapshot);
+  const activePage = hydratedPages.find((page) => page.id === activeRoute);
 
   return (
     <ConsoleShell
+      apiDetail={apiDetail}
+      apiState={apiState}
       activeRoute={activeRoute}
       role={role}
       setRole={setRole}
       visibleItems={visibleItems}
     >
-      {activeRoute === "home" ? <ConsoleHome role={role} visibleItems={visibleItems} /> : null}
+      {activeRoute === "home" ? (
+        <ConsoleHome
+          metrics={hydrateHomeMetrics(snapshot)}
+          role={role}
+          snapshot={snapshot}
+          visibleItems={visibleItems}
+        />
+      ) : null}
       {activePage ? <ModulePage page={activePage} /> : null}
     </ConsoleShell>
   );
@@ -151,13 +199,23 @@ function LandingPage() {
 
 interface ConsoleShellProps {
   activeRoute: ConsoleRoute;
+  apiDetail: string;
+  apiState: ApiState;
   children: React.ReactNode;
   role: RoleId;
   setRole: (role: RoleId) => void;
   visibleItems: NavItem[];
 }
 
-function ConsoleShell({ activeRoute, children, role, setRole, visibleItems }: ConsoleShellProps) {
+function ConsoleShell({
+  activeRoute,
+  apiDetail,
+  apiState,
+  children,
+  role,
+  setRole,
+  visibleItems,
+}: ConsoleShellProps) {
   const activeItem = navItems.find((item) => item.id === activeRoute) || navItems[0];
   const activeRole = roles.find((item) => item.id === role) || roles[0];
 
@@ -191,18 +249,23 @@ function ConsoleShell({ activeRoute, children, role, setRole, visibleItems }: Co
             <p className="eyebrow">{activeRole.name} View</p>
             <h1>{activeItem.label}</h1>
           </div>
-          <div className="role-switcher" aria-label="角色视角">
-            {roles.map((item) => (
-              <button
-                className={item.id === role ? "is-active" : ""}
-                key={item.id}
-                onClick={() => setRole(item.id)}
-                type="button"
-                title={item.purpose}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="topbar__actions">
+            <span className={`api-state api-state--${apiState}`} title={apiDetail}>
+              {apiState === "live" ? "Live API" : apiState === "loading" ? "Connecting" : "Mock fallback"}
+            </span>
+            <div className="role-switcher" aria-label="角色视角">
+              {roles.map((item) => (
+                <button
+                  className={item.id === role ? "is-active" : ""}
+                  key={item.id}
+                  onClick={() => setRole(item.id)}
+                  type="button"
+                  title={item.purpose}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
         </header>
         {children}
@@ -211,9 +274,20 @@ function ConsoleShell({ activeRoute, children, role, setRole, visibleItems }: Co
   );
 }
 
-function ConsoleHome({ role, visibleItems }: { role: RoleId; visibleItems: NavItem[] }) {
+function ConsoleHome({
+  metrics,
+  role,
+  snapshot,
+  visibleItems,
+}: {
+  metrics: MetricItem[];
+  role: RoleId;
+  snapshot?: PlatformSnapshot;
+  visibleItems: NavItem[];
+}) {
   const businessItems = visibleItems.filter((item) => item.id !== "home");
   const roleLabel = roles.find((item) => item.id === role)?.label || "管理员";
+  const liveTodos = hydrateTodos(snapshot) || todos;
 
   return (
     <main className="page">
@@ -231,7 +305,7 @@ function ConsoleHome({ role, visibleItems }: { role: RoleId; visibleItems: NavIt
         </a>
       </section>
 
-      <MetricGrid metrics={homeMetrics} />
+      <MetricGrid metrics={metrics} />
 
       <section className="home-grid">
         <Panel title="模块入口" eyebrow="Modules" className="home-grid__main">
@@ -256,7 +330,7 @@ function ConsoleHome({ role, visibleItems }: { role: RoleId; visibleItems: NavIt
 
         <Panel title="今日待办" eyebrow="Focus">
           <div className="todo-list">
-            {todos.slice(0, 4).map((todo) => (
+            {liveTodos.slice(0, 4).map((todo) => (
               <a className="todo-item" href={routeHash[todo.moduleId]} key={todo.id}>
                 <span>{todo.moduleLabel}</span>
                 <strong>{todo.title}</strong>
