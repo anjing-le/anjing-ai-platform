@@ -37,9 +37,13 @@ func main() {
 		controlRegister = func(mux *http.ServeMux, st *store.Store) {
 			control.RegisterWithRepositories(mux, st, controlRepos)
 		}
-		routes := gateway.NewPostgresRouteRepository(pool)
+		gatewayRepos := gateway.NewMemoryRepositories(st)
+		gatewayRepos.Routes = gateway.NewPostgresRouteRepository(pool)
+		gatewayRepos.ModelRoutes = gateway.NewPostgresModelRouteRepository(pool)
+		gatewayRepos.Skills = gateway.NewPostgresSkillRepository(pool)
+		gatewayRepos.RequestLogs = gateway.NewPostgresRequestLogRepository(pool)
 		gatewayRegister = func(mux *http.ServeMux, st *store.Store) {
-			gateway.RegisterWithRoutes(mux, st, routes)
+			gateway.RegisterWithRepositories(mux, st, gatewayRepos)
 		}
 		plans := billing.NewPostgresPlanRepository(pool)
 		billingRegister = func(mux *http.ServeMux, st *store.Store) {

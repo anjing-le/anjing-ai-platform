@@ -22,9 +22,13 @@ func main() {
 			panic(err)
 		}
 		defer pool.Close()
-		routes := gateway.NewPostgresRouteRepository(pool)
+		repos := gateway.NewMemoryRepositories(st)
+		repos.Routes = gateway.NewPostgresRouteRepository(pool)
+		repos.ModelRoutes = gateway.NewPostgresModelRouteRepository(pool)
+		repos.Skills = gateway.NewPostgresSkillRepository(pool)
+		repos.RequestLogs = gateway.NewPostgresRequestLogRepository(pool)
 		gatewayRegister = func(mux *http.ServeMux, st *store.Store) {
-			gateway.RegisterWithRoutes(mux, st, routes)
+			gateway.RegisterWithRepositories(mux, st, repos)
 		}
 	}
 
