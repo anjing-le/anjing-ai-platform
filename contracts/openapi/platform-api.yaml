@@ -360,6 +360,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/routes/publish:
+    post:
+      tags: [gateway]
+      operationId: publishGatewayRoute
+      summary: Publish a gateway route draft.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishGatewayRouteRequest"
+      responses:
+        "200":
+          description: Gateway route published.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/GatewayRoute"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/gateway/model-routes:
     get:
       tags: [gateway]
@@ -977,6 +1009,12 @@ components:
         limit:
           type: string
           default: 600/min
+    PublishGatewayRouteRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
     ModelRoute:
       type: object
       required: [id, alias, scenario, primary, fallback, status, updatedAt]

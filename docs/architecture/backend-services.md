@@ -217,6 +217,7 @@ go run ./cmd/console-web      # :1818
 - `GET /api/gateway/healthz`
 - `GET /api/gateway/routes`
 - `POST /api/gateway/routes`
+- `POST /api/gateway/routes/publish`
 - `GET /api/gateway/model-routes`
 - `GET /api/gateway/skills`
 - `GET /api/gateway/request-logs`

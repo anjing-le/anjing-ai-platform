@@ -19,6 +19,7 @@ type CreateRouteInput struct {
 type RouteRepository interface {
 	ListRoutes(ctx context.Context) ([]store.GatewayRoute, error)
 	CreateRoute(ctx context.Context, input CreateRouteInput) (store.GatewayRoute, error)
+	PublishRoute(ctx context.Context, id string) (store.GatewayRoute, bool, error)
 }
 
 type ModelRouteRepository interface {
@@ -63,6 +64,11 @@ func (repo MemoryRouteRepository) ListRoutes(context.Context) ([]store.GatewayRo
 
 func (repo MemoryRouteRepository) CreateRoute(_ context.Context, input CreateRouteInput) (store.GatewayRoute, error) {
 	return repo.store.CreateRoute(input.Route, input.Upstream, input.Limit), nil
+}
+
+func (repo MemoryRouteRepository) PublishRoute(_ context.Context, id string) (store.GatewayRoute, bool, error) {
+	route, ok := repo.store.PublishRoute(id)
+	return route, ok, nil
 }
 
 type MemoryModelRouteRepository struct {
@@ -149,6 +155,29 @@ func (repo PostgresRouteRepository) CreateRoute(ctx context.Context, input Creat
 
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil
+}
+
+func (repo PostgresRouteRepository) PublishRoute(ctx context.Context, id string) (store.GatewayRoute, bool, error) {
+	rows, err := repo.pool.Query(ctx, `
+		update gateway_routes
+		set status = 'Active', updated_at = now()
+		where id = $1
+		returning id, route, upstream, auth, rate_limit, status, updated_at
+	`, id)
+	if err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("publish gateway route: %w", err)
+	}
+	defer rows.Close()
+
+	route, err := pgx.CollectOneRow(rows, scanGatewayRoute)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.GatewayRoute{}, false, nil
+		}
+		return store.GatewayRoute{}, false, fmt.Errorf("collect published gateway route: %w", err)
+	}
+
+	return route, true, nil
 }
 
 type PostgresModelRouteRepository struct {

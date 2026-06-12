@@ -335,6 +335,13 @@ export function createRoute(input: CreateRouteInput, role?: RoleId): Promise<Gat
   }, role);
 }
 
+export function publishRoute(id: string, role?: RoleId): Promise<GatewayRoute> {
+  return requestJson<GatewayRoute>("/api/gateway/routes/publish", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function createPlan(input: CreatePlanInput, role?: RoleId): Promise<BillingPlan> {
   return requestJson<BillingPlan>("/api/billing/plans", {
     method: "POST",

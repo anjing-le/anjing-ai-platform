@@ -36,6 +36,29 @@ func TestCreateRouteAddsRoute(t *testing.T) {
 	if !payload.Success || payload.Data.Route != "/api/v1/demo/**" {
 		t.Fatalf("unexpected payload: %+v", payload)
 	}
+
+	publishBody := bytes.NewBufferString(`{"id":"` + payload.Data.ID + `"}`)
+	publishReq := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/publish", publishBody)
+	publishReq.Header.Set("Content-Type", "application/json")
+	publishRec := httptest.NewRecorder()
+
+	mux.ServeHTTP(publishRec, publishReq)
+
+	if publishRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", publishRec.Code, publishRec.Body.String())
+	}
+
+	var published struct {
+		Success bool               `json:"success"`
+		Data    store.GatewayRoute `json:"data"`
+	}
+	if err := json.NewDecoder(publishRec.Body).Decode(&published); err != nil {
+		t.Fatalf("decode publish response: %v", err)
+	}
+	if !published.Success || published.Data.Status != "Active" {
+		t.Fatalf("expected published route, got %+v", published)
+	}
+
 	if logs := st.ListRequestLogs(); len(logs) < 3 {
 		t.Fatalf("expected request log to be appended, got %d logs", len(logs))
 	}

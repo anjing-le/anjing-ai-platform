@@ -44,6 +44,14 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 		t.Fatalf("expected gateway write to be allowed, got %d", allowedRec.Code)
 	}
 
+	publishAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/publish", nil)
+	publishAllowed.Header.Set("Authorization", "Bearer developer-test-token")
+	publishAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(publishAllowedRec, publishAllowed)
+	if publishAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected gateway publish to be allowed, got %d", publishAllowedRec.Code)
+	}
+
 	denied := httptest.NewRequest(http.MethodPost, "/api/billing/plans", nil)
 	denied.Header.Set("Authorization", "Bearer developer-test-token")
 	deniedRec := httptest.NewRecorder()
@@ -106,6 +114,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler.ServeHTTP(deniedRec, denied)
 	if deniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected gateway config to be forbidden, got %d", deniedRec.Code)
+	}
+
+	publishDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/publish", nil)
+	publishDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	publishDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(publishDeniedRec, publishDenied)
+	if publishDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected gateway publish to be forbidden for operator, got %d", publishDeniedRec.Code)
 	}
 
 	appDenied := httptest.NewRequest(http.MethodGet, "/api/control/applications", nil)

@@ -17,9 +17,11 @@ import {
   createUser,
   invokeLLM,
   loadPlatformSnapshot,
+  publishRoute,
   resolveTodo,
   rotateApplicationKey,
   type Application,
+  type GatewayRoute,
   type LLMInvokeResponse,
   type PlatformSnapshot,
 } from "./lib/api";
@@ -71,6 +73,7 @@ function App() {
   const [actionBusy, setActionBusy] = useState(false);
   const [activatingApplicationId, setActivatingApplicationId] = useState("");
   const [rotatingApplicationId, setRotatingApplicationId] = useState("");
+  const [publishingRouteId, setPublishingRouteId] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -267,6 +270,21 @@ function App() {
     }
   }
 
+  async function handleRoutePublish(id: string) {
+    setNotice("");
+    setPublishingRouteId(id);
+
+    try {
+      const route = await publishRoute(id, role);
+      await refreshSnapshot();
+      setNotice(`已发布路由：${route.route}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "路由发布失败");
+    } finally {
+      setPublishingRouteId("");
+    }
+  }
+
   return (
     <>
       <ConsoleShell
@@ -290,9 +308,11 @@ function App() {
             notice={notice}
             onApplicationActivate={handleApplicationActivate}
             onApplicationKeyRotate={handleApplicationKeyRotate}
+            onRoutePublish={handleRoutePublish}
             activatingApplicationId={activatingApplicationId}
             onPrimaryAction={handleModuleAction}
             page={activePage}
+            publishingRouteId={publishingRouteId}
             role={role}
             rotatingApplicationId={rotatingApplicationId}
             snapshot={snapshot}
@@ -552,7 +572,9 @@ function ModulePage({
   onApplicationActivate,
   onApplicationKeyRotate,
   onPrimaryAction,
+  onRoutePublish,
   page,
+  publishingRouteId,
   role,
   rotatingApplicationId,
   snapshot,
@@ -562,7 +584,9 @@ function ModulePage({
   onApplicationActivate: (id: string) => Promise<void>;
   onApplicationKeyRotate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
+  onRoutePublish: (id: string) => Promise<void>;
   page: ModulePageDefinition;
+  publishingRouteId: string;
   role: RoleId;
   rotatingApplicationId: string;
   snapshot?: PlatformSnapshot;
@@ -592,6 +616,25 @@ function ModulePage({
       snapshot.applications[0]
     );
   }, [page.id, selectedRowId, snapshot?.applications]);
+
+  const selectedRoute = useMemo(() => {
+    if (page.id !== "gateway" || !snapshot?.routes?.length) {
+      return undefined;
+    }
+
+    return (
+      snapshot.routes.find((route) => route.id === selectedRowId) || snapshot.routes[0]
+    );
+  }, [page.id, selectedRowId, snapshot?.routes]);
+
+  const selectableTable = page.id === "docs" || page.id === "gateway";
+  let selectedTableRowId: string | undefined;
+  if (page.id === "docs") {
+    selectedTableRowId = selectedApplication?.id;
+  }
+  if (page.id === "gateway") {
+    selectedTableRowId = selectedRoute?.id;
+  }
 
   useEffect(() => {
     if (!rows.length) {
@@ -650,13 +693,20 @@ function ModulePage({
           </div>
           <DataTable
             columns={page.table.columns}
-            onRowSelect={page.id === "docs" ? setSelectedRowId : undefined}
+            onRowSelect={selectableTable ? setSelectedRowId : undefined}
             rows={rows}
-            selectedRowId={page.id === "docs" ? selectedApplication?.id : undefined}
+            selectedRowId={selectedTableRowId}
           />
         </Panel>
 
         <div className="side-panels">
+          {page.id === "gateway" ? (
+            <GatewayRoutePanel
+              onPublish={onRoutePublish}
+              publishing={publishingRouteId === selectedRoute?.id}
+              route={selectedRoute}
+            />
+          ) : null}
           {page.id === "gateway" ? <LLMInvokePanel role={role} /> : null}
           {page.id === "docs" ? (
             <ApplicationJourneyPanel
@@ -821,6 +871,74 @@ function ApplicationJourneyPanel({
           type="button"
         >
           {application.status === "Active" ? "已完成校验" : activating ? "校验中" : "完成接入校验"}
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    </Panel>
+  );
+}
+
+function GatewayRoutePanel({
+  onPublish,
+  publishing,
+  route,
+}: {
+  onPublish: (id: string) => Promise<void>;
+  publishing: boolean;
+  route?: GatewayRoute;
+}) {
+  if (!route) {
+    return (
+      <Panel eyebrow="Route" title="路由详情">
+        <div className="empty-panel">
+          <strong>暂无路由</strong>
+          <p>新增路由后，这里会展示鉴权、限流、发布状态和上线动作。</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  const checks = [
+    {
+      label: "Auth",
+      value: route.auth,
+      note: "入口鉴权策略",
+      tone: route.auth === "API Key" ? "good" : "watch",
+    },
+    { label: "Limit", value: route.limit, note: "限流窗口", tone: "neutral" },
+    { label: "Upstream", value: route.upstream, note: "服务入口", tone: "neutral" },
+  ] as const;
+
+  return (
+    <Panel eyebrow="Route" title="路由详情">
+      <div className="route-summary">
+        <div>
+          <span>Selected Route</span>
+          <strong>{route.route}</strong>
+          <p>Updated {route.updatedAt}</p>
+        </div>
+        <StatusBadge tone={toneForStatus(route.status)}>{route.status}</StatusBadge>
+      </div>
+
+      <div className="route-checks">
+        {checks.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.note}</p>
+            <StatusDot tone={item.tone} />
+          </article>
+        ))}
+      </div>
+
+      <div className="application-actions">
+        <button
+          className="button button--primary"
+          disabled={publishing || route.status === "Active"}
+          onClick={() => void onPublish(route.id)}
+          type="button"
+        >
+          {route.status === "Active" ? "已发布" : publishing ? "发布中" : "发布路由"}
           <ChevronRight size={16} />
         </button>
       </div>

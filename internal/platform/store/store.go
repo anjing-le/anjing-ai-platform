@@ -424,6 +424,31 @@ func (s *Store) CreateRoute(route, upstream, limit string) GatewayRoute {
 	return item
 }
 
+func (s *Store) PublishRoute(id string) (GatewayRoute, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.routes {
+		if s.routes[index].ID != id {
+			continue
+		}
+
+		s.routes[index].Status = "Active"
+		s.routes[index].UpdatedAt = nowLabel()
+		s.requestLogs = append([]RequestLog{{
+			ID:        nextID("req"),
+			Request:   "PUBLISH " + s.routes[index].Route,
+			Consumer:  s.routes[index].Upstream,
+			Latency:   "28ms",
+			Result:    "200",
+			Status:    "Success",
+			CreatedAt: nowLabel(),
+		}}, s.requestLogs...)
+		s.addAuditLocked("网关与模型", "publish route", s.routes[index].Route, "Success")
+		return s.routes[index], true
+	}
+	return GatewayRoute{}, false
+}
+
 func (s *Store) ListModelRoutes() []ModelRoute {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

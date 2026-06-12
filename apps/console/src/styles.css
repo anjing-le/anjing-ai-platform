@@ -903,10 +903,27 @@ tbody tr.is-selected td:first-child {
   gap: 7px;
 }
 
+.route-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.route-summary div {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
 .application-summary span,
+.route-summary span,
 .journey-list small,
 .application-usage span,
-.mini-log-list span {
+.mini-log-list span,
+.route-checks span {
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 900;
@@ -914,19 +931,45 @@ tbody tr.is-selected td:first-child {
   text-transform: uppercase;
 }
 
-.application-summary strong {
+.application-summary strong,
+.route-summary strong {
   overflow-wrap: anywhere;
   font-size: 1.28rem;
 }
 
 .application-summary p,
+.route-summary p,
 .journey-list p,
 .application-usage p,
-.mini-log-list p {
+.mini-log-list p,
+.route-checks p {
   margin: 0;
   color: var(--ink-soft);
   font-size: 0.86rem;
   line-height: 1.55;
+}
+
+.route-checks {
+  display: grid;
+}
+
+.route-checks article {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  min-height: 88px;
+  padding: 14px 40px 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.route-checks article:last-child {
+  border-bottom: 0;
+}
+
+.route-checks .status-dot {
+  position: absolute;
+  top: 16px;
+  right: 16px;
 }
 
 .journey-list {
