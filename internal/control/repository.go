@@ -32,6 +32,7 @@ type UserRepository interface {
 type ApplicationRepository interface {
 	ListApplications(ctx context.Context) ([]store.Application, error)
 	CreateApplication(ctx context.Context, input CreateApplicationInput) (store.Application, error)
+	ActivateApplication(ctx context.Context, id string) (store.Application, bool, error)
 }
 
 type RoleRepository interface {
@@ -94,6 +95,11 @@ func (repo MemoryApplicationRepository) ListApplications(context.Context) ([]sto
 
 func (repo MemoryApplicationRepository) CreateApplication(_ context.Context, input CreateApplicationInput) (store.Application, error) {
 	return repo.store.CreateApplication(input.Name, input.Owner, input.Environment, input.DefaultRoute, input.Plan), nil
+}
+
+func (repo MemoryApplicationRepository) ActivateApplication(_ context.Context, id string) (store.Application, bool, error) {
+	item, ok := repo.store.ActivateApplication(id)
+	return item, ok, nil
 }
 
 type MemoryRoleRepository struct {
@@ -271,6 +277,48 @@ func (repo PostgresApplicationRepository) CreateApplication(ctx context.Context,
 
 	app.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return app, nil
+}
+
+func (repo PostgresApplicationRepository) ActivateApplication(ctx context.Context, id string) (store.Application, bool, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.Application{}, false, fmt.Errorf("begin activate application: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
+		update applications
+		set status = 'Active'
+		where id = $1
+		returning id, name, owner, environment, api_key, default_route, plan, status, created_at
+	`, id)
+	if err != nil {
+		return store.Application{}, false, fmt.Errorf("activate application: %w", err)
+	}
+	defer rows.Close()
+
+	app, err := pgx.CollectOneRow(rows, scanApplication)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.Application{}, false, nil
+		}
+		return store.Application{}, false, fmt.Errorf("collect activated application: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, `
+		update api_keys
+		set status = 'Active'
+		where project = $1 or name = $2
+	`, app.Name, app.APIKey)
+	if err != nil {
+		return store.Application{}, false, fmt.Errorf("activate application api key: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.Application{}, false, fmt.Errorf("commit activate application: %w", err)
+	}
+
+	return app, true, nil
 }
 
 func scanApplication(row pgx.CollectableRow) (store.Application, error) {

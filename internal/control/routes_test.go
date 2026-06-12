@@ -42,6 +42,27 @@ func TestApplicationsCanBeCreatedAndListed(t *testing.T) {
 		t.Fatalf("unexpected create response: %+v", created)
 	}
 
+	activateBody := bytes.NewBufferString(`{"id":"` + created.Data.ID + `"}`)
+	activateReq := httptest.NewRequest(http.MethodPost, "/api/control/applications/activate", activateBody)
+	activateReq.Header.Set("Content-Type", "application/json")
+	activateRec := httptest.NewRecorder()
+	mux.ServeHTTP(activateRec, activateReq)
+
+	if activateRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", activateRec.Code, activateRec.Body.String())
+	}
+
+	var activated struct {
+		Success bool              `json:"success"`
+		Data    store.Application `json:"data"`
+	}
+	if err := json.Unmarshal(activateRec.Body.Bytes(), &activated); err != nil {
+		t.Fatalf("decode activate response: %v", err)
+	}
+	if !activated.Success || activated.Data.Status != "Active" {
+		t.Fatalf("expected activated application, got %+v", activated)
+	}
+
 	listReq := httptest.NewRequest(http.MethodGet, "/api/control/applications", nil)
 	listRec := httptest.NewRecorder()
 	mux.ServeHTTP(listRec, listReq)
@@ -59,5 +80,8 @@ func TestApplicationsCanBeCreatedAndListed(t *testing.T) {
 	}
 	if !listed.Success || len(listed.Data) == 0 || listed.Data[0].Name != "agent-workbench" {
 		t.Fatalf("expected newly created application first, got %+v", listed.Data)
+	}
+	if listed.Data[0].Status != "Active" {
+		t.Fatalf("expected listed application to be active, got %s", listed.Data[0].Status)
 	}
 }

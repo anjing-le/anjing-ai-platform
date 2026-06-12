@@ -314,6 +314,13 @@ export function createApplication(input: CreateApplicationInput, role?: RoleId):
   }, role);
 }
 
+export function activateApplication(id: string, role?: RoleId): Promise<Application> {
+  return requestJson<Application>("/api/control/applications/activate", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function createRoute(input: CreateRouteInput, role?: RoleId): Promise<GatewayRoute> {
   return requestJson<GatewayRoute>("/api/gateway/routes", {
     method: "POST",

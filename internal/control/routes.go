@@ -26,6 +26,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	})
 	mux.HandleFunc("/api/control/users", usersHandler(repos.Users))
 	mux.HandleFunc("/api/control/applications", applicationsHandler(repos.Applications))
+	mux.HandleFunc("/api/control/applications/activate", activateApplicationHandler(repos.Applications))
 	mux.HandleFunc("/api/control/roles", rolesHandler(repos.Roles))
 	mux.HandleFunc("/api/control/api-keys", apiKeysHandler(repos.APIKeys))
 	mux.HandleFunc("/api/control/credentials", credentialsHandler(repos.Credentials))
@@ -125,6 +126,39 @@ func applicationsHandler(applications ApplicationRepository) http.HandlerFunc {
 		default:
 			httpjson.MethodNotAllowed(w)
 		}
+	}
+}
+
+func activateApplicationHandler(applications ApplicationRepository) http.HandlerFunc {
+	type activateApplicationRequest struct {
+		ID string `json:"id"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req activateApplicationRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+
+		item, ok, err := applications.ActivateApplication(r.Context(), req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "application not found")
+			return
+		}
+		httpjson.OK(w, item)
 	}
 }
 

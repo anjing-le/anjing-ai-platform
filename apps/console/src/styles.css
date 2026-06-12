@@ -1009,6 +1009,19 @@ tbody tr.is-selected td:first-child {
   font-size: 0.98rem;
 }
 
+.application-actions {
+  padding: 14px 16px 16px;
+}
+
+.application-actions .button {
+  width: 100%;
+}
+
+.application-actions .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
 .status {
   display: inline-flex;
   min-height: 26px;

@@ -327,6 +327,36 @@ func (s *Store) CreateApplication(name, owner, environment, defaultRoute, plan s
 	return app
 }
 
+func (s *Store) ActivateApplication(id string) (Application, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.applications {
+		if s.applications[index].ID != id {
+			continue
+		}
+
+		s.applications[index].Status = "Active"
+		s.addAuditLocked("帮助文档", "activate application", s.applications[index].Name, "Success")
+		for keyIndex := range s.apiKeys {
+			if s.apiKeys[keyIndex].Project == s.applications[index].Name ||
+				s.apiKeys[keyIndex].Name == s.applications[index].APIKey {
+				s.apiKeys[keyIndex].Status = "Active"
+			}
+		}
+		s.requestLogs = append([]RequestLog{{
+			ID:        nextID("req"),
+			Request:   "POST " + s.applications[index].DefaultRoute,
+			Consumer:  s.applications[index].Name,
+			Latency:   "64ms",
+			Result:    "200",
+			Status:    "Success",
+			CreatedAt: nowLabel(),
+		}}, s.requestLogs...)
+		return s.applications[index], true
+	}
+	return Application{}, false
+}
+
 func (s *Store) ListRoles() []RolePolicy {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

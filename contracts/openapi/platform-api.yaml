@@ -162,6 +162,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/control/applications/activate:
+    post:
+      tags: [control]
+      operationId: activateApplication
+      summary: Mark an onboarding application as active after validation.
+      x-anjing-roles: [Administrator, User, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateApplicationRequest"
+      responses:
+        "200":
+          description: Application activated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Application"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/control/roles:
     get:
       tags: [control]
@@ -820,6 +852,12 @@ components:
         plan:
           type: string
           default: Free
+    ActivateApplicationRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
     RolePolicy:
       type: object
       required: [id, name, visibleEntries, configScope, restriction, status]

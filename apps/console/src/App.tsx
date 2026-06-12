@@ -10,6 +10,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 import { ActionDialog, type ActionMode, type ActionValues } from "./components/ActionDialog";
 import { backendPlan, modulePages, navItems, roles, todos } from "./data/console";
 import {
+  activateApplication,
   createApplication,
   createPlan,
   createRoute,
@@ -67,6 +68,7 @@ function App() {
   const [actionMode, setActionMode] = useState<ActionMode | null>(null);
   const [actionError, setActionError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
+  const [activatingApplicationId, setActivatingApplicationId] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -233,6 +235,21 @@ function App() {
     }
   }
 
+  async function handleApplicationActivate(id: string) {
+    setNotice("");
+    setActivatingApplicationId(id);
+
+    try {
+      const application = await activateApplication(id, role);
+      await refreshSnapshot();
+      setNotice(`已完成接入校验：${application.name}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "应用激活失败");
+    } finally {
+      setActivatingApplicationId("");
+    }
+  }
+
   return (
     <>
       <ConsoleShell
@@ -254,6 +271,8 @@ function App() {
         {activePage ? (
           <ModulePage
             notice={notice}
+            onApplicationActivate={handleApplicationActivate}
+            activatingApplicationId={activatingApplicationId}
             onPrimaryAction={handleModuleAction}
             page={activePage}
             role={role}
@@ -509,13 +528,17 @@ function ConsoleHome({
 }
 
 function ModulePage({
+  activatingApplicationId,
   notice,
+  onApplicationActivate,
   onPrimaryAction,
   page,
   role,
   snapshot,
 }: {
+  activatingApplicationId: string;
   notice: string;
+  onApplicationActivate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   page: ModulePageDefinition;
   role: RoleId;
@@ -613,7 +636,12 @@ function ModulePage({
         <div className="side-panels">
           {page.id === "gateway" ? <LLMInvokePanel role={role} /> : null}
           {page.id === "docs" ? (
-            <ApplicationJourneyPanel application={selectedApplication} snapshot={snapshot} />
+            <ApplicationJourneyPanel
+              activating={activatingApplicationId === selectedApplication?.id}
+              application={selectedApplication}
+              onActivate={onApplicationActivate}
+              snapshot={snapshot}
+            />
           ) : null}
           {page.panels.map((panel) => (
             <Panel eyebrow={panel.eyebrow} key={panel.title} title={panel.title}>
@@ -635,10 +663,14 @@ function ModulePage({
 }
 
 function ApplicationJourneyPanel({
+  activating,
   application,
+  onActivate,
   snapshot,
 }: {
+  activating: boolean;
   application?: Application;
+  onActivate: (id: string) => Promise<void>;
   snapshot?: PlatformSnapshot;
 }) {
   if (!application) {
@@ -742,6 +774,18 @@ function ApplicationJourneyPanel({
             <p>首次调用后这里会出现最近请求。</p>
           </article>
         )}
+      </div>
+
+      <div className="application-actions">
+        <button
+          className="button button--primary"
+          disabled={activating || application.status === "Active"}
+          onClick={() => void onActivate(application.id)}
+          type="button"
+        >
+          {application.status === "Active" ? "已完成校验" : activating ? "校验中" : "完成接入校验"}
+          <ChevronRight size={16} />
+        </button>
       </div>
     </Panel>
   );

@@ -167,6 +167,7 @@ func allowUser(method, path string) bool {
 
 	if method == http.MethodPost {
 		return path == "/api/control/applications" ||
+			path == "/api/control/applications/activate" ||
 			path == "/api/gateway/llm/invoke"
 	}
 
@@ -186,6 +187,7 @@ func allowDeveloper(method, path string) bool {
 
 	if method == http.MethodPost {
 		return path == "/api/control/applications" ||
+			path == "/api/control/applications/activate" ||
 			path == "/api/gateway/routes" ||
 			path == "/api/gateway/llm/invoke"
 	}

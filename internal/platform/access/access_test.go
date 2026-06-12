@@ -71,6 +71,14 @@ func TestUserAndDeveloperCanCreateApplications(t *testing.T) {
 	if developerRec.Code != http.StatusOK {
 		t.Fatalf("expected developer application create to be allowed, got %d", developerRec.Code)
 	}
+
+	activateReq := httptest.NewRequest(http.MethodPost, "/api/control/applications/activate", nil)
+	activateReq.Header.Set("Authorization", "Bearer developer-test-token")
+	activateRec := httptest.NewRecorder()
+	handler.ServeHTTP(activateRec, activateReq)
+	if activateRec.Code != http.StatusOK {
+		t.Fatalf("expected developer application activation to be allowed, got %d", activateRec.Code)
+	}
 }
 
 func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
@@ -98,6 +106,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler.ServeHTTP(appDeniedRec, appDenied)
 	if appDeniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected application config to be forbidden for operator, got %d", appDeniedRec.Code)
+	}
+
+	appActivateDenied := httptest.NewRequest(http.MethodPost, "/api/control/applications/activate", nil)
+	appActivateDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	appActivateDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(appActivateDeniedRec, appActivateDenied)
+	if appActivateDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected application activation to be forbidden for operator, got %d", appActivateDeniedRec.Code)
 	}
 }
 

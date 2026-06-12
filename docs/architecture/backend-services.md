@@ -206,6 +206,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/control/users`
 - `GET /api/control/applications`
 - `POST /api/control/applications`
+- `POST /api/control/applications/activate`
 - `GET /api/control/roles`
 - `GET /api/control/api-keys`
 - `GET /api/control/credentials`
