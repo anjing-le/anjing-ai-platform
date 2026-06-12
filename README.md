@@ -97,6 +97,14 @@ pnpm image:up
 http://localhost:18080/
 ```
 
+CI 模板：
+
+```text
+docs/ci/github-actions-ci.yml
+```
+
+如果要启用 GitHub Actions，把模板复制到 `.github/workflows/ci.yml`。当前自动化 token 需要 `workflow` scope 才能直接推送 workflow 文件。
+
 单服务启动：
 
 ```bash
