@@ -22,9 +22,12 @@ func main() {
 			panic(err)
 		}
 		defer pool.Close()
-		todos := ops.NewPostgresTodoRepository(pool)
+		repos := ops.NewMemoryRepositories(st)
+		repos.Todos = ops.NewPostgresTodoRepository(pool)
+		repos.Health = ops.NewPostgresHealthRepository(pool)
+		repos.Audit = ops.NewPostgresAuditRepository(pool)
 		opsRegister = func(mux *http.ServeMux, st *store.Store) {
-			ops.RegisterWithTodos(mux, st, todos)
+			ops.RegisterWithRepositories(mux, st, repos)
 		}
 	}
 

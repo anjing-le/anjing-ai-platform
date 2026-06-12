@@ -52,9 +52,12 @@ func main() {
 		billingRegister = func(mux *http.ServeMux, st *store.Store) {
 			billing.RegisterWithRepositories(mux, st, billingRepos)
 		}
-		todos := ops.NewPostgresTodoRepository(pool)
+		opsRepos := ops.NewMemoryRepositories(st)
+		opsRepos.Todos = ops.NewPostgresTodoRepository(pool)
+		opsRepos.Health = ops.NewPostgresHealthRepository(pool)
+		opsRepos.Audit = ops.NewPostgresAuditRepository(pool)
 		opsRegister = func(mux *http.ServeMux, st *store.Store) {
-			ops.RegisterWithTodos(mux, st, todos)
+			ops.RegisterWithRepositories(mux, st, opsRepos)
 		}
 	}
 

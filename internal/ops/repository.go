@@ -15,6 +15,28 @@ type TodoRepository interface {
 	ResolveTodo(ctx context.Context, id string) (store.OpsTodo, bool, error)
 }
 
+type HealthRepository interface {
+	ListHealth(ctx context.Context) ([]store.ServiceHealth, error)
+}
+
+type AuditRepository interface {
+	ListAudit(ctx context.Context) ([]store.AuditEvent, error)
+}
+
+type Repositories struct {
+	Todos  TodoRepository
+	Health HealthRepository
+	Audit  AuditRepository
+}
+
+func NewMemoryRepositories(st *store.Store) Repositories {
+	return Repositories{
+		Todos:  NewMemoryTodoRepository(st),
+		Health: NewMemoryHealthRepository(st),
+		Audit:  NewMemoryAuditRepository(st),
+	}
+}
+
 type MemoryTodoRepository struct {
 	store *store.Store
 }
@@ -30,6 +52,30 @@ func (repo MemoryTodoRepository) ListTodos(context.Context) ([]store.OpsTodo, er
 func (repo MemoryTodoRepository) ResolveTodo(_ context.Context, id string) (store.OpsTodo, bool, error) {
 	todo, ok := repo.store.ResolveTodo(id)
 	return todo, ok, nil
+}
+
+type MemoryHealthRepository struct {
+	store *store.Store
+}
+
+func NewMemoryHealthRepository(st *store.Store) MemoryHealthRepository {
+	return MemoryHealthRepository{store: st}
+}
+
+func (repo MemoryHealthRepository) ListHealth(context.Context) ([]store.ServiceHealth, error) {
+	return repo.store.ListHealth(), nil
+}
+
+type MemoryAuditRepository struct {
+	store *store.Store
+}
+
+func NewMemoryAuditRepository(st *store.Store) MemoryAuditRepository {
+	return MemoryAuditRepository{store: st}
+}
+
+func (repo MemoryAuditRepository) ListAudit(context.Context) ([]store.AuditEvent, error) {
+	return repo.store.ListAudit(), nil
 }
 
 type PostgresTodoRepository struct {
@@ -89,5 +135,77 @@ func scanOpsTodo(row pgx.CollectableRow) (store.OpsTodo, error) {
 		return store.OpsTodo{}, err
 	}
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
+	return item, nil
+}
+
+type PostgresHealthRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresHealthRepository(pool *pgxpool.Pool) PostgresHealthRepository {
+	return PostgresHealthRepository{pool: pool}
+}
+
+func (repo PostgresHealthRepository) ListHealth(ctx context.Context) ([]store.ServiceHealth, error) {
+	rows, err := repo.pool.Query(ctx, `
+		select id, name, slo, p95, status
+		from service_health
+		order by name asc
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query service health: %w", err)
+	}
+	defer rows.Close()
+
+	items, err := pgx.CollectRows(rows, scanServiceHealth)
+	if err != nil {
+		return nil, fmt.Errorf("collect service health: %w", err)
+	}
+
+	return items, nil
+}
+
+func scanServiceHealth(row pgx.CollectableRow) (store.ServiceHealth, error) {
+	var item store.ServiceHealth
+	if err := row.Scan(&item.ID, &item.Name, &item.SLO, &item.P95, &item.Status); err != nil {
+		return store.ServiceHealth{}, err
+	}
+	return item, nil
+}
+
+type PostgresAuditRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresAuditRepository(pool *pgxpool.Pool) PostgresAuditRepository {
+	return PostgresAuditRepository{pool: pool}
+}
+
+func (repo PostgresAuditRepository) ListAudit(ctx context.Context) ([]store.AuditEvent, error) {
+	rows, err := repo.pool.Query(ctx, `
+		select id, event_time, module, action, object, status, request_id
+		from audit_events
+		order by event_time desc
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query audit events: %w", err)
+	}
+	defer rows.Close()
+
+	items, err := pgx.CollectRows(rows, scanAuditEvent)
+	if err != nil {
+		return nil, fmt.Errorf("collect audit events: %w", err)
+	}
+
+	return items, nil
+}
+
+func scanAuditEvent(row pgx.CollectableRow) (store.AuditEvent, error) {
+	var item store.AuditEvent
+	var eventTime time.Time
+	if err := row.Scan(&item.ID, &eventTime, &item.Module, &item.Action, &item.Object, &item.Status, &item.RequestID); err != nil {
+		return store.AuditEvent{}, err
+	}
+	item.Time = eventTime.UTC().Format(time.RFC3339)
 	return item, nil
 }
