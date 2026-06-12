@@ -563,6 +563,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/billing/plans/activate:
+    post:
+      tags: [billing]
+      operationId: activateBillingPlan
+      summary: Activate a billing plan draft.
+      x-anjing-roles: [Administrator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateBillingPlanRequest"
+      responses:
+        "200":
+          description: Billing plan activated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/BillingPlan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/billing/usage:
     get:
       tags: [billing]
@@ -1151,6 +1183,12 @@ components:
         tokenPerDay:
           type: string
           default: 1M
+    ActivateBillingPlanRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
     UsageRecord:
       type: object
       required: [id, project, tokens, skillCalls, cost, status, updatedAt]

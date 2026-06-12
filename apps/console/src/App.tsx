@@ -11,6 +11,7 @@ import { ActionDialog, type ActionMode, type ActionValues } from "./components/A
 import { backendPlan, modulePages, navItems, roles, todos } from "./data/console";
 import {
   activateApplication,
+  activatePlan,
   createApplication,
   createPlan,
   createRoute,
@@ -21,6 +22,7 @@ import {
   resolveTodo,
   rotateApplicationKey,
   type Application,
+  type BillingPlan,
   type GatewayRoute,
   type LLMInvokeResponse,
   type PlatformSnapshot,
@@ -74,6 +76,7 @@ function App() {
   const [activatingApplicationId, setActivatingApplicationId] = useState("");
   const [rotatingApplicationId, setRotatingApplicationId] = useState("");
   const [publishingRouteId, setPublishingRouteId] = useState("");
+  const [activatingPlanId, setActivatingPlanId] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -285,6 +288,21 @@ function App() {
     }
   }
 
+  async function handlePlanActivate(id: string) {
+    setNotice("");
+    setActivatingPlanId(id);
+
+    try {
+      const plan = await activatePlan(id, role);
+      await refreshSnapshot();
+      setNotice(`已启用套餐：${plan.name}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "套餐启用失败");
+    } finally {
+      setActivatingPlanId("");
+    }
+  }
+
   return (
     <>
       <ConsoleShell
@@ -308,8 +326,10 @@ function App() {
             notice={notice}
             onApplicationActivate={handleApplicationActivate}
             onApplicationKeyRotate={handleApplicationKeyRotate}
+            onPlanActivate={handlePlanActivate}
             onRoutePublish={handleRoutePublish}
             activatingApplicationId={activatingApplicationId}
+            activatingPlanId={activatingPlanId}
             onPrimaryAction={handleModuleAction}
             page={activePage}
             publishingRouteId={publishingRouteId}
@@ -571,9 +591,11 @@ function ModulePage({
   notice,
   onApplicationActivate,
   onApplicationKeyRotate,
+  onPlanActivate,
   onPrimaryAction,
   onRoutePublish,
   page,
+  activatingPlanId,
   publishingRouteId,
   role,
   rotatingApplicationId,
@@ -583,8 +605,10 @@ function ModulePage({
   notice: string;
   onApplicationActivate: (id: string) => Promise<void>;
   onApplicationKeyRotate: (id: string) => Promise<void>;
+  onPlanActivate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   onRoutePublish: (id: string) => Promise<void>;
+  activatingPlanId: string;
   page: ModulePageDefinition;
   publishingRouteId: string;
   role: RoleId;
@@ -627,13 +651,24 @@ function ModulePage({
     );
   }, [page.id, selectedRowId, snapshot?.routes]);
 
-  const selectableTable = page.id === "docs" || page.id === "gateway";
+  const selectedPlan = useMemo(() => {
+    if (page.id !== "quota" || !snapshot?.plans?.length) {
+      return undefined;
+    }
+
+    return snapshot.plans.find((plan) => plan.id === selectedRowId) || snapshot.plans[0];
+  }, [page.id, selectedRowId, snapshot?.plans]);
+
+  const selectableTable = page.id === "docs" || page.id === "gateway" || page.id === "quota";
   let selectedTableRowId: string | undefined;
   if (page.id === "docs") {
     selectedTableRowId = selectedApplication?.id;
   }
   if (page.id === "gateway") {
     selectedTableRowId = selectedRoute?.id;
+  }
+  if (page.id === "quota") {
+    selectedTableRowId = selectedPlan?.id;
   }
 
   useEffect(() => {
@@ -708,6 +743,14 @@ function ModulePage({
             />
           ) : null}
           {page.id === "gateway" ? <LLMInvokePanel role={role} /> : null}
+          {page.id === "quota" ? (
+            <BillingPlanPanel
+              activating={activatingPlanId === selectedPlan?.id}
+              onActivate={onPlanActivate}
+              plan={selectedPlan}
+              role={role}
+            />
+          ) : null}
           {page.id === "docs" ? (
             <ApplicationJourneyPanel
               activating={activatingApplicationId === selectedApplication?.id}
@@ -939,6 +982,72 @@ function GatewayRoutePanel({
           type="button"
         >
           {route.status === "Active" ? "已发布" : publishing ? "发布中" : "发布路由"}
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    </Panel>
+  );
+}
+
+function BillingPlanPanel({
+  activating,
+  onActivate,
+  plan,
+  role,
+}: {
+  activating: boolean;
+  onActivate: (id: string) => Promise<void>;
+  plan?: BillingPlan;
+  role: RoleId;
+}) {
+  if (!plan) {
+    return (
+      <Panel eyebrow="Plan" title="套餐详情">
+        <div className="empty-panel">
+          <strong>暂无套餐</strong>
+          <p>新增套餐后，这里会展示限流、Token 配额和启用状态。</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  const canActivate = role === "admin";
+  const checks = [
+    { label: "Target", value: plan.target, note: "适用对象", tone: "neutral" },
+    { label: "RPS", value: plan.rps, note: "请求速率", tone: "neutral" },
+    { label: "Token / day", value: plan.tokenPerDay, note: "每日额度", tone: "watch" },
+  ] as const;
+
+  return (
+    <Panel eyebrow="Plan" title="套餐详情">
+      <div className="plan-summary">
+        <div>
+          <span>Selected Plan</span>
+          <strong>{plan.name}</strong>
+          <p>{canActivate ? "管理员可启用套餐" : "当前角色只读计费配置"}</p>
+        </div>
+        <StatusBadge tone={toneForStatus(plan.status)}>{plan.status}</StatusBadge>
+      </div>
+
+      <div className="plan-checks">
+        {checks.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.note}</p>
+            <StatusDot tone={item.tone} />
+          </article>
+        ))}
+      </div>
+
+      <div className="application-actions">
+        <button
+          className="button button--primary"
+          disabled={!canActivate || activating || plan.status === "Active"}
+          onClick={() => void onActivate(plan.id)}
+          type="button"
+        >
+          {plan.status === "Active" ? "已启用" : activating ? "启用中" : "启用套餐"}
           <ChevronRight size={16} />
         </button>
       </div>

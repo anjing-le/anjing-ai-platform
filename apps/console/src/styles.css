@@ -903,7 +903,8 @@ tbody tr.is-selected td:first-child {
   gap: 7px;
 }
 
-.route-summary {
+.route-summary,
+.plan-summary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -912,7 +913,8 @@ tbody tr.is-selected td:first-child {
   border-bottom: 1px solid var(--line);
 }
 
-.route-summary div {
+.route-summary div,
+.plan-summary div {
   display: grid;
   min-width: 0;
   gap: 7px;
@@ -920,10 +922,12 @@ tbody tr.is-selected td:first-child {
 
 .application-summary span,
 .route-summary span,
+.plan-summary span,
 .journey-list small,
 .application-usage span,
 .mini-log-list span,
-.route-checks span {
+.route-checks span,
+.plan-checks span {
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 900;
@@ -932,28 +936,33 @@ tbody tr.is-selected td:first-child {
 }
 
 .application-summary strong,
-.route-summary strong {
+.route-summary strong,
+.plan-summary strong {
   overflow-wrap: anywhere;
   font-size: 1.28rem;
 }
 
 .application-summary p,
 .route-summary p,
+.plan-summary p,
 .journey-list p,
 .application-usage p,
 .mini-log-list p,
-.route-checks p {
+.route-checks p,
+.plan-checks p {
   margin: 0;
   color: var(--ink-soft);
   font-size: 0.86rem;
   line-height: 1.55;
 }
 
-.route-checks {
+.route-checks,
+.plan-checks {
   display: grid;
 }
 
-.route-checks article {
+.route-checks article,
+.plan-checks article {
   position: relative;
   display: grid;
   gap: 7px;
@@ -962,11 +971,13 @@ tbody tr.is-selected td:first-child {
   border-bottom: 1px solid var(--line);
 }
 
-.route-checks article:last-child {
+.route-checks article:last-child,
+.plan-checks article:last-child {
   border-bottom: 0;
 }
 
-.route-checks .status-dot {
+.route-checks .status-dot,
+.plan-checks .status-dot {
   position: absolute;
   top: 16px;
   right: 16px;

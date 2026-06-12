@@ -19,6 +19,7 @@ type CreatePlanInput struct {
 type PlanRepository interface {
 	ListPlans(ctx context.Context) ([]store.BillingPlan, error)
 	CreatePlan(ctx context.Context, input CreatePlanInput) (store.BillingPlan, error)
+	ActivatePlan(ctx context.Context, id string) (store.BillingPlan, bool, error)
 }
 
 type UsageRepository interface {
@@ -57,6 +58,11 @@ func (repo MemoryPlanRepository) ListPlans(context.Context) ([]store.BillingPlan
 
 func (repo MemoryPlanRepository) CreatePlan(_ context.Context, input CreatePlanInput) (store.BillingPlan, error) {
 	return repo.store.CreatePlan(input.Name, input.RPS, input.TokenPerDay), nil
+}
+
+func (repo MemoryPlanRepository) ActivatePlan(_ context.Context, id string) (store.BillingPlan, bool, error) {
+	plan, ok := repo.store.ActivatePlan(id)
+	return plan, ok, nil
 }
 
 type MemoryUsageRepository struct {
@@ -128,6 +134,29 @@ func (repo PostgresPlanRepository) CreatePlan(ctx context.Context, input CreateP
 	}
 
 	return item, nil
+}
+
+func (repo PostgresPlanRepository) ActivatePlan(ctx context.Context, id string) (store.BillingPlan, bool, error) {
+	rows, err := repo.pool.Query(ctx, `
+		update billing_plans
+		set status = 'Active'
+		where id = $1
+		returning id, name, target, rps, token_per_day, status
+	`, id)
+	if err != nil {
+		return store.BillingPlan{}, false, fmt.Errorf("activate billing plan: %w", err)
+	}
+	defer rows.Close()
+
+	plan, err := pgx.CollectOneRow(rows, scanBillingPlan)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.BillingPlan{}, false, nil
+		}
+		return store.BillingPlan{}, false, fmt.Errorf("collect activated billing plan: %w", err)
+	}
+
+	return plan, true, nil
 }
 
 type PostgresUsageRepository struct {

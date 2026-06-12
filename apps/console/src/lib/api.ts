@@ -349,6 +349,13 @@ export function createPlan(input: CreatePlanInput, role?: RoleId): Promise<Billi
   }, role);
 }
 
+export function activatePlan(id: string, role?: RoleId): Promise<BillingPlan> {
+  return requestJson<BillingPlan>("/api/billing/plans/activate", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function resolveTodo(id: string, role?: RoleId): Promise<OpsTodo> {
   return requestJson<OpsTodo>("/api/ops/todos/resolve", {
     method: "POST",

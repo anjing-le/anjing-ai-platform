@@ -483,6 +483,21 @@ func (s *Store) CreatePlan(name, rps, tokenPerDay string) BillingPlan {
 	return plan
 }
 
+func (s *Store) ActivatePlan(id string) (BillingPlan, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.plans {
+		if s.plans[index].ID != id {
+			continue
+		}
+
+		s.plans[index].Status = "Active"
+		s.addAuditLocked("计费与配额", "activate plan", s.plans[index].Name, "Success")
+		return s.plans[index], true
+	}
+	return BillingPlan{}, false
+}
+
 func (s *Store) ListUsage() []UsageRecord {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

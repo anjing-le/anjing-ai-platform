@@ -228,6 +228,7 @@ go run ./cmd/console-web      # :1818
 - `GET /api/billing/healthz`
 - `GET /api/billing/plans`
 - `POST /api/billing/plans`
+- `POST /api/billing/plans/activate`
 - `GET /api/billing/usage`
 - `GET /api/billing/budget-alerts`
 

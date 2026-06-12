@@ -59,6 +59,14 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 	if deniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected billing write to be forbidden, got %d", deniedRec.Code)
 	}
+
+	activateDenied := httptest.NewRequest(http.MethodPost, "/api/billing/plans/activate", nil)
+	activateDenied.Header.Set("Authorization", "Bearer developer-test-token")
+	activateDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(activateDeniedRec, activateDenied)
+	if activateDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected billing activation to be forbidden, got %d", activateDeniedRec.Code)
+	}
 }
 
 func TestUserAndDeveloperCanCreateApplications(t *testing.T) {

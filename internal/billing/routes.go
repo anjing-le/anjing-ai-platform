@@ -25,6 +25,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 		httpjson.OK(w, map[string]string{"service": "billing-service", "status": "ok"})
 	})
 	mux.HandleFunc("/api/billing/plans", plansHandler(repos.Plans))
+	mux.HandleFunc("/api/billing/plans/activate", activatePlanHandler(repos.Plans))
 	mux.HandleFunc("/api/billing/usage", usageHandler(repos.Usage))
 	mux.HandleFunc("/api/billing/budget-alerts", budgetAlertsHandler(repos.BudgetAlerts))
 }
@@ -74,6 +75,40 @@ func plansHandler(plans PlanRepository) http.HandlerFunc {
 		default:
 			httpjson.MethodNotAllowed(w)
 		}
+	}
+}
+
+func activatePlanHandler(plans PlanRepository) http.HandlerFunc {
+	type activatePlanRequest struct {
+		ID string `json:"id"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req activatePlanRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+
+		plan, ok, err := plans.ActivatePlan(r.Context(), req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "billing plan not found")
+			return
+		}
+
+		httpjson.OK(w, plan)
 	}
 }
 
