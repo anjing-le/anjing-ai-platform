@@ -28,6 +28,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/billing/plans/activate", activatePlanHandler(repos.Plans))
 	mux.HandleFunc("/api/billing/usage", usageHandler(repos.Usage))
 	mux.HandleFunc("/api/billing/budget-alerts", budgetAlertsHandler(repos.BudgetAlerts))
+	mux.HandleFunc("/api/billing/budget-alerts/resolve", resolveBudgetAlertHandler(repos.BudgetAlerts))
 }
 
 func plansHandler(plans PlanRepository) http.HandlerFunc {
@@ -137,5 +138,39 @@ func budgetAlertsHandler(alerts BudgetAlertRepository) http.HandlerFunc {
 			return
 		}
 		httpjson.OK(w, items)
+	}
+}
+
+func resolveBudgetAlertHandler(alerts BudgetAlertRepository) http.HandlerFunc {
+	type resolveBudgetAlertRequest struct {
+		ID string `json:"id"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req resolveBudgetAlertRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+
+		alert, ok, err := alerts.ResolveBudgetAlert(r.Context(), req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "budget alert not found")
+			return
+		}
+
+		httpjson.OK(w, alert)
 	}
 }

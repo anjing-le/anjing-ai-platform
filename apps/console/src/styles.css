@@ -1013,6 +1013,7 @@ tbody tr.is-selected td:first-child {
 .model-summary,
 .skill-summary,
 .plan-summary,
+.budget-alert-summary,
 .api-key-summary,
 .credential-summary {
   display: flex;
@@ -1027,6 +1028,7 @@ tbody tr.is-selected td:first-child {
 .model-summary div,
 .skill-summary div,
 .plan-summary div,
+.budget-alert-summary div,
 .api-key-summary div,
 .credential-summary div {
   display: grid;
@@ -1039,6 +1041,7 @@ tbody tr.is-selected td:first-child {
 .model-summary span,
 .skill-summary span,
 .plan-summary span,
+.budget-alert-summary span,
 .api-key-summary span,
 .credential-summary span,
 .journey-list small,
@@ -1048,6 +1051,7 @@ tbody tr.is-selected td:first-child {
 .model-checks span,
 .skill-checks span,
 .plan-checks span,
+.budget-alert-checks span,
 .api-key-checks span,
 .credential-checks span {
   color: var(--muted);
@@ -1062,6 +1066,7 @@ tbody tr.is-selected td:first-child {
 .model-summary strong,
 .skill-summary strong,
 .plan-summary strong,
+.budget-alert-summary strong,
 .api-key-summary strong,
 .credential-summary strong {
   overflow-wrap: anywhere;
@@ -1073,6 +1078,7 @@ tbody tr.is-selected td:first-child {
 .model-summary p,
 .skill-summary p,
 .plan-summary p,
+.budget-alert-summary p,
 .api-key-summary p,
 .credential-summary p,
 .journey-list p,
@@ -1082,6 +1088,7 @@ tbody tr.is-selected td:first-child {
 .model-checks p,
 .skill-checks p,
 .plan-checks p,
+.budget-alert-checks p,
 .api-key-checks p,
 .credential-checks p {
   margin: 0;
@@ -1094,6 +1101,7 @@ tbody tr.is-selected td:first-child {
 .model-checks,
 .skill-checks,
 .plan-checks,
+.budget-alert-checks,
 .api-key-checks,
 .credential-checks {
   display: grid;
@@ -1103,6 +1111,7 @@ tbody tr.is-selected td:first-child {
 .model-checks article,
 .skill-checks article,
 .plan-checks article,
+.budget-alert-checks article,
 .api-key-checks article,
 .credential-checks article {
   position: relative;
@@ -1117,6 +1126,7 @@ tbody tr.is-selected td:first-child {
 .model-checks article:last-child,
 .skill-checks article:last-child,
 .plan-checks article:last-child,
+.budget-alert-checks article:last-child,
 .api-key-checks article:last-child,
 .credential-checks article:last-child {
   border-bottom: 0;
@@ -1126,6 +1136,7 @@ tbody tr.is-selected td:first-child {
 .model-checks .status-dot,
 .skill-checks .status-dot,
 .plan-checks .status-dot,
+.budget-alert-checks .status-dot,
 .api-key-checks .status-dot,
 .credential-checks .status-dot {
   position: absolute;

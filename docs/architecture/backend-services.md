@@ -235,6 +235,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/billing/plans/activate`
 - `GET /api/billing/usage`
 - `GET /api/billing/budget-alerts`
+- `POST /api/billing/budget-alerts/resolve`
 
 ### `ops-api`
 

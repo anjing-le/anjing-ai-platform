@@ -21,12 +21,14 @@ import {
   invokeLLM,
   loadPlatformSnapshot,
   publishRoute,
+  resolveBudgetAlert,
   resolveTodo,
   rotateCredential,
   revokeAPIKey,
   rotateApplicationKey,
   type APIKey,
   type Application,
+  type BudgetAlert,
   type BillingPlan,
   type CreateModelRouteInput,
   type CreateSkillBindingInput,
@@ -88,6 +90,7 @@ function App() {
   const [rotatingApplicationId, setRotatingApplicationId] = useState("");
   const [publishingRouteId, setPublishingRouteId] = useState("");
   const [activatingPlanId, setActivatingPlanId] = useState("");
+  const [resolvingBudgetAlertId, setResolvingBudgetAlertId] = useState("");
   const [rotatingCredentialId, setRotatingCredentialId] = useState("");
   const [revokingAPIKeyId, setRevokingAPIKeyId] = useState("");
   const [resolvingTodoId, setResolvingTodoId] = useState("");
@@ -365,6 +368,21 @@ function App() {
     }
   }
 
+  async function handleBudgetAlertResolve(id: string) {
+    setNotice("");
+    setResolvingBudgetAlertId(id);
+
+    try {
+      const alert = await resolveBudgetAlert(id, role);
+      await refreshSnapshot();
+      setNotice(`已处理预算告警：${alert.project}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "预算告警处理失败");
+    } finally {
+      setResolvingBudgetAlertId("");
+    }
+  }
+
   async function handleCredentialRotate(id: string) {
     setNotice("");
     setRotatingCredentialId(id);
@@ -424,6 +442,7 @@ function App() {
             onApplicationKeyRotate={handleApplicationKeyRotate}
             onCredentialRotate={handleCredentialRotate}
             onModelRouteCreate={handleModelRouteCreate}
+            onBudgetAlertResolve={handleBudgetAlertResolve}
             onPlanActivate={handlePlanActivate}
             onRoutePublish={handleRoutePublish}
             onSkillBindingCreate={handleSkillBindingCreate}
@@ -432,6 +451,7 @@ function App() {
             onPrimaryAction={handleModuleAction}
             page={activePage}
             publishingRouteId={publishingRouteId}
+            resolvingBudgetAlertId={resolvingBudgetAlertId}
             role={role}
             revokingAPIKeyId={revokingAPIKeyId}
             rotatingCredentialId={rotatingCredentialId}
@@ -714,6 +734,7 @@ function ModulePage({
   onAPIKeyRevoke,
   onApplicationActivate,
   onApplicationKeyRotate,
+  onBudgetAlertResolve,
   onCredentialRotate,
   onModelRouteCreate,
   onPlanActivate,
@@ -723,6 +744,7 @@ function ModulePage({
   page,
   activatingPlanId,
   publishingRouteId,
+  resolvingBudgetAlertId,
   revokingAPIKeyId,
   role,
   rotatingCredentialId,
@@ -734,6 +756,7 @@ function ModulePage({
   onAPIKeyRevoke: (id: string) => Promise<void>;
   onApplicationActivate: (id: string) => Promise<void>;
   onApplicationKeyRotate: (id: string) => Promise<void>;
+  onBudgetAlertResolve: (id: string) => Promise<void>;
   onCredentialRotate: (id: string) => Promise<void>;
   onModelRouteCreate: (input: CreateModelRouteInput) => Promise<void>;
   onPlanActivate: (id: string) => Promise<void>;
@@ -743,6 +766,7 @@ function ModulePage({
   activatingPlanId: string;
   page: ModulePageDefinition;
   publishingRouteId: string;
+  resolvingBudgetAlertId: string;
   revokingAPIKeyId: string;
   role: RoleId;
   rotatingCredentialId: string;
@@ -814,6 +838,17 @@ function ModulePage({
 
     return snapshot.plans.find((plan) => plan.id === selectedRowId) || snapshot.plans[0];
   }, [page.id, selectedRowId, snapshot?.plans]);
+
+  const selectedBudgetAlert = useMemo(() => {
+    if (page.id !== "quota" || !snapshot?.budgetAlerts?.length) {
+      return undefined;
+    }
+
+    return (
+      snapshot.budgetAlerts.find((alert) => alert.status === "Warning") ||
+      snapshot.budgetAlerts[0]
+    );
+  }, [page.id, snapshot?.budgetAlerts]);
 
   const selectedCredential = useMemo(() => {
     if (page.id !== "iam" || !snapshot?.credentials?.length) {
@@ -952,8 +987,11 @@ function ModulePage({
           {page.id === "quota" ? (
             <BillingPlanPanel
               activating={activatingPlanId === selectedPlan?.id}
+              budgetAlert={selectedBudgetAlert}
               onActivate={onPlanActivate}
+              onBudgetAlertResolve={onBudgetAlertResolve}
               plan={selectedPlan}
+              resolvingBudgetAlertId={resolvingBudgetAlertId}
               role={role}
             />
           ) : null}
@@ -1436,13 +1474,19 @@ function SkillBindingPanel({
 
 function BillingPlanPanel({
   activating,
+  budgetAlert,
   onActivate,
+  onBudgetAlertResolve,
   plan,
+  resolvingBudgetAlertId,
   role,
 }: {
   activating: boolean;
+  budgetAlert?: BudgetAlert;
   onActivate: (id: string) => Promise<void>;
+  onBudgetAlertResolve: (id: string) => Promise<void>;
   plan?: BillingPlan;
+  resolvingBudgetAlertId: string;
   role: RoleId;
 }) {
   if (!plan) {
@@ -1464,35 +1508,110 @@ function BillingPlanPanel({
   ] as const;
 
   return (
-    <Panel eyebrow="Plan" title="套餐详情">
-      <div className="plan-summary">
-        <div>
-          <span>Selected Plan</span>
-          <strong>{plan.name}</strong>
-          <p>{canActivate ? "管理员可启用套餐" : "当前角色只读计费配置"}</p>
+    <>
+      <Panel eyebrow="Plan" title="套餐详情">
+        <div className="plan-summary">
+          <div>
+            <span>Selected Plan</span>
+            <strong>{plan.name}</strong>
+            <p>{canActivate ? "管理员可启用套餐" : "当前角色只读计费配置"}</p>
+          </div>
+          <StatusBadge tone={toneForStatus(plan.status)}>{plan.status}</StatusBadge>
         </div>
-        <StatusBadge tone={toneForStatus(plan.status)}>{plan.status}</StatusBadge>
+
+        <div className="plan-checks">
+          {checks.map((item) => (
+            <article key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <p>{item.note}</p>
+              <StatusDot tone={item.tone} />
+            </article>
+          ))}
+        </div>
+
+        <div className="application-actions">
+          <button
+            className="button button--primary"
+            disabled={!canActivate || activating || plan.status === "Active"}
+            onClick={() => void onActivate(plan.id)}
+            type="button"
+          >
+            {plan.status === "Active" ? "已启用" : activating ? "启用中" : "启用套餐"}
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </Panel>
+
+      <BudgetAlertPanel
+        alert={budgetAlert}
+        onResolve={onBudgetAlertResolve}
+        resolving={resolvingBudgetAlertId === budgetAlert?.id}
+        role={role}
+      />
+    </>
+  );
+}
+
+function BudgetAlertPanel({
+  alert,
+  onResolve,
+  resolving,
+  role,
+}: {
+  alert?: BudgetAlert;
+  onResolve: (id: string) => Promise<void>;
+  resolving: boolean;
+  role: RoleId;
+}) {
+  if (!alert) {
+    return (
+      <Panel eyebrow="Budget" title="预算告警">
+        <div className="empty-panel">
+          <strong>暂无预算规则</strong>
+          <p>创建套餐或预算规则后，这里会展示水位和处理动作。</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  const canResolve = role === "admin" || role === "operator";
+  const resolved = alert.status === "Resolved" || alert.status === "Normal";
+
+  return (
+    <Panel eyebrow="Budget" title="预算告警">
+      <div className="budget-alert-summary">
+        <div>
+          <span>Selected Alert</span>
+          <strong>{alert.project}</strong>
+          <p>{alert.current} / {alert.budget}</p>
+        </div>
+        <StatusBadge tone={toneForStatus(alert.status)}>{alert.status}</StatusBadge>
       </div>
 
-      <div className="plan-checks">
-        {checks.map((item) => (
-          <article key={item.label}>
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-            <p>{item.note}</p>
-            <StatusDot tone={item.tone} />
-          </article>
-        ))}
+      <div className="budget-alert-checks">
+        <article>
+          <span>Threshold</span>
+          <strong>{alert.threshold}</strong>
+          <p>触发阈值</p>
+          <StatusDot tone={alert.status === "Warning" ? "warn" : "neutral"} />
+        </article>
+        <article>
+          <span>Current</span>
+          <strong>{alert.current}</strong>
+          <p>当前消耗</p>
+          <StatusDot tone={alert.status === "Warning" ? "watch" : "good"} />
+        </article>
       </div>
 
       <div className="application-actions">
         <button
           className="button button--primary"
-          disabled={!canActivate || activating || plan.status === "Active"}
-          onClick={() => void onActivate(plan.id)}
+          disabled={!canResolve || resolving || resolved}
+          onClick={() => void onResolve(alert.id)}
           type="button"
         >
-          {plan.status === "Active" ? "已启用" : activating ? "启用中" : "启用套餐"}
+          {resolved ? "已处理" : resolving ? "处理中" : "处理预算告警"}
           <ChevronRight size={16} />
         </button>
       </div>
@@ -1809,7 +1928,7 @@ function StatusDot({ tone }: { tone: StatusTone }) {
 function toneForStatus(status = ""): StatusTone {
   const normalized = status.toLowerCase();
 
-  if (["active", "success", "normal", "ready", "published"].includes(normalized)) {
+  if (["active", "success", "normal", "ready", "published", "resolved"].includes(normalized)) {
     return "good";
   }
 

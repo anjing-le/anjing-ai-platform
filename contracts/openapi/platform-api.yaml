@@ -765,6 +765,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/billing/budget-alerts/resolve:
+    post:
+      tags: [billing]
+      operationId: resolveBudgetAlert
+      summary: Resolve a budget alert.
+      x-anjing-roles: [Administrator, Operator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveBudgetAlertRequest"
+      responses:
+        "200":
+          description: Budget alert resolved.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/BudgetAlert"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/ops/healthz:
     get:
       tags: [operations]
@@ -1389,6 +1421,12 @@ components:
         threshold:
           type: string
         status:
+          type: string
+    ResolveBudgetAlertRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
           type: string
     OpsDashboard:
       type: object

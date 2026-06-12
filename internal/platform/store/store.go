@@ -586,6 +586,21 @@ func (s *Store) ListBudgetAlerts() []BudgetAlert {
 	return append([]BudgetAlert(nil), s.budgetAlerts...)
 }
 
+func (s *Store) ResolveBudgetAlert(id string) (BudgetAlert, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.budgetAlerts {
+		if s.budgetAlerts[index].ID != id {
+			continue
+		}
+
+		s.budgetAlerts[index].Status = "Resolved"
+		s.addAuditLocked("计费与配额", "resolve budget alert", s.budgetAlerts[index].Project, "Success")
+		return s.budgetAlerts[index], true
+	}
+	return BudgetAlert{}, false
+}
+
 func (s *Store) Dashboard() OpsDashboard {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -117,7 +117,7 @@ export function hydrateModulePages(
     }
 
     if (page.id === "quota" && snapshot.plans) {
-      const warningCount = snapshot.budgetAlerts?.filter((alert) => alert.status !== "Normal").length || 0;
+      const warningCount = snapshot.budgetAlerts?.filter((alert) => alert.status === "Warning").length || 0;
       return {
         ...page,
         metrics: [
@@ -187,7 +187,7 @@ function toneForMetric(label: string, value: string): StatusTone {
 function toneForStatus(status: string): StatusTone {
   const normalized = status.toLowerCase();
 
-  if (["active", "success", "normal", "ready", "published"].includes(normalized)) {
+  if (["active", "success", "normal", "ready", "published", "resolved"].includes(normalized)) {
     return "good";
   }
 

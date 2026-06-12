@@ -28,6 +28,7 @@ type UsageRepository interface {
 
 type BudgetAlertRepository interface {
 	ListBudgetAlerts(ctx context.Context) ([]store.BudgetAlert, error)
+	ResolveBudgetAlert(ctx context.Context, id string) (store.BudgetAlert, bool, error)
 }
 
 type Repositories struct {
@@ -87,6 +88,11 @@ func NewMemoryBudgetAlertRepository(st *store.Store) MemoryBudgetAlertRepository
 
 func (repo MemoryBudgetAlertRepository) ListBudgetAlerts(context.Context) ([]store.BudgetAlert, error) {
 	return repo.store.ListBudgetAlerts(), nil
+}
+
+func (repo MemoryBudgetAlertRepository) ResolveBudgetAlert(_ context.Context, id string) (store.BudgetAlert, bool, error) {
+	alert, ok := repo.store.ResolveBudgetAlert(id)
+	return alert, ok, nil
 }
 
 type PostgresPlanRepository struct {
@@ -221,6 +227,29 @@ func (repo PostgresBudgetAlertRepository) ListBudgetAlerts(ctx context.Context) 
 	}
 
 	return items, nil
+}
+
+func (repo PostgresBudgetAlertRepository) ResolveBudgetAlert(ctx context.Context, id string) (store.BudgetAlert, bool, error) {
+	rows, err := repo.pool.Query(ctx, `
+		update budget_alerts
+		set status = 'Resolved'
+		where id = $1
+		returning id, project, budget, current, threshold, status
+	`, id)
+	if err != nil {
+		return store.BudgetAlert{}, false, fmt.Errorf("resolve budget alert: %w", err)
+	}
+	defer rows.Close()
+
+	alert, err := pgx.CollectOneRow(rows, scanBudgetAlert)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.BudgetAlert{}, false, nil
+		}
+		return store.BudgetAlert{}, false, fmt.Errorf("collect resolved budget alert: %w", err)
+	}
+
+	return alert, true, nil
 }
 
 func scanBudgetAlert(row pgx.CollectableRow) (store.BudgetAlert, error) {

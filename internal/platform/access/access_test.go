@@ -83,6 +83,14 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 	if activateDeniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected billing activation to be forbidden, got %d", activateDeniedRec.Code)
 	}
+
+	budgetResolveDenied := httptest.NewRequest(http.MethodPost, "/api/billing/budget-alerts/resolve", nil)
+	budgetResolveDenied.Header.Set("Authorization", "Bearer developer-test-token")
+	budgetResolveDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(budgetResolveDeniedRec, budgetResolveDenied)
+	if budgetResolveDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected budget alert resolve to be forbidden, got %d", budgetResolveDeniedRec.Code)
+	}
 }
 
 func TestUserAndDeveloperCanCreateApplications(t *testing.T) {
@@ -146,6 +154,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler.ServeHTTP(allowedRec, allowed)
 	if allowedRec.Code != http.StatusOK {
 		t.Fatalf("expected ops write to be allowed, got %d", allowedRec.Code)
+	}
+
+	budgetAllowed := httptest.NewRequest(http.MethodPost, "/api/billing/budget-alerts/resolve", nil)
+	budgetAllowed.Header.Set("Authorization", "Bearer operator-test-token")
+	budgetAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(budgetAllowedRec, budgetAllowed)
+	if budgetAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected budget alert handling to be allowed, got %d", budgetAllowedRec.Code)
 	}
 
 	denied := httptest.NewRequest(http.MethodGet, "/api/gateway/routes", nil)

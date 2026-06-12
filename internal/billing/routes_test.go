@@ -59,3 +59,36 @@ func TestCreateAndActivatePlan(t *testing.T) {
 		t.Fatalf("expected active plan, got %+v", activated)
 	}
 }
+
+func TestResolveBudgetAlert(t *testing.T) {
+	st := store.NewSeedStore()
+	alerts := st.ListBudgetAlerts()
+	if len(alerts) == 0 {
+		t.Fatal("seed store should contain budget alerts")
+	}
+
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"id":"` + alerts[0].ID + `"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/billing/budget-alerts/resolve", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool              `json:"success"`
+		Data    store.BudgetAlert `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Status != "Resolved" {
+		t.Fatalf("expected resolved alert, got %+v", payload)
+	}
+}

@@ -384,6 +384,13 @@ export function activatePlan(id: string, role?: RoleId): Promise<BillingPlan> {
   }, role);
 }
 
+export function resolveBudgetAlert(id: string, role?: RoleId): Promise<BudgetAlert> {
+  return requestJson<BudgetAlert>("/api/billing/budget-alerts/resolve", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function rotateCredential(id: string, role?: RoleId): Promise<Credential> {
   return requestJson<Credential>("/api/control/credentials/rotate", {
     method: "POST",
