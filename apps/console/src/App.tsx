@@ -104,6 +104,7 @@ function App() {
   const [rotatingCredentialId, setRotatingCredentialId] = useState("");
   const [revokingAPIKeyId, setRevokingAPIKeyId] = useState("");
   const [resolvingTodoId, setResolvingTodoId] = useState("");
+  const [selectedApplicationId, setSelectedApplicationId] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -247,7 +248,7 @@ function App() {
       }
 
       if (actionMode === "docs") {
-        await createApplication(
+        const application = await createApplication(
           {
             name: values.name,
             owner: values.owner,
@@ -257,7 +258,8 @@ function App() {
           },
           role,
         );
-        setNotice(`已创建接入应用：${values.name}`);
+        setSelectedApplicationId(application.id);
+        setNotice(`已创建接入应用：${application.name}`);
       }
 
       setActionMode(null);
@@ -291,6 +293,7 @@ function App() {
     try {
       const application = await activateApplication(id, role);
       await refreshSnapshot();
+      setSelectedApplicationId(application.id);
       setNotice(`已完成接入校验：${application.name}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "应用激活失败");
@@ -306,6 +309,7 @@ function App() {
     try {
       const application = await rotateApplicationKey(id, role);
       await refreshSnapshot();
+      setSelectedApplicationId(application.id);
       setNotice(`已轮换 API Key：${application.name}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "API Key 轮换失败");
@@ -524,6 +528,7 @@ function App() {
             revokingAPIKeyId={revokingAPIKeyId}
             rotatingCredentialId={rotatingCredentialId}
             rotatingApplicationId={rotatingApplicationId}
+            selectedApplicationId={selectedApplicationId}
             selectedModelRouteId={selectedModelRouteId}
             selectedPlanId={selectedPlanId}
             selectedSkillId={selectedSkillId}
@@ -827,6 +832,7 @@ function ModulePage({
   role,
   rotatingCredentialId,
   rotatingApplicationId,
+  selectedApplicationId,
   selectedModelRouteId,
   selectedPlanId,
   selectedSkillId,
@@ -859,6 +865,7 @@ function ModulePage({
   role: RoleId;
   rotatingCredentialId: string;
   rotatingApplicationId: string;
+  selectedApplicationId: string;
   selectedModelRouteId: string;
   selectedPlanId: string;
   selectedSkillId: string;
@@ -885,10 +892,12 @@ function ModulePage({
     }
 
     return (
+      snapshot.applications.find((application) => application.id === selectedApplicationId) ||
       snapshot.applications.find((application) => application.id === selectedRowId) ||
+      snapshot.applications.find((application) => application.status === "Provisioning") ||
       snapshot.applications[0]
     );
-  }, [page.id, selectedRowId, snapshot?.applications]);
+  }, [page.id, selectedApplicationId, selectedRowId, snapshot?.applications]);
 
   const selectedUser = useMemo(() => {
     if (page.id !== "iam" || !snapshot?.users?.length) {
