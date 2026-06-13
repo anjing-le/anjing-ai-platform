@@ -150,22 +150,28 @@ export const todos: TodoItem[] = [
 
 export const backendPlan = [
   {
-    label: "V1",
-    title: "4 个 Go command",
-    note: "control-api、gateway-api、billing-service、ops-api，边界先清楚。",
+    label: "control-api",
+    title: "Access / IAM",
+    note: ":1820 · 用户、角色、API Key、credentialRef。",
     icon: Gauge,
   },
   {
-    label: "Access",
-    title: "API Key + RBAC",
-    note: "先把用户、角色、凭据和路由访问权限做成真实闭环。",
+    label: "gateway-api",
+    title: "Gateway / Model",
+    note: ":1821 · API 路由、模型路由、Skill、请求日志。",
     icon: ShieldCheck,
   },
   {
-    label: "Gateway",
-    title: "最小调用链",
-    note: "先做 mock provider，再接 OpenAI-compatible provider。",
+    label: "billing-service",
+    title: "Quota / Billing",
+    note: ":1822 · 套餐、配额、用量、预算告警。",
     icon: KeyRound,
+  },
+  {
+    label: "ops-api",
+    title: "Operations",
+    note: ":1823 · 总览、健康、审计、待办。",
+    icon: Gauge,
   },
 ];
 

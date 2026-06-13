@@ -847,14 +847,14 @@ a {
 
 .service-plan {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .service-plan article,
 .key-list article {
   display: grid;
   gap: 8px;
-  min-height: 138px;
+  min-height: 148px;
   align-content: start;
   padding: 16px;
   border-right: 1px solid var(--line);
