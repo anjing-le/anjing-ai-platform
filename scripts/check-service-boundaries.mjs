@@ -74,6 +74,13 @@ function parseOpenapiBoundaries(source) {
   return boundaries;
 }
 
+function parseOpenapiPaths(source) {
+  return new Set(
+    [...source.matchAll(/^  (\/(?:api\/[^:]+|healthz)):/gm)]
+      .map((match) => match[1]),
+  );
+}
+
 function normalize(boundaries) {
   return boundaries
     .map((item) => ({
@@ -86,6 +93,7 @@ function normalize(boundaries) {
 
 const consoleBoundaries = normalize(parseConsoleBoundaries(consoleSource));
 const openapiBoundaries = normalize(parseOpenapiBoundaries(openapiSource));
+const openapiPaths = parseOpenapiPaths(openapiSource);
 const consoleJson = JSON.stringify(consoleBoundaries, null, 2);
 const openapiJson = JSON.stringify(openapiBoundaries, null, 2);
 
@@ -98,4 +106,19 @@ if (consoleJson !== openapiJson) {
   process.exit(1);
 }
 
-console.log("Service boundary metadata matches console and OpenAPI.");
+const virtualApiGroups = new Set(["/", "/api/*"]);
+const missingApiGroups = openapiBoundaries.flatMap((boundary) =>
+  boundary.apis
+    .filter((api) => !virtualApiGroups.has(api) && !openapiPaths.has(api))
+    .map((api) => `${boundary.label} (${boundary.owner}) -> ${api}`),
+);
+
+if (missingApiGroups.length) {
+  console.error("Service boundary API groups are missing from OpenAPI paths.");
+  for (const api of missingApiGroups) {
+    console.error(`- ${api}`);
+  }
+  process.exit(1);
+}
+
+console.log("Service boundary metadata matches console and OpenAPI paths.");
