@@ -284,6 +284,7 @@ scripts/check-db-files.mjs
 - `infra/postgres/migrations` 和 `infra/postgres/seeds` 下的 SQL 文件必须使用连续三位编号和 snake_case 文件名。
 - seed 文件 `INSERT INTO` 的表必须由 migration 文件创建。
 - Go repository SQL 中 `from`、`insert into`、`update` 引用的表必须由 migration 文件创建。
+- Postgres 用户邀请和激活必须同步 `ops_todos` 和 `audit_events`，保持真实数据库模式的运营闭环。
 - Go 默认 migrations / seeds 目录、单镜像 compose 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
 
 ## Gate 15：Go 格式

@@ -12,6 +12,7 @@ checkSequence("migration", migrations);
 checkSequence("seed", seeds);
 checkSeedTables(migrations, seeds);
 checkRepositoryTables(migrations);
+checkControlUserSideEffects();
 checkMigrationDirConfig();
 
 if (errors.length > 0) {
@@ -112,6 +113,47 @@ function collectSQLTables(source) {
   }
 
   return tables;
+}
+
+function checkControlUserSideEffects() {
+  const source = readFileSync("internal/control/repository.go", "utf8");
+  const createUser = functionBody(source, "func (repo PostgresUserRepository) CreateUser");
+  const activateUser = functionBody(source, "func (repo PostgresUserRepository) ActivateUser");
+
+  for (const [label, body] of [
+    ["PostgresUserRepository.CreateUser", createUser],
+    ["PostgresUserRepository.ActivateUser", activateUser],
+  ]) {
+    if (!body.includes("ops_todos")) {
+      errors.push(`${label} must keep user onboarding todos in sync.`);
+    }
+    if (!body.includes("audit_events")) {
+      errors.push(`${label} must write audit events.`);
+    }
+  }
+}
+
+function functionBody(source, signature) {
+  const start = source.indexOf(signature);
+  if (start === -1) {
+    return "";
+  }
+
+  const braceStart = source.indexOf("{", start);
+  let depth = 0;
+  for (let index = braceStart; index < source.length; index += 1) {
+    if (source[index] === "{") {
+      depth += 1;
+    }
+    if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(braceStart, index + 1);
+      }
+    }
+  }
+
+  return "";
 }
 
 function checkMigrationDirConfig() {

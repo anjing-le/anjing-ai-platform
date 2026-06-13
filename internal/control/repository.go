@@ -199,8 +199,14 @@ func (repo PostgresUserRepository) CreateUser(ctx context.Context, input CreateU
 		Status: "Invited",
 	}
 
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.User{}, fmt.Errorf("begin create user: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	var createdAt time.Time
-	if err := repo.pool.QueryRow(ctx, `
+	if err := tx.QueryRow(ctx, `
 		insert into users(id, email, org, role, mfa, status)
 		values($1, $2, $3, $4, $5, $6)
 		returning created_at
@@ -208,12 +214,36 @@ func (repo PostgresUserRepository) CreateUser(ctx context.Context, input CreateU
 		return store.User{}, fmt.Errorf("insert user: %w", err)
 	}
 
+	if _, err := tx.Exec(ctx, `
+		insert into ops_todos(id, title, source, owner, status)
+		values($1, $2, $3, $4, $5)
+	`, nextID("todo"), user.Email+" 完成首次登录", "用户与权限", user.Role, "Pending"); err != nil {
+		return store.User{}, fmt.Errorf("insert user onboarding todo: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "用户与权限", "invite user", user.Email, "Success", nextID("req")); err != nil {
+		return store.User{}, fmt.Errorf("insert user invite audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.User{}, fmt.Errorf("commit create user: %w", err)
+	}
+
 	user.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return user, nil
 }
 
 func (repo PostgresUserRepository) ActivateUser(ctx context.Context, id string) (store.User, bool, error) {
-	rows, err := repo.pool.Query(ctx, `
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.User{}, false, fmt.Errorf("begin activate user: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
 		update users
 		set mfa = 'Enabled', status = 'Active'
 		where id = $1
@@ -230,6 +260,26 @@ func (repo PostgresUserRepository) ActivateUser(ctx context.Context, id string) 
 			return store.User{}, false, nil
 		}
 		return store.User{}, false, fmt.Errorf("collect activated user: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		update ops_todos
+		set status = 'Resolved', updated_at = now()
+		where title = $1
+	`, user.Email+" 完成首次登录"); err != nil {
+		return store.User{}, false, fmt.Errorf("resolve user onboarding todo: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "用户与权限", "activate user", user.Email, "Success", nextID("req")); err != nil {
+		return store.User{}, false, fmt.Errorf("insert user activation audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.User{}, false, fmt.Errorf("commit activate user: %w", err)
 	}
 
 	return user, true, nil
@@ -642,4 +692,8 @@ func scanCredential(row pgx.CollectableRow) (store.Credential, error) {
 		return store.Credential{}, err
 	}
 	return item, nil
+}
+
+func nextID(prefix string) string {
+	return fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
 }
