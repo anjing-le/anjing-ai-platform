@@ -584,6 +584,31 @@ func (s *Store) CreateSkillBinding(name, protocol, route, timeout string) SkillB
 	return skill
 }
 
+func (s *Store) PublishSkillBinding(id string) (SkillBinding, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.skills {
+		if s.skills[index].ID != id {
+			continue
+		}
+
+		s.skills[index].Status = "Published"
+		s.skills[index].UpdatedAt = nowLabel()
+		s.requestLogs = append([]RequestLog{{
+			ID:        nextID("req"),
+			Request:   "PUBLISH skill:" + s.skills[index].Name,
+			Consumer:  s.skills[index].Protocol,
+			Latency:   "41ms",
+			Result:    "200",
+			Status:    "Success",
+			CreatedAt: nowLabel(),
+		}}, s.requestLogs...)
+		s.addAuditLocked("网关与模型", "publish skill binding", s.skills[index].Name, "Success")
+		return s.skills[index], true
+	}
+	return SkillBinding{}, false
+}
+
 func (s *Store) ListRequestLogs() []RequestLog {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -23,6 +23,7 @@ import {
   loadPlatformSnapshot,
   publishModelRoute,
   publishRoute,
+  publishSkillBinding,
   resolveBudgetAlert,
   resolveTodo,
   rotateCredential,
@@ -94,7 +95,9 @@ function App() {
   const [rotatingApplicationId, setRotatingApplicationId] = useState("");
   const [publishingRouteId, setPublishingRouteId] = useState("");
   const [publishingModelRouteId, setPublishingModelRouteId] = useState("");
+  const [publishingSkillId, setPublishingSkillId] = useState("");
   const [selectedModelRouteId, setSelectedModelRouteId] = useState("");
+  const [selectedSkillId, setSelectedSkillId] = useState("");
   const [activatingPlanId, setActivatingPlanId] = useState("");
   const [resolvingBudgetAlertId, setResolvingBudgetAlertId] = useState("");
   const [rotatingCredentialId, setRotatingCredentialId] = useState("");
@@ -359,9 +362,26 @@ function App() {
     try {
       const skill = await createSkillBinding(input, role);
       await refreshSnapshot();
+      setSelectedSkillId(skill.id);
       setNotice(`已创建 Skill 绑定：${skill.name}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Skill 绑定创建失败");
+    }
+  }
+
+  async function handleSkillBindingPublish(id: string) {
+    setNotice("");
+    setPublishingSkillId(id);
+
+    try {
+      const skill = await publishSkillBinding(id, role);
+      await refreshSnapshot();
+      setSelectedSkillId(skill.id);
+      setNotice(`已发布 Skill 绑定：${skill.name}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Skill 绑定发布失败");
+    } finally {
+      setPublishingSkillId("");
     }
   }
 
@@ -485,6 +505,7 @@ function App() {
             onPlanActivate={handlePlanActivate}
             onRoutePublish={handleRoutePublish}
             onSkillBindingCreate={handleSkillBindingCreate}
+            onSkillBindingPublish={handleSkillBindingPublish}
             onUserActivate={handleUserActivate}
             activatingApplicationId={activatingApplicationId}
             activatingPlanId={activatingPlanId}
@@ -493,12 +514,14 @@ function App() {
             page={activePage}
             publishingModelRouteId={publishingModelRouteId}
             publishingRouteId={publishingRouteId}
+            publishingSkillId={publishingSkillId}
             resolvingBudgetAlertId={resolvingBudgetAlertId}
             role={role}
             revokingAPIKeyId={revokingAPIKeyId}
             rotatingCredentialId={rotatingCredentialId}
             rotatingApplicationId={rotatingApplicationId}
             selectedModelRouteId={selectedModelRouteId}
+            selectedSkillId={selectedSkillId}
             snapshot={snapshot}
           />
         ) : null}
@@ -785,18 +808,21 @@ function ModulePage({
   onPrimaryAction,
   onRoutePublish,
   onSkillBindingCreate,
+  onSkillBindingPublish,
   onUserActivate,
   page,
   activatingUserId,
   activatingPlanId,
   publishingRouteId,
   publishingModelRouteId,
+  publishingSkillId,
   resolvingBudgetAlertId,
   revokingAPIKeyId,
   role,
   rotatingCredentialId,
   rotatingApplicationId,
   selectedModelRouteId,
+  selectedSkillId,
   snapshot,
 }: {
   activatingApplicationId: string;
@@ -813,17 +839,20 @@ function ModulePage({
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   onRoutePublish: (id: string) => Promise<void>;
   onSkillBindingCreate: (input: CreateSkillBindingInput) => Promise<void>;
+  onSkillBindingPublish: (id: string) => Promise<void>;
   onUserActivate: (id: string) => Promise<void>;
   activatingPlanId: string;
   page: ModulePageDefinition;
   publishingModelRouteId: string;
   publishingRouteId: string;
+  publishingSkillId: string;
   resolvingBudgetAlertId: string;
   revokingAPIKeyId: string;
   role: RoleId;
   rotatingCredentialId: string;
   rotatingApplicationId: string;
   selectedModelRouteId: string;
+  selectedSkillId: string;
   snapshot?: PlatformSnapshot;
 }) {
   const [query, setQuery] = useState("");
@@ -895,10 +924,12 @@ function ModulePage({
     }
 
     return (
+      snapshot.skills.find((skill) => skill.id === selectedSkillId) ||
+      snapshot.skills.find((skill) => skill.status === "Draft") ||
       snapshot.skills.find((skill) => skill.status === "Published") ||
       snapshot.skills[0]
     );
-  }, [page.id, snapshot?.skills]);
+  }, [page.id, selectedSkillId, snapshot?.skills]);
 
   const selectedPlan = useMemo(() => {
     if (page.id !== "quota" || !snapshot?.plans?.length) {
@@ -1066,6 +1097,8 @@ function ModulePage({
           {page.id === "gateway" ? (
             <SkillBindingPanel
               onCreate={onSkillBindingCreate}
+              onPublish={onSkillBindingPublish}
+              publishing={publishingSkillId === selectedSkill?.id}
               role={role}
               skill={selectedSkill}
             />
@@ -1482,10 +1515,14 @@ function ModelRoutePanel({
 
 function SkillBindingPanel({
   onCreate,
+  onPublish,
+  publishing,
   role,
   skill,
 }: {
   onCreate: (input: CreateSkillBindingInput) => Promise<void>;
+  onPublish: (id: string) => Promise<void>;
+  publishing: boolean;
   role: RoleId;
   skill?: SkillBinding;
 }) {
@@ -1537,6 +1574,18 @@ function SkillBindingPanel({
               <p>治理超时</p>
               <StatusDot tone="watch" />
             </article>
+          </div>
+
+          <div className="application-actions">
+            <button
+              className="button button--primary"
+              disabled={publishing || skill.status === "Published" || role === "operator"}
+              onClick={() => void onPublish(skill.id)}
+              type="button"
+            >
+              {skill.status === "Published" ? "已发布" : publishing ? "发布中" : "发布 Skill"}
+              <ChevronRight size={16} />
+            </button>
           </div>
         </>
       ) : (

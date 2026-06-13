@@ -45,6 +45,7 @@ type ModelRouteRepository interface {
 type SkillRepository interface {
 	ListSkills(ctx context.Context) ([]store.SkillBinding, error)
 	CreateSkillBinding(ctx context.Context, input CreateSkillBindingInput) (store.SkillBinding, error)
+	PublishSkillBinding(ctx context.Context, id string) (store.SkillBinding, bool, error)
 }
 
 type RequestLogRepository interface {
@@ -123,6 +124,11 @@ func (repo MemorySkillRepository) ListSkills(context.Context) ([]store.SkillBind
 
 func (repo MemorySkillRepository) CreateSkillBinding(_ context.Context, input CreateSkillBindingInput) (store.SkillBinding, error) {
 	return repo.store.CreateSkillBinding(input.Name, input.Protocol, input.Route, input.Timeout), nil
+}
+
+func (repo MemorySkillRepository) PublishSkillBinding(_ context.Context, id string) (store.SkillBinding, bool, error) {
+	skill, ok := repo.store.PublishSkillBinding(id)
+	return skill, ok, nil
 }
 
 type MemoryRequestLogRepository struct {
@@ -341,6 +347,29 @@ func (repo PostgresSkillRepository) CreateSkillBinding(ctx context.Context, inpu
 
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil
+}
+
+func (repo PostgresSkillRepository) PublishSkillBinding(ctx context.Context, id string) (store.SkillBinding, bool, error) {
+	rows, err := repo.pool.Query(ctx, `
+		update skill_bindings
+		set status = 'Published', updated_at = now()
+		where id = $1
+		returning id, name, protocol, route, timeout, status, updated_at
+	`, id)
+	if err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("publish skill binding: %w", err)
+	}
+	defer rows.Close()
+
+	skill, err := pgx.CollectOneRow(rows, scanSkillBinding)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.SkillBinding{}, false, nil
+		}
+		return store.SkillBinding{}, false, fmt.Errorf("collect published skill binding: %w", err)
+	}
+
+	return skill, true, nil
 }
 
 func scanSkillBinding(row pgx.CollectableRow) (store.SkillBinding, error) {

@@ -191,6 +191,28 @@ func TestCreateSkillBindingAddsDraftSkill(t *testing.T) {
 	if !payload.Success || payload.Data.Name != "summarize-ticket" || payload.Data.Status != "Draft" {
 		t.Fatalf("expected draft skill binding, got %+v", payload)
 	}
+
+	publishBody := bytes.NewBufferString(`{"id":"` + payload.Data.ID + `"}`)
+	publishReq := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/publish", publishBody)
+	publishReq.Header.Set("Content-Type", "application/json")
+	publishRec := httptest.NewRecorder()
+
+	mux.ServeHTTP(publishRec, publishReq)
+
+	if publishRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", publishRec.Code, publishRec.Body.String())
+	}
+
+	var published struct {
+		Success bool               `json:"success"`
+		Data    store.SkillBinding `json:"data"`
+	}
+	if err := json.NewDecoder(publishRec.Body).Decode(&published); err != nil {
+		t.Fatalf("decode publish response: %v", err)
+	}
+	if !published.Success || published.Data.Status != "Published" || published.Data.Name != "summarize-ticket" {
+		t.Fatalf("expected published skill binding, got %+v", published)
+	}
 }
 
 func TestInvokeLLMRejectsUnknownModelRoute(t *testing.T) {

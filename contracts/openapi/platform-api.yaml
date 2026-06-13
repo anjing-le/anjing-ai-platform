@@ -626,6 +626,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/skills/publish:
+    post:
+      tags: [gateway]
+      operationId: publishSkillBinding
+      summary: Publish a skill binding draft.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishSkillBindingRequest"
+      responses:
+        "200":
+          description: Skill binding published.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SkillBinding"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/gateway/request-logs:
     get:
       tags: [gateway]
@@ -1358,6 +1390,12 @@ components:
         timeout:
           type: string
           default: 8s
+    PublishSkillBindingRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
     RequestLog:
       type: object
       required: [id, request, consumer, latency, result, status, createdAt]

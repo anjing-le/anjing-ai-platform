@@ -384,6 +384,13 @@ export function createSkillBinding(input: CreateSkillBindingInput, role?: RoleId
   }, role);
 }
 
+export function publishSkillBinding(id: string, role?: RoleId): Promise<SkillBinding> {
+  return requestJson<SkillBinding>("/api/gateway/skills/publish", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function createPlan(input: CreatePlanInput, role?: RoleId): Promise<BillingPlan> {
   return requestJson<BillingPlan>("/api/billing/plans", {
     method: "POST",

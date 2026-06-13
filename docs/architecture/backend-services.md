@@ -226,6 +226,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/model-routes/publish`
 - `GET /api/gateway/skills`
 - `POST /api/gateway/skills`
+- `POST /api/gateway/skills/publish`
 - `GET /api/gateway/request-logs`
 - `POST /api/gateway/llm/invoke`
 
