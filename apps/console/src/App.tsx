@@ -940,6 +940,12 @@ function ConsoleHome({
           <RoleAccessMatrix activeRole={role} modules={moduleAccessItems} />
         </Panel>
         <Panel title="后端服务规划" eyebrow="Backend">
+          <div className="service-runtime">
+            <span>Dev Runtime</span>
+            <strong>platform-all</strong>
+            <p>本地一键启动完整控制台和 V1 API。</p>
+            <code>go run ./cmd/platform-all</code>
+          </div>
           <div className="service-plan">
             {backendPlan.map((item) => (
               <article key={item.label}>

@@ -845,6 +845,47 @@ a {
   background: #ffffff;
 }
 
+.service-runtime {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.34fr) minmax(160px, 0.44fr) minmax(0, 1fr) minmax(220px, 0.72fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.service-runtime span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.service-runtime strong {
+  font-size: 1rem;
+}
+
+.service-runtime p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.service-runtime code {
+  overflow: hidden;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8f8f8;
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .service-plan {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1793,6 +1834,11 @@ tbody tr.is-selected td:first-child {
   .module-search {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .service-runtime {
+    grid-template-columns: 1fr;
+    align-items: start;
   }
 
   .module-card,
