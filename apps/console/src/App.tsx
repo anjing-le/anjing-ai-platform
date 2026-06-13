@@ -1623,6 +1623,9 @@ function ModulePage({
                 <option key={item}>{item}</option>
               ))}
             </select>
+            <span className="table-result-count">
+              {rows.length} / {tableView.rows.length} rows
+            </span>
           </div>
           <DataTable
             columns={tableView.columns}

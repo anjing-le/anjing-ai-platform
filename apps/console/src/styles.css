@@ -1172,6 +1172,14 @@ a {
   font-weight: 800;
 }
 
+.table-result-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .table-wrap {
   overflow-x: auto;
 }

@@ -20,6 +20,10 @@ if (!appSource.includes("window.setTimeout") || !appSource.includes("setNotice(\
   errors.push("Console notices must clear automatically after a short delay.");
 }
 
+if (!appSource.includes("table-result-count") || !appSource.includes("tableView.rows.length")) {
+  errors.push("Console data tables must show filtered row counts.");
+}
+
 for (const port of ["1820", "1821", "1822", "1823"]) {
   if (!dataSource.includes(`http://localhost:${port}/healthz`)) {
     errors.push(`Console backend plan must show http://localhost:${port}/healthz.`);
