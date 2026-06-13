@@ -183,6 +183,34 @@ export const backendPlan = [
   },
 ];
 
+export const consoleServiceMap = [
+  {
+    entry: "运营总览",
+    owner: "ops-api",
+    scope: "服务健康、调用日志、审计事件、今日待办",
+  },
+  {
+    entry: "用户与权限",
+    owner: "control-api",
+    scope: "用户、角色、权限、API Key、credentialRef",
+  },
+  {
+    entry: "网关与模型",
+    owner: "gateway-api",
+    scope: "API 路由、模型路由、Skill 调用、请求日志",
+  },
+  {
+    entry: "计费与配额",
+    owner: "billing-service",
+    scope: "套餐、配额、用量统计、预算告警",
+  },
+  {
+    entry: "帮助文档",
+    owner: "console-web + APIs",
+    scope: "Quickstart、API Reference、示例入口、FAQ",
+  },
+];
+
 export const modulePages: ModulePageDefinition[] = [
   {
     id: "overview",

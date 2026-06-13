@@ -8,7 +8,7 @@ import {
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { ActionDialog, type ActionMode, type ActionValues } from "./components/ActionDialog";
-import { backendPlan, modulePages, navItems, roles, todos } from "./data/console";
+import { backendPlan, consoleServiceMap, modulePages, navItems, roles, todos } from "./data/console";
 import {
   activateApplication,
   activatePlan,
@@ -956,6 +956,20 @@ function ConsoleHome({
                 {"command" in item ? <code>{item.command}</code> : null}
                 {"health" in item ? <small>{item.health}</small> : null}
               </article>
+            ))}
+          </div>
+          <div aria-label="后台入口到服务归属" className="service-map">
+            <div className="service-map__head">
+              <span>Entry</span>
+              <span>Owner</span>
+              <span>Scope</span>
+            </div>
+            {consoleServiceMap.map((item) => (
+              <div className="service-map__row" key={item.entry}>
+                <strong>{item.entry}</strong>
+                <span>{item.owner}</span>
+                <p>{item.scope}</p>
+              </div>
             ))}
           </div>
         </Panel>
