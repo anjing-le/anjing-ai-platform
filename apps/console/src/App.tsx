@@ -12,6 +12,7 @@ import { backendPlan, modulePages, navItems, roles, todos } from "./data/console
 import {
   activateApplication,
   activatePlan,
+  activateUser,
   createApplication,
   createModelRoute,
   createPlan,
@@ -30,6 +31,7 @@ import {
   type Application,
   type BudgetAlert,
   type BillingPlan,
+  type ControlUser,
   type CreateModelRouteInput,
   type CreateSkillBindingInput,
   type Credential,
@@ -86,6 +88,7 @@ function App() {
   const [actionMode, setActionMode] = useState<ActionMode | null>(null);
   const [actionError, setActionError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
+  const [activatingUserId, setActivatingUserId] = useState("");
   const [activatingApplicationId, setActivatingApplicationId] = useState("");
   const [rotatingApplicationId, setRotatingApplicationId] = useState("");
   const [publishingRouteId, setPublishingRouteId] = useState("");
@@ -255,6 +258,21 @@ function App() {
       setActionError(error instanceof Error ? error.message : "操作失败");
     } finally {
       setActionBusy(false);
+    }
+  }
+
+  async function handleUserActivate(id: string) {
+    setNotice("");
+    setActivatingUserId(id);
+
+    try {
+      const user = await activateUser(id, role);
+      await refreshSnapshot();
+      setNotice(`已激活用户：${user.email}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "用户激活失败");
+    } finally {
+      setActivatingUserId("");
     }
   }
 
@@ -446,8 +464,10 @@ function App() {
             onPlanActivate={handlePlanActivate}
             onRoutePublish={handleRoutePublish}
             onSkillBindingCreate={handleSkillBindingCreate}
+            onUserActivate={handleUserActivate}
             activatingApplicationId={activatingApplicationId}
             activatingPlanId={activatingPlanId}
+            activatingUserId={activatingUserId}
             onPrimaryAction={handleModuleAction}
             page={activePage}
             publishingRouteId={publishingRouteId}
@@ -741,7 +761,9 @@ function ModulePage({
   onPrimaryAction,
   onRoutePublish,
   onSkillBindingCreate,
+  onUserActivate,
   page,
+  activatingUserId,
   activatingPlanId,
   publishingRouteId,
   resolvingBudgetAlertId,
@@ -752,6 +774,7 @@ function ModulePage({
   snapshot,
 }: {
   activatingApplicationId: string;
+  activatingUserId: string;
   notice: string;
   onAPIKeyRevoke: (id: string) => Promise<void>;
   onApplicationActivate: (id: string) => Promise<void>;
@@ -763,6 +786,7 @@ function ModulePage({
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   onRoutePublish: (id: string) => Promise<void>;
   onSkillBindingCreate: (input: CreateSkillBindingInput) => Promise<void>;
+  onUserActivate: (id: string) => Promise<void>;
   activatingPlanId: string;
   page: ModulePageDefinition;
   publishingRouteId: string;
@@ -798,6 +822,20 @@ function ModulePage({
       snapshot.applications[0]
     );
   }, [page.id, selectedRowId, snapshot?.applications]);
+
+  const selectedUser = useMemo(() => {
+    if (page.id !== "iam" || !snapshot?.users?.length) {
+      return undefined;
+    }
+
+    const selected = snapshot.users.find((user) => user.id === selectedRowId);
+    const invited = snapshot.users.find((user) => user.status === "Invited");
+    if (invited && selected?.status !== "Invited") {
+      return invited;
+    }
+
+    return selected || snapshot.users[0];
+  }, [page.id, selectedRowId, snapshot?.users]);
 
   const selectedRoute = useMemo(() => {
     if (page.id !== "gateway" || !snapshot?.routes?.length) {
@@ -870,8 +908,11 @@ function ModulePage({
     return snapshot.apiKeys.find((key) => key.status === "Active") || snapshot.apiKeys[0];
   }, [page.id, snapshot?.apiKeys]);
 
-  const selectableTable = page.id === "docs" || page.id === "gateway" || page.id === "quota";
+  const selectableTable = page.id === "iam" || page.id === "docs" || page.id === "gateway" || page.id === "quota";
   let selectedTableRowId: string | undefined;
+  if (page.id === "iam") {
+    selectedTableRowId = selectedUser?.id;
+  }
   if (page.id === "docs") {
     selectedTableRowId = selectedApplication?.id;
   }
@@ -893,6 +934,11 @@ function ModulePage({
       setSelectedRowId(rows[0].id);
     }
   }, [rows, selectedRowId]);
+
+  async function handleSelectedUserActivate(id: string) {
+    await onUserActivate(id);
+    setSelectedRowId(id);
+  }
 
   return (
     <main className="page">
@@ -946,6 +992,14 @@ function ModulePage({
         </Panel>
 
         <div className="side-panels">
+          {page.id === "iam" ? (
+            <UserAccessPanel
+              activating={activatingUserId === selectedUser?.id}
+              onActivate={handleSelectedUserActivate}
+              role={role}
+              user={selectedUser}
+            />
+          ) : null}
           {page.id === "iam" ? (
             <APIKeyPanel
               apiKey={selectedAPIKey}
@@ -1612,6 +1666,72 @@ function BudgetAlertPanel({
           type="button"
         >
           {resolved ? "已处理" : resolving ? "处理中" : "处理预算告警"}
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    </Panel>
+  );
+}
+
+function UserAccessPanel({
+  activating,
+  onActivate,
+  role,
+  user,
+}: {
+  activating: boolean;
+  onActivate: (id: string) => Promise<void>;
+  role: RoleId;
+  user?: ControlUser;
+}) {
+  if (!user) {
+    return (
+      <Panel eyebrow="User" title="用户详情">
+        <div className="empty-panel">
+          <strong>暂无用户</strong>
+          <p>邀请用户后，这里会展示角色、MFA、状态和激活动作。</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  const canActivate = role === "admin";
+  const checks = [
+    { label: "Org", value: user.org, note: "组织归属", tone: "neutral" },
+    { label: "Role", value: user.role, note: "访问边界", tone: "neutral" },
+    { label: "MFA", value: user.mfa, note: "登录安全", tone: user.mfa === "Enabled" ? "good" : "watch" },
+  ] as const;
+
+  return (
+    <Panel eyebrow="User" title="用户详情">
+      <div className="user-summary">
+        <div>
+          <span>Selected User</span>
+          <strong>{user.email}</strong>
+          <p>{canActivate ? "管理员可激活邀请用户" : "当前角色只读用户配置"}</p>
+        </div>
+        <StatusBadge tone={toneForStatus(user.status)}>{user.status}</StatusBadge>
+      </div>
+
+      <div className="user-checks">
+        {checks.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.note}</p>
+            <StatusDot tone={item.tone} />
+          </article>
+        ))}
+      </div>
+
+      <div className="application-actions">
+        <button
+          className="button button--primary"
+          disabled={!canActivate || activating || user.status === "Active"}
+          onClick={() => void onActivate(user.id)}
+          type="button"
+        >
+          {user.status === "Active" ? "已激活" : activating ? "激活中" : "激活用户"}
           <ChevronRight size={16} />
         </button>
       </div>

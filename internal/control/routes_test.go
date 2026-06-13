@@ -107,6 +107,54 @@ func TestApplicationsCanBeCreatedAndListed(t *testing.T) {
 	}
 }
 
+func TestUserCanBeInvitedAndActivated(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"email":"new.dev@anjing.ai","org":"Engineering","role":"Developer"}`)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/control/users", body)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRec := httptest.NewRecorder()
+	mux.ServeHTTP(createRec, createReq)
+
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", createRec.Code, createRec.Body.String())
+	}
+
+	var created struct {
+		Success bool       `json:"success"`
+		Data    store.User `json:"data"`
+	}
+	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode create response: %v", err)
+	}
+	if !created.Success || created.Data.Status != "Invited" || created.Data.MFA != "Pending" {
+		t.Fatalf("expected invited user, got %+v", created)
+	}
+
+	activateBody := bytes.NewBufferString(`{"id":"` + created.Data.ID + `"}`)
+	activateReq := httptest.NewRequest(http.MethodPost, "/api/control/users/activate", activateBody)
+	activateReq.Header.Set("Content-Type", "application/json")
+	activateRec := httptest.NewRecorder()
+	mux.ServeHTTP(activateRec, activateReq)
+
+	if activateRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", activateRec.Code, activateRec.Body.String())
+	}
+
+	var activated struct {
+		Success bool       `json:"success"`
+		Data    store.User `json:"data"`
+	}
+	if err := json.Unmarshal(activateRec.Body.Bytes(), &activated); err != nil {
+		t.Fatalf("decode activate response: %v", err)
+	}
+	if !activated.Success || activated.Data.Status != "Active" || activated.Data.MFA != "Enabled" {
+		t.Fatalf("expected active user, got %+v", activated)
+	}
+}
+
 func TestCredentialCanBeRotated(t *testing.T) {
 	st := store.NewSeedStore()
 	mux := http.NewServeMux()

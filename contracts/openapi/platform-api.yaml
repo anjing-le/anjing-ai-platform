@@ -109,6 +109,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/control/users/activate:
+    post:
+      tags: [control]
+      operationId: activateUser
+      summary: Activate an invited console user.
+      x-anjing-roles: [Administrator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateUserRequest"
+      responses:
+        "200":
+          description: User activated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/control/applications:
     get:
       tags: [control]
@@ -1060,6 +1092,12 @@ components:
           type: string
           enum: [Administrator, User, Developer, Operator]
           default: User
+    ActivateUserRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
     Application:
       type: object
       required: [id, name, owner, environment, apiKey, defaultRoute, plan, status, createdAt]

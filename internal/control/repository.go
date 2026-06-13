@@ -27,6 +27,7 @@ type CreateApplicationInput struct {
 type UserRepository interface {
 	ListUsers(ctx context.Context) ([]store.User, error)
 	CreateUser(ctx context.Context, input CreateUserInput) (store.User, error)
+	ActivateUser(ctx context.Context, id string) (store.User, bool, error)
 }
 
 type ApplicationRepository interface {
@@ -82,6 +83,11 @@ func (repo MemoryUserRepository) ListUsers(context.Context) ([]store.User, error
 
 func (repo MemoryUserRepository) CreateUser(_ context.Context, input CreateUserInput) (store.User, error) {
 	return repo.store.CreateUser(input.Email, input.Org, input.Role), nil
+}
+
+func (repo MemoryUserRepository) ActivateUser(_ context.Context, id string) (store.User, bool, error) {
+	user, ok := repo.store.ActivateUser(id)
+	return user, ok, nil
 }
 
 type MemoryApplicationRepository struct {
@@ -204,6 +210,29 @@ func (repo PostgresUserRepository) CreateUser(ctx context.Context, input CreateU
 
 	user.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return user, nil
+}
+
+func (repo PostgresUserRepository) ActivateUser(ctx context.Context, id string) (store.User, bool, error) {
+	rows, err := repo.pool.Query(ctx, `
+		update users
+		set mfa = 'Enabled', status = 'Active'
+		where id = $1
+		returning id, email, org, role, mfa, status, created_at
+	`, id)
+	if err != nil {
+		return store.User{}, false, fmt.Errorf("activate user: %w", err)
+	}
+	defer rows.Close()
+
+	user, err := pgx.CollectOneRow(rows, scanUser)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.User{}, false, nil
+		}
+		return store.User{}, false, fmt.Errorf("collect activated user: %w", err)
+	}
+
+	return user, true, nil
 }
 
 func scanUser(row pgx.CollectableRow) (store.User, error) {

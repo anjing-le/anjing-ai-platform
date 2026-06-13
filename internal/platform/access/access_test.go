@@ -143,6 +143,14 @@ func TestUserAndDeveloperCanCreateApplications(t *testing.T) {
 	if keyRevokeDeniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected api key revoke to be forbidden for developer, got %d", keyRevokeDeniedRec.Code)
 	}
+
+	userActivateDenied := httptest.NewRequest(http.MethodPost, "/api/control/users/activate", nil)
+	userActivateDenied.Header.Set("Authorization", "Bearer developer-test-token")
+	userActivateDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(userActivateDeniedRec, userActivateDenied)
+	if userActivateDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected user activation to be forbidden for developer, got %d", userActivateDeniedRec.Code)
+	}
 }
 
 func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {

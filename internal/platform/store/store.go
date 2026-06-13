@@ -275,6 +275,28 @@ func (s *Store) CreateUser(email, org, role string) User {
 	return user
 }
 
+func (s *Store) ActivateUser(id string) (User, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.users {
+		if s.users[index].ID != id {
+			continue
+		}
+
+		s.users[index].MFA = "Enabled"
+		s.users[index].Status = "Active"
+		for todoIndex := range s.todos {
+			if s.todos[todoIndex].Title == s.users[index].Email+" 完成首次登录" {
+				s.todos[todoIndex].Status = "Resolved"
+				s.todos[todoIndex].UpdatedAt = nowLabel()
+			}
+		}
+		s.addAuditLocked("用户与权限", "activate user", s.users[index].Email, "Success")
+		return s.users[index], true
+	}
+	return User{}, false
+}
+
 func (s *Store) ListApplications() []Application {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -321,6 +321,13 @@ export function createUser(input: CreateUserInput, role?: RoleId): Promise<Contr
   }, role);
 }
 
+export function activateUser(id: string, role?: RoleId): Promise<ControlUser> {
+  return requestJson<ControlUser>("/api/control/users/activate", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function createApplication(input: CreateApplicationInput, role?: RoleId): Promise<Application> {
   return requestJson<Application>("/api/control/applications", {
     method: "POST",

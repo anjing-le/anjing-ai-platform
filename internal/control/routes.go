@@ -25,6 +25,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 		httpjson.OK(w, map[string]string{"service": "control-api", "status": "ok"})
 	})
 	mux.HandleFunc("/api/control/users", usersHandler(repos.Users))
+	mux.HandleFunc("/api/control/users/activate", activateUserHandler(repos.Users))
 	mux.HandleFunc("/api/control/applications", applicationsHandler(repos.Applications))
 	mux.HandleFunc("/api/control/applications/activate", activateApplicationHandler(repos.Applications))
 	mux.HandleFunc("/api/control/applications/rotate-key", rotateApplicationKeyHandler(repos.Applications))
@@ -80,6 +81,40 @@ func usersHandler(users UserRepository) http.HandlerFunc {
 		default:
 			httpjson.MethodNotAllowed(w)
 		}
+	}
+}
+
+func activateUserHandler(users UserRepository) http.HandlerFunc {
+	type activateUserRequest struct {
+		ID string `json:"id"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req activateUserRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+
+		user, ok, err := users.ActivateUser(r.Context(), req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "user not found")
+			return
+		}
+
+		httpjson.OK(w, user)
 	}
 }
 

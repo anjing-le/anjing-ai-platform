@@ -1010,6 +1010,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-summary,
+.user-summary,
 .model-summary,
 .skill-summary,
 .plan-summary,
@@ -1025,6 +1026,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-summary div,
+.user-summary div,
 .model-summary div,
 .skill-summary div,
 .plan-summary div,
@@ -1038,6 +1040,7 @@ tbody tr.is-selected td:first-child {
 
 .application-summary span,
 .route-summary span,
+.user-summary span,
 .model-summary span,
 .skill-summary span,
 .plan-summary span,
@@ -1048,6 +1051,7 @@ tbody tr.is-selected td:first-child {
 .application-usage span,
 .mini-log-list span,
 .route-checks span,
+.user-checks span,
 .model-checks span,
 .skill-checks span,
 .plan-checks span,
@@ -1063,6 +1067,7 @@ tbody tr.is-selected td:first-child {
 
 .application-summary strong,
 .route-summary strong,
+.user-summary strong,
 .model-summary strong,
 .skill-summary strong,
 .plan-summary strong,
@@ -1075,6 +1080,7 @@ tbody tr.is-selected td:first-child {
 
 .application-summary p,
 .route-summary p,
+.user-summary p,
 .model-summary p,
 .skill-summary p,
 .plan-summary p,
@@ -1085,6 +1091,7 @@ tbody tr.is-selected td:first-child {
 .application-usage p,
 .mini-log-list p,
 .route-checks p,
+.user-checks p,
 .model-checks p,
 .skill-checks p,
 .plan-checks p,
@@ -1098,6 +1105,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks,
+.user-checks,
 .model-checks,
 .skill-checks,
 .plan-checks,
@@ -1108,6 +1116,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks article,
+.user-checks article,
 .model-checks article,
 .skill-checks article,
 .plan-checks article,
@@ -1123,6 +1132,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks article:last-child,
+.user-checks article:last-child,
 .model-checks article:last-child,
 .skill-checks article:last-child,
 .plan-checks article:last-child,
@@ -1133,6 +1143,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .route-checks .status-dot,
+.user-checks .status-dot,
 .model-checks .status-dot,
 .skill-checks .status-dot,
 .plan-checks .status-dot,
