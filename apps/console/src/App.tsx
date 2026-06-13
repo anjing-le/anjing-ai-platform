@@ -104,6 +104,8 @@ function App() {
   const [resolvingBudgetAlertId, setResolvingBudgetAlertId] = useState("");
   const [rotatingCredentialId, setRotatingCredentialId] = useState("");
   const [revokingAPIKeyId, setRevokingAPIKeyId] = useState("");
+  const [selectedAPIKeyId, setSelectedAPIKeyId] = useState("");
+  const [selectedCredentialId, setSelectedCredentialId] = useState("");
   const [resolvingTodoId, setResolvingTodoId] = useState("");
   const [selectedApplicationId, setSelectedApplicationId] = useState("");
   const [notice, setNotice] = useState("");
@@ -458,6 +460,7 @@ function App() {
     try {
       const credential = await rotateCredential(id, role);
       await refreshSnapshot();
+      setSelectedCredentialId(credential.id);
       setNotice(`已轮换凭据：${credential.ref}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "凭据轮换失败");
@@ -473,6 +476,7 @@ function App() {
     try {
       const key = await revokeAPIKey(id, role);
       await refreshSnapshot();
+      setSelectedAPIKeyId(key.id);
       setNotice(`已撤销 API Key：${key.name}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "API Key 撤销失败");
@@ -532,6 +536,8 @@ function App() {
             rotatingCredentialId={rotatingCredentialId}
             rotatingApplicationId={rotatingApplicationId}
             selectedApplicationId={selectedApplicationId}
+            selectedAPIKeyId={selectedAPIKeyId}
+            selectedCredentialId={selectedCredentialId}
             selectedModelRouteId={selectedModelRouteId}
             selectedPlanId={selectedPlanId}
             selectedRouteId={selectedRouteId}
@@ -837,6 +843,8 @@ function ModulePage({
   rotatingCredentialId,
   rotatingApplicationId,
   selectedApplicationId,
+  selectedAPIKeyId,
+  selectedCredentialId,
   selectedModelRouteId,
   selectedPlanId,
   selectedRouteId,
@@ -871,6 +879,8 @@ function ModulePage({
   rotatingCredentialId: string;
   rotatingApplicationId: string;
   selectedApplicationId: string;
+  selectedAPIKeyId: string;
+  selectedCredentialId: string;
   selectedModelRouteId: string;
   selectedPlanId: string;
   selectedRouteId: string;
@@ -988,19 +998,24 @@ function ModulePage({
     }
 
     return (
+      snapshot.credentials.find((credential) => credential.id === selectedCredentialId) ||
       snapshot.credentials.find((credential) => credential.status === "Expiring") ||
       snapshot.credentials.find((credential) => credential.status === "Active") ||
       snapshot.credentials[0]
     );
-  }, [page.id, snapshot?.credentials]);
+  }, [page.id, selectedCredentialId, snapshot?.credentials]);
 
   const selectedAPIKey = useMemo(() => {
     if (page.id !== "iam" || !snapshot?.apiKeys?.length) {
       return undefined;
     }
 
-    return snapshot.apiKeys.find((key) => key.status === "Active") || snapshot.apiKeys[0];
-  }, [page.id, snapshot?.apiKeys]);
+    return (
+      snapshot.apiKeys.find((key) => key.id === selectedAPIKeyId) ||
+      snapshot.apiKeys.find((key) => key.status === "Active") ||
+      snapshot.apiKeys[0]
+    );
+  }, [page.id, selectedAPIKeyId, snapshot?.apiKeys]);
 
   const selectableTable = page.id === "iam" || page.id === "docs" || page.id === "gateway" || page.id === "quota";
   let selectedTableRowId: string | undefined;
