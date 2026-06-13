@@ -24,6 +24,7 @@ Anjing AI Infra Platform 是面向 AI 应用、Agent、内部工具和业务系�
 - OpenAPI 合约：见 `contracts/openapi/platform-api.yaml`
 - 后端规划：见 `docs/architecture/backend-services.md`
 - 技术基线：见 `docs/architecture/dvskyfolding-baseline.md`
+- 质量门禁：见 `docs/architecture/quality-gates.md`
 
 ## 本地启动
 
