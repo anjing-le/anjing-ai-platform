@@ -94,6 +94,10 @@ func NewRepository(sources Sources) Repository {
 }
 
 func (repo Repository) LoadSnapshot(ctx context.Context) (store.PlatformSnapshot, error) {
+	if missing := missingSource(repo.sources); missing != "" {
+		return store.PlatformSnapshot{}, fmt.Errorf("snapshot source %s is required", missing)
+	}
+
 	var item store.PlatformSnapshot
 	var err error
 
@@ -161,6 +165,43 @@ func (repo Repository) LoadSnapshot(ctx context.Context) (store.PlatformSnapshot
 
 	item.Dashboard = dashboardFromOps(todos, health, audit)
 	return item, nil
+}
+
+func missingSource(sources Sources) string {
+	switch {
+	case sources.Users == nil:
+		return "users"
+	case sources.Applications == nil:
+		return "applications"
+	case sources.Roles == nil:
+		return "roles"
+	case sources.APIKeys == nil:
+		return "apiKeys"
+	case sources.Credentials == nil:
+		return "credentials"
+	case sources.Routes == nil:
+		return "routes"
+	case sources.ModelRoutes == nil:
+		return "modelRoutes"
+	case sources.Skills == nil:
+		return "skills"
+	case sources.RequestLogs == nil:
+		return "requestLogs"
+	case sources.Plans == nil:
+		return "plans"
+	case sources.Usage == nil:
+		return "usage"
+	case sources.BudgetAlerts == nil:
+		return "budgetAlerts"
+	case sources.Todos == nil:
+		return "todos"
+	case sources.Health == nil:
+		return "health"
+	case sources.Audit == nil:
+		return "audit"
+	default:
+		return ""
+	}
 }
 
 func dashboardFromOps(todos []store.OpsTodo, health []store.ServiceHealth, audit []store.AuditEvent) store.OpsDashboard {

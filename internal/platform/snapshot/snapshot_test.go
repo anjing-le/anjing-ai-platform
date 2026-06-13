@@ -2,6 +2,7 @@ package snapshot_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/billing"
@@ -50,6 +51,19 @@ func TestRepositoryLoadsConsoleSnapshotFromModuleRepositories(t *testing.T) {
 	}
 	if metricValue(t, item.Dashboard.Metrics, "待处理") != "3" {
 		t.Fatalf("expected pending metric to reflect unresolved todos")
+	}
+}
+
+func TestRepositoryReturnsClearErrorWhenSourceIsMissing(t *testing.T) {
+	repo := snapshot.NewRepository(snapshot.Sources{})
+
+	_, err := repo.LoadSnapshot(context.Background())
+
+	if err == nil {
+		t.Fatal("expected missing source error")
+	}
+	if !strings.Contains(err.Error(), "snapshot source users is required") {
+		t.Fatalf("expected clear missing source error, got %v", err)
 	}
 }
 
