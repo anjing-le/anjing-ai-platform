@@ -143,7 +143,27 @@ scripts/check-console-api-client.mjs
 - 后台按钮、列表刷新和 Live API 接入不能绕过合约。
 - 新增前端 API 调用时，必须同步补充 `contracts/openapi/platform-api.yaml`。
 
-## Gate 8：角色 Seed 可见性
+## Gate 8：Command 运行时约束
+
+命令：
+
+```bash
+pnpm verify:commands
+```
+
+脚本：
+
+```text
+scripts/check-command-runtime.mjs
+```
+
+保护内容：
+
+- HTTP 服务 command 必须通过 `service.ListenWithLogger` 启动，确保启动和请求日志使用同一套 `slog` JSON logger。
+- Go command 不允许用 `panic` 处理运行时启动错误。
+- `migrate-db` 和 `seed-db` 保持一次性 command，使用结构化日志和显式退出码。
+
+## Gate 9：角色 Seed 可见性
 
 命令：
 
@@ -163,7 +183,7 @@ scripts/check-role-policy-seeds.mjs
 - PostgreSQL seed `infra/postgres/seeds/006_demo_role_policies.sql` 的 `visible_entries` 必须匹配前端 `navItems`。
 - 运维、开发、使用用户的后台入口展示不能在 Mock / 内存 / PostgreSQL 三种模式下漂移。
 
-## Gate 9：文档本地引用
+## Gate 10：文档本地引用
 
 命令：
 
@@ -183,7 +203,7 @@ scripts/check-doc-links.mjs
 - 当前检查 `apps/`、`cmd/`、`contracts/`、`docs/`、`frontend/`、`infra/`、`internal/`、`scripts/` 和常见根文件。
 - `/api/*`、URL、绝对本机路径和未启用的 `.github` workflow 路径不会作为本地文件检查。
 
-## Gate 10：Compose 配置
+## Gate 11：Compose 配置
 
 命令：
 
@@ -203,7 +223,7 @@ scripts/check-compose.sh
 - `infra/local/docker-compose.image.yml` 必须能通过 `docker compose config`。
 - 本地 PostgreSQL 和单镜像预览的编排配置不能因为字段错误或路径错误而失效。
 
-## Gate 11：Dockerfile 路径
+## Gate 12：Dockerfile 路径
 
 命令：
 
@@ -224,7 +244,7 @@ scripts/check-dockerfile-paths.mjs
 - 镜像必须构建并复制 `migrate-db`、`seed-db`，同时复制 PostgreSQL migrations 和 seeds 目录。
 - 重构目录时，镜像构建入口不会静默引用不存在的路径。
 
-## Gate 12：数据库文件一致性
+## Gate 13：数据库文件一致性
 
 命令：
 
@@ -244,7 +264,7 @@ scripts/check-db-files.mjs
 - seed 文件 `INSERT INTO` 的表必须由 migration 文件创建。
 - Go 默认 migrations / seeds 目录、单镜像 compose 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
 
-## Gate 13：Go 格式
+## Gate 14：Go 格式
 
 命令：
 
@@ -264,7 +284,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 14：Go Vet
+## Gate 15：Go Vet
 
 命令：
 
@@ -283,7 +303,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 15：Go Command 构建
+## Gate 16：Go Command 构建
 
 命令：
 
@@ -297,7 +317,7 @@ pnpm verify:go-build
 - Dockerfile 中构建的交付入口必须先在本地门禁中被编译验证。
 - 新增 command 时，不能只通过包测试而遗漏真实可执行入口构建。
 
-## Gate 16：Go 测试
+## Gate 17：Go 测试
 
 命令：
 

@@ -34,9 +34,21 @@ func NewMux(serviceName string, st *store.Store, registers ...RegisterFunc) *htt
 }
 
 func Listen(addr, serviceName string, handler http.Handler) error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	return ListenWithLogger(NewLogger(), addr, serviceName, handler)
+}
+
+func ListenWithLogger(logger *slog.Logger, addr, serviceName string, handler http.Handler) error {
 	logger.Info("service starting", "service", serviceName, "addr", addr)
 	return http.ListenAndServe(addr, WithMiddleware(logger, serviceName, handler))
+}
+
+func NewLogger() *slog.Logger {
+	return slog.New(slog.NewJSONHandler(os.Stdout, nil))
+}
+
+func Fatal(logger *slog.Logger, message string, err error) {
+	logger.Error(message, "error", err)
+	os.Exit(1)
 }
 
 func WithMiddleware(logger *slog.Logger, serviceName string, next http.Handler) http.Handler {

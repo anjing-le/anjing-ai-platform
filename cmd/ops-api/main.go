@@ -13,13 +13,14 @@ import (
 
 func main() {
 	cfg := config.Load("ops-api", "1823")
+	logger := service.NewLogger()
 	st := store.NewSeedStore()
 	opsRegister := ops.Register
 
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
 		if err != nil {
-			panic(err)
+			service.Fatal(logger, "open database failed", err)
 		}
 		defer pool.Close()
 		repos := ops.NewMemoryRepositories(st)
@@ -32,7 +33,7 @@ func main() {
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st, opsRegister)
-	if err := service.Listen(cfg.Addr, cfg.ServiceName, mux); err != nil {
-		panic(err)
+	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+		service.Fatal(logger, "service stopped", err)
 	}
 }

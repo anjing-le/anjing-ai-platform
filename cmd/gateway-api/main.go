@@ -13,13 +13,14 @@ import (
 
 func main() {
 	cfg := config.Load("gateway-api", "1821")
+	logger := service.NewLogger()
 	st := store.NewSeedStore()
 	gatewayRegister := gateway.Register
 
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
 		if err != nil {
-			panic(err)
+			service.Fatal(logger, "open database failed", err)
 		}
 		defer pool.Close()
 		repos := gateway.NewMemoryRepositories(st)
@@ -33,7 +34,7 @@ func main() {
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st, gatewayRegister)
-	if err := service.Listen(cfg.Addr, cfg.ServiceName, mux); err != nil {
-		panic(err)
+	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+		service.Fatal(logger, "service stopped", err)
 	}
 }

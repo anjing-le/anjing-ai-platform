@@ -23,6 +23,7 @@
     "verify:workspace": "node scripts/check-workspace.mjs",
     "verify:boundaries": "node scripts/check-service-boundaries.mjs",
     "verify:console-api": "node scripts/check-console-api-client.mjs",
+    "verify:commands": "node scripts/check-command-runtime.mjs",
     "verify:compose": "bash scripts/check-compose.sh",
     "verify:docs": "node scripts/check-doc-links.mjs",
     "verify:dockerfile": "node scripts/check-dockerfile-paths.mjs",
@@ -33,6 +34,6 @@
     "verify:openapi-meta": "node scripts/check-openapi-metadata.mjs",
     "verify:openapi": "bash scripts/check-openapi-routes.sh",
     "verify:role-seeds": "node scripts/check-role-policy-seeds.mjs",
-    "verify": "pnpm verify:workspace && pnpm build:console && pnpm test:console && pnpm verify:openapi && pnpm verify:openapi-meta && pnpm verify:boundaries && pnpm verify:console-api && pnpm verify:role-seeds && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:db-files && pnpm verify:gofmt && pnpm verify:govet && pnpm verify:go-build && go test ./..."
+    "verify": "pnpm verify:workspace && pnpm build:console && pnpm test:console && pnpm verify:openapi && pnpm verify:openapi-meta && pnpm verify:boundaries && pnpm verify:console-api && pnpm verify:commands && pnpm verify:role-seeds && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:db-files && pnpm verify:gofmt && pnpm verify:govet && pnpm verify:go-build && go test ./..."
   }
 }

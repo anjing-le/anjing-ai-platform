@@ -13,13 +13,14 @@ import (
 
 func main() {
 	cfg := config.Load("control-api", "1820")
+	logger := service.NewLogger()
 	st := store.NewSeedStore()
 	controlRegister := control.Register
 
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
 		if err != nil {
-			panic(err)
+			service.Fatal(logger, "open database failed", err)
 		}
 		defer pool.Close()
 		repos := control.NewMemoryRepositories(st)
@@ -34,7 +35,7 @@ func main() {
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st, controlRegister)
-	if err := service.Listen(cfg.Addr, cfg.ServiceName, mux); err != nil {
-		panic(err)
+	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+		service.Fatal(logger, "service stopped", err)
 	}
 }

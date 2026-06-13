@@ -13,13 +13,14 @@ import (
 
 func main() {
 	cfg := config.Load("billing-service", "1822")
+	logger := service.NewLogger()
 	st := store.NewSeedStore()
 	billingRegister := billing.Register
 
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
 		if err != nil {
-			panic(err)
+			service.Fatal(logger, "open database failed", err)
 		}
 		defer pool.Close()
 		repos := billing.NewMemoryRepositories(st)
@@ -32,7 +33,7 @@ func main() {
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st, billingRegister)
-	if err := service.Listen(cfg.Addr, cfg.ServiceName, mux); err != nil {
-		panic(err)
+	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+		service.Fatal(logger, "service stopped", err)
 	}
 }

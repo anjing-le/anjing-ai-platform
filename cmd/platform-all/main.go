@@ -17,6 +17,7 @@ import (
 
 func main() {
 	cfg := config.Load("platform-all", "18080")
+	logger := service.NewLogger()
 	st := store.NewSeedStore()
 	controlRegister := control.Register
 	gatewayRegister := gateway.Register
@@ -26,7 +27,7 @@ func main() {
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
 		if err != nil {
-			panic(err)
+			service.Fatal(logger, "open database failed", err)
 		}
 		defer pool.Close()
 		controlRepos := control.NewMemoryRepositories(st)
@@ -70,7 +71,7 @@ func main() {
 		opsRegister,
 	)
 	consoleweb.Register(mux, cfg.StaticDir)
-	if err := service.Listen(cfg.Addr, cfg.ServiceName, mux); err != nil {
-		panic(err)
+	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+		service.Fatal(logger, "service stopped", err)
 	}
 }

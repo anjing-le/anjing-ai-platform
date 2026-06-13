@@ -9,10 +9,11 @@ import (
 
 func main() {
 	cfg := config.Load("console-web", "1818")
+	logger := service.NewLogger()
 	st := store.NewSeedStore()
 	mux := service.NewMux(cfg.ServiceName, st)
 	consoleweb.Register(mux, cfg.StaticDir)
-	if err := service.Listen(cfg.Addr, cfg.ServiceName, mux); err != nil {
-		panic(err)
+	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+		service.Fatal(logger, "service stopped", err)
 	}
 }
