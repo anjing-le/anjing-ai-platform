@@ -16,6 +16,7 @@ checkControlUserSideEffects();
 checkControlApplicationSideEffects();
 checkGatewaySideEffects();
 checkBillingSideEffects();
+checkOpsSideEffects();
 checkMigrationDirConfig();
 
 if (errors.length > 0) {
@@ -201,6 +202,14 @@ function checkBillingSideEffects() {
 
   if (!createPlan.includes("budget_alerts")) {
     errors.push("PostgresPlanRepository.CreatePlan must create a budget alert.");
+  }
+}
+
+function checkOpsSideEffects() {
+  const source = readFileSync("internal/ops/repository.go", "utf8");
+  const resolveTodo = functionBody(source, "func (repo PostgresTodoRepository) ResolveTodo");
+  if (!resolveTodo.includes("audit_events")) {
+    errors.push("PostgresTodoRepository.ResolveTodo must write an audit event.");
   }
 }
 

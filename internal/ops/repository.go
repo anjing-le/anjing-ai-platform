@@ -124,7 +124,13 @@ func (repo PostgresTodoRepository) ListTodos(ctx context.Context) ([]store.OpsTo
 }
 
 func (repo PostgresTodoRepository) ResolveTodo(ctx context.Context, id string) (store.OpsTodo, bool, error) {
-	rows, err := repo.pool.Query(ctx, `
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.OpsTodo{}, false, fmt.Errorf("begin resolve ops todo: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
 		update ops_todos
 		set status = 'Resolved', updated_at = now()
 		where id = $1
@@ -141,6 +147,18 @@ func (repo PostgresTodoRepository) ResolveTodo(ctx context.Context, id string) (
 	}
 	if err != nil {
 		return store.OpsTodo{}, false, fmt.Errorf("collect resolved todo: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "运营总览", "resolve todo", todo.Title, "Success", nextID("req")); err != nil {
+		return store.OpsTodo{}, false, fmt.Errorf("insert ops todo resolution audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.OpsTodo{}, false, fmt.Errorf("commit resolve ops todo: %w", err)
 	}
 
 	return todo, true, nil
@@ -226,4 +244,8 @@ func scanAuditEvent(row pgx.CollectableRow) (store.AuditEvent, error) {
 	}
 	item.Time = eventTime.UTC().Format(time.RFC3339)
 	return item, nil
+}
+
+func nextID(prefix string) string {
+	return fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
 }
