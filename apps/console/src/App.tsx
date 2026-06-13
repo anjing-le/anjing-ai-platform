@@ -1970,11 +1970,13 @@ function ModelRoutePanel({
               className="button button--primary"
               disabled={publishing || modelRoute.status === "Active" || role === "operator"}
               onClick={() => void onPublish(modelRoute.id)}
+              title={role === "operator" ? "运维人员只读模型路由发布配置" : undefined}
               type="button"
             >
               {modelRoute.status === "Active" ? "已发布" : publishing ? "发布中" : "发布模型路由"}
               <ChevronRight size={16} />
             </button>
+            {role === "operator" ? <ActionHint>需要管理员或开发人员发布模型路由。</ActionHint> : null}
           </div>
         </>
       ) : (
@@ -2002,9 +2004,15 @@ function ModelRoutePanel({
           <input onChange={(event) => setFallback(event.target.value)} required value={fallback} />
         </label>
         {error ? <p className="form-error">{error}</p> : null}
-        <button className="button button--primary" disabled={busy || role === "operator"} type="submit">
+        <button
+          className="button button--primary"
+          disabled={busy || role === "operator"}
+          title={role === "operator" ? "运维人员只读模型路由创建配置" : undefined}
+          type="submit"
+        >
           {busy ? "创建中" : "创建模型路由"}
         </button>
+        {role === "operator" ? <ActionHint>需要管理员或开发人员创建模型路由。</ActionHint> : null}
       </form>
     </Panel>
   );
@@ -2078,11 +2086,13 @@ function SkillBindingPanel({
               className="button button--primary"
               disabled={publishing || skill.status === "Published" || role === "operator"}
               onClick={() => void onPublish(skill.id)}
+              title={role === "operator" ? "运维人员只读 Skill 发布配置" : undefined}
               type="button"
             >
               {skill.status === "Published" ? "已发布" : publishing ? "发布中" : "发布 Skill"}
               <ChevronRight size={16} />
             </button>
+            {role === "operator" ? <ActionHint>需要管理员或开发人员发布 Skill。</ActionHint> : null}
           </div>
         </>
       ) : (
@@ -2113,9 +2123,15 @@ function SkillBindingPanel({
           <input onChange={(event) => setTimeoutValue(event.target.value)} required value={timeout} />
         </label>
         {error ? <p className="form-error">{error}</p> : null}
-        <button className="button button--primary" disabled={busy || role === "operator"} type="submit">
+        <button
+          className="button button--primary"
+          disabled={busy || role === "operator"}
+          title={role === "operator" ? "运维人员只读 Skill 创建配置" : undefined}
+          type="submit"
+        >
           {busy ? "创建中" : "创建 Skill 绑定"}
         </button>
+        {role === "operator" ? <ActionHint>需要管理员或开发人员创建 Skill 绑定。</ActionHint> : null}
       </form>
     </Panel>
   );
@@ -2177,11 +2193,13 @@ function BillingPlanPanel({
           className="button button--primary"
           disabled={!canActivate || activating || plan.status === "Active"}
           onClick={() => void onActivate(plan.id)}
+          title={!canActivate ? "启用套餐需要管理员权限" : undefined}
           type="button"
         >
           {plan.status === "Active" ? "已启用" : activating ? "启用中" : "启用套餐"}
           <ChevronRight size={16} />
         </button>
+        {!canActivate ? <ActionHint>需要管理员启用或变更套餐。</ActionHint> : null}
       </div>
     </Panel>
   );
@@ -2243,11 +2261,13 @@ function BudgetAlertPanel({
           className="button button--primary"
           disabled={!canResolve || resolving || resolved}
           onClick={() => void onResolve(alert.id)}
+          title={!canResolve ? "处理预算告警需要管理员或运维人员权限" : undefined}
           type="button"
         >
           {resolved ? "已处理" : resolving ? "处理中" : "处理预算告警"}
           <ChevronRight size={16} />
         </button>
+        {!canResolve ? <ActionHint>需要管理员或运维人员处理预算告警。</ActionHint> : null}
       </div>
     </Panel>
   );
@@ -2309,11 +2329,13 @@ function UserAccessPanel({
           className="button button--primary"
           disabled={!canActivate || activating || user.status === "Active"}
           onClick={() => void onActivate(user.id)}
+          title={!canActivate ? "激活用户需要管理员权限" : undefined}
           type="button"
         >
           {user.status === "Active" ? "已激活" : activating ? "激活中" : "激活用户"}
           <ChevronRight size={16} />
         </button>
+        {!canActivate ? <ActionHint>需要管理员激活用户邀请。</ActionHint> : null}
       </div>
     </Panel>
   );
@@ -2375,11 +2397,13 @@ function APIKeyPanel({
           className="button button--primary"
           disabled={!canRevoke || revoking || apiKey.status === "Revoked"}
           onClick={() => void onRevoke(apiKey.id)}
+          title={!canRevoke ? "撤销 API Key 需要管理员权限" : undefined}
           type="button"
         >
           {apiKey.status === "Revoked" ? "已撤销" : revoking ? "撤销中" : "撤销 API Key"}
           <ChevronRight size={16} />
         </button>
+        {!canRevoke ? <ActionHint>需要管理员撤销 API Key。</ActionHint> : null}
       </div>
     </Panel>
   );
@@ -2441,11 +2465,13 @@ function CredentialRefPanel({
           className="button button--primary"
           disabled={!canRotate || rotating || credential.status === "Rotated"}
           onClick={() => void onRotate(credential.id)}
+          title={!canRotate ? "轮换凭据需要管理员权限" : undefined}
           type="button"
         >
           {credential.status === "Rotated" ? "已轮换" : rotating ? "轮换中" : "轮换凭据"}
           <ChevronRight size={16} />
         </button>
+        {!canRotate ? <ActionHint>需要管理员轮换供应商凭据。</ActionHint> : null}
       </div>
     </Panel>
   );
@@ -2660,6 +2686,10 @@ function StatusDot({ tone }: { tone: StatusTone }) {
   }
 
   return <CircleAlert className={`status-dot status-dot--${tone}`} size={16} />;
+}
+
+function ActionHint({ children }: { children: React.ReactNode }) {
+  return <p className="action-hint">{children}</p>;
 }
 
 function toneForStatus(status = ""): StatusTone {

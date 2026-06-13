@@ -1417,6 +1417,14 @@ tbody tr.is-selected td:first-child {
   opacity: 0.64;
 }
 
+.action-hint {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .status {
   display: inline-flex;
   min-height: 26px;
