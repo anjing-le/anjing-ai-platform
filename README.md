@@ -68,7 +68,7 @@ pnpm build:console
 pnpm verify
 ```
 
-`pnpm verify` 会依次执行 workspace 配置检查、前端构建、OpenAPI 路由覆盖检查、服务边界一致性检查、文档本地引用检查、Compose 配置检查、Dockerfile 路径检查、Go 格式检查、Go vet 和 Go 测试。Workspace 检查会确认 `apps/console` 是正式后台入口，根脚本和 pnpm workspace 没有漂移。OpenAPI 检查会比对 Go `mux.HandleFunc` 注册的 `/healthz`、`/api/*` 路径与 `contracts/openapi/platform-api.yaml`，避免新增后端接口时遗漏合约。服务边界检查会比对前端 `consoleServiceMap` 和 OpenAPI `x-anjing-service-boundaries`，避免后台入口、后端归属和 API 分组漂移。文档引用检查会确认 README 和 `docs/` 中指向仓库内的路径真实存在。Compose 检查会验证本地 PostgreSQL 和单镜像预览的编排配置。Dockerfile 检查会确认本地 `COPY` 源路径真实存在。Go 检查会覆盖 `gofmt`、`go vet ./...` 和 `go test ./...`。
+`pnpm verify` 会依次执行 workspace 配置检查、前端构建、前端数据映射测试、OpenAPI 路由覆盖检查、服务边界一致性检查、文档本地引用检查、Compose 配置检查、Dockerfile 路径检查、Go 格式检查、Go vet 和 Go 测试。Workspace 检查会确认 `apps/console` 是正式后台入口，根脚本和 pnpm workspace 没有漂移。前端测试会验证后端快照到首页指标、待办和模块表格的 hydration 映射。OpenAPI 检查会比对 Go `mux.HandleFunc` 注册的 `/healthz`、`/api/*` 路径与 `contracts/openapi/platform-api.yaml`，避免新增后端接口时遗漏合约。服务边界检查会比对前端 `consoleServiceMap` 和 OpenAPI `x-anjing-service-boundaries`，避免后台入口、后端归属和 API 分组漂移。文档引用检查会确认 README 和 `docs/` 中指向仓库内的路径真实存在。Compose 检查会验证本地 PostgreSQL 和单镜像预览的编排配置。Dockerfile 检查会确认本地 `COPY` 源路径真实存在。Go 检查会覆盖 `gofmt`、`go vet ./...` 和 `go test ./...`。
 
 完整 Go 后端：
 

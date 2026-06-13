@@ -13,6 +13,7 @@
     "dev:console": "pnpm --filter @anjing-ai-platform/console dev",
     "build:console": "pnpm --filter @anjing-ai-platform/console build",
     "preview:console": "pnpm --filter @anjing-ai-platform/console preview",
+    "test:console": "pnpm --filter @anjing-ai-platform/console test",
     "build:go": "go build ./cmd/...",
     "test:go": "go test ./...",
     "image:build": "docker build -t anjing-ai-platform:local .",
@@ -27,6 +28,6 @@
     "verify:gofmt": "bash scripts/check-gofmt.sh",
     "verify:govet": "bash scripts/check-govet.sh",
     "verify:openapi": "bash scripts/check-openapi-routes.sh",
-    "verify": "pnpm verify:workspace && pnpm build:console && pnpm verify:openapi && pnpm verify:boundaries && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:gofmt && pnpm verify:govet && go test ./..."
+    "verify": "pnpm verify:workspace && pnpm build:console && pnpm test:console && pnpm verify:openapi && pnpm verify:boundaries && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:gofmt && pnpm verify:govet && go test ./..."
   }
 }
