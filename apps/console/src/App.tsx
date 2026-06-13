@@ -947,6 +947,7 @@ function ConsoleHome({
                 <span>{item.label}</span>
                 <strong>{item.title}</strong>
                 <p>{item.note}</p>
+                {"command" in item ? <code>{item.command}</code> : null}
               </article>
             ))}
           </div>
