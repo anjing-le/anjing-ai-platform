@@ -19,7 +19,8 @@
     "image:up": "docker compose -f infra/local/docker-compose.image.yml up -d --build",
     "image:down": "docker compose -f infra/local/docker-compose.image.yml down",
     "image:logs": "docker compose -f infra/local/docker-compose.image.yml logs -f platform",
+    "verify:boundaries": "node scripts/check-service-boundaries.mjs",
     "verify:openapi": "bash scripts/check-openapi-routes.sh",
-    "verify": "pnpm build:console && pnpm verify:openapi && go test ./..."
+    "verify": "pnpm build:console && pnpm verify:openapi && pnpm verify:boundaries && go test ./..."
   }
 }
