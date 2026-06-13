@@ -66,7 +66,7 @@ pnpm build:console
 pnpm verify
 ```
 
-`pnpm verify` 会依次执行前端构建、OpenAPI 路由覆盖检查和 Go 测试。OpenAPI 检查会比对 Go `mux.HandleFunc` 注册的 `/healthz`、`/api/*` 路径与 `contracts/openapi/platform-api.yaml`，避免新增后端接口时遗漏合约。
+`pnpm verify` 会依次执行前端构建、OpenAPI 路由覆盖检查、服务边界一致性检查和 Go 测试。OpenAPI 检查会比对 Go `mux.HandleFunc` 注册的 `/healthz`、`/api/*` 路径与 `contracts/openapi/platform-api.yaml`，避免新增后端接口时遗漏合约。服务边界检查会比对前端 `consoleServiceMap` 和 OpenAPI `x-anjing-service-boundaries`，避免后台入口、后端归属和 API 分组漂移。
 
 完整 Go 后端：
 
