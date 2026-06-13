@@ -60,6 +60,14 @@ http://localhost:1818/
 pnpm build:console
 ```
 
+本地校验：
+
+```bash
+pnpm verify
+```
+
+`pnpm verify` 会依次执行前端构建、OpenAPI 路由覆盖检查和 Go 测试。OpenAPI 检查会比对 Go `mux.HandleFunc` 注册的 `/healthz`、`/api/*` 路径与 `contracts/openapi/platform-api.yaml`，避免新增后端接口时遗漏合约。
+
 完整 Go 后端：
 
 ```bash
