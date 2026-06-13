@@ -58,7 +58,7 @@ scripts/check-service-boundaries.mjs
 保护内容：
 
 - 前端 `consoleServiceMap` 和 OpenAPI `x-anjing-service-boundaries` 必须保持一致。
-- 后台入口、后端归属和 API 分组不能在前端、合约之间漂移。
+- 后台入口 key、展示名称、后端归属和 API 分组不能在前端、合约之间漂移。
 - 边界中列出的 API 分组必须存在于 OpenAPI `paths`，`/` 和 `/api/*` 作为帮助文档入口的虚拟分组保留。
 - 当前受保护的入口包括 `operations`、`access`、`gateway`、`billing` 和 `docs`。
 

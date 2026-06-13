@@ -9,11 +9,12 @@ function parseConsoleBoundaries(source) {
     throw new Error("consoleServiceMap was not found in apps/console/src/data/console.ts");
   }
 
-  return [...mapMatch[1].matchAll(/\{\s*entry:\s*"([^"]+)",\s*owner:\s*"([^"]+)",\s*scope:\s*"[^"]+",\s*apis:\s*\[([^\]]*)\],\s*\}/g)]
+  return [...mapMatch[1].matchAll(/\{\s*id:\s*"([^"]+)",\s*entry:\s*"([^"]+)",\s*owner:\s*"([^"]+)",\s*scope:\s*"[^"]+",\s*apis:\s*\[([^\]]*)\],\s*\}/g)]
     .map((match) => ({
-      label: match[1],
-      owner: match[2],
-      apis: [...match[3].matchAll(/"([^"]+)"/g)].map((api) => api[1]),
+      id: match[1],
+      label: match[2],
+      owner: match[3],
+      apis: [...match[4].matchAll(/"([^"]+)"/g)].map((api) => api[1]),
     }));
 }
 
@@ -84,6 +85,7 @@ function parseOpenapiPaths(source) {
 function normalize(boundaries) {
   return boundaries
     .map((item) => ({
+      id: item.id || item.consoleEntry,
       label: item.label,
       owner: item.owner,
       apis: [...item.apis].sort(),
