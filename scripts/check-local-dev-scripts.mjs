@@ -34,6 +34,14 @@ if (!consoleEnvExample.includes("VITE_API_BASE_URL=")) {
   errors.push("apps/console/.env.example must document VITE_API_BASE_URL.");
 }
 
+const consoleWeb = readFileSync("internal/consoleweb/static.go", "utf8");
+if (!consoleWeb.includes("run pnpm build:console first")) {
+  errors.push("internal/consoleweb/static.go must point missing static build users to pnpm build:console.");
+}
+if (consoleWeb.includes("frontend/admin-console")) {
+  errors.push("internal/consoleweb/static.go must not point users to the legacy Vue prototype.");
+}
+
 if (errors.length > 0) {
   console.error("Local development script check failed:");
   for (const error of errors) {

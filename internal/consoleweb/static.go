@@ -26,7 +26,7 @@ func Handler(staticDir string) http.HandlerFunc {
 				"service":   "console-web",
 				"status":    "static dir not built",
 				"staticDir": staticDir,
-				"hint":      "run pnpm build in frontend/admin-console first",
+				"hint":      "run pnpm build:console first",
 			})
 			return
 		}
