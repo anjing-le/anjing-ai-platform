@@ -911,11 +911,7 @@ function ModulePage({
   }, [activeTab]);
 
   const tableView = useMemo(() => {
-    if (page.id !== "iam") {
-      return page.table;
-    }
-
-    if (activeTab === "角色权限") {
+    if (page.id === "iam" && activeTab === "角色权限") {
       return {
         eyebrow: "Roles",
         title: "角色权限",
@@ -929,7 +925,7 @@ function ModulePage({
       };
     }
 
-    if (activeTab === "API Key") {
+    if (page.id === "iam" && activeTab === "API Key") {
       return {
         eyebrow: "API Keys",
         title: "密钥列表",
@@ -943,7 +939,7 @@ function ModulePage({
       };
     }
 
-    if (activeTab === "凭据") {
+    if (page.id === "iam" && activeTab === "凭据") {
       return {
         eyebrow: "Credentials",
         title: "凭据引用",
@@ -963,8 +959,60 @@ function ModulePage({
       };
     }
 
+    if (page.id === "gateway" && activeTab === "模型路由") {
+      return {
+        eyebrow: "Model Routes",
+        title: "模型路由",
+        columns: ["Alias", "场景", "Primary", "Fallback", "状态"],
+        rows: (snapshot?.modelRoutes || []).map((route) => ({
+          id: route.id,
+          cells: [route.alias, route.scenario, route.primary, route.fallback, route.status],
+          status: route.status,
+          tone: toneForStatus(route.status),
+        })),
+      };
+    }
+
+    if (page.id === "gateway" && activeTab === "Skill 调用") {
+      return {
+        eyebrow: "Skills",
+        title: "Skill 绑定",
+        columns: ["Name", "Protocol", "Route", "Timeout", "状态"],
+        rows: (snapshot?.skills || []).map((skill) => ({
+          id: skill.id,
+          cells: [skill.name, skill.protocol, skill.route, skill.timeout, skill.status],
+          status: skill.status,
+          tone: toneForStatus(skill.status),
+        })),
+      };
+    }
+
+    if (page.id === "gateway" && activeTab === "请求日志") {
+      return {
+        eyebrow: "Request Logs",
+        title: "请求日志",
+        columns: ["Request", "Consumer", "Latency", "Result", "状态"],
+        rows: (snapshot?.requestLogs || []).map((log) => ({
+          id: log.id,
+          cells: [log.request, log.consumer, log.latency, log.result, log.status],
+          status: log.status,
+          tone: toneForStatus(log.status),
+        })),
+      };
+    }
+
     return page.table;
-  }, [activeTab, page.id, page.table, snapshot?.apiKeys, snapshot?.credentials, snapshot?.roles]);
+  }, [
+    activeTab,
+    page.id,
+    page.table,
+    snapshot?.apiKeys,
+    snapshot?.credentials,
+    snapshot?.modelRoutes,
+    snapshot?.requestLogs,
+    snapshot?.roles,
+    snapshot?.skills,
+  ]);
 
   const statuses = useMemo(
     () => ["全部状态", ...Array.from(new Set(tableView.rows.map((row) => row.status)))],
@@ -1024,11 +1072,12 @@ function ModulePage({
 
     return (
       snapshot.modelRoutes.find((route) => route.id === selectedModelRouteId) ||
+      snapshot.modelRoutes.find((route) => route.id === selectedRowId) ||
       snapshot.modelRoutes.find((route) => route.status === "Draft") ||
       snapshot.modelRoutes.find((route) => route.alias === "chat-default") ||
       snapshot.modelRoutes[0]
     );
-  }, [page.id, selectedModelRouteId, snapshot?.modelRoutes]);
+  }, [page.id, selectedModelRouteId, selectedRowId, snapshot?.modelRoutes]);
 
   const selectedSkill = useMemo(() => {
     if (page.id !== "gateway" || !snapshot?.skills?.length) {
@@ -1037,11 +1086,12 @@ function ModulePage({
 
     return (
       snapshot.skills.find((skill) => skill.id === selectedSkillId) ||
+      snapshot.skills.find((skill) => skill.id === selectedRowId) ||
       snapshot.skills.find((skill) => skill.status === "Draft") ||
       snapshot.skills.find((skill) => skill.status === "Published") ||
       snapshot.skills[0]
     );
-  }, [page.id, selectedSkillId, snapshot?.skills]);
+  }, [page.id, selectedRowId, selectedSkillId, snapshot?.skills]);
 
   const selectedPlan = useMemo(() => {
     if (page.id !== "quota" || !snapshot?.plans?.length) {
@@ -1112,8 +1162,17 @@ function ModulePage({
   if (page.id === "docs") {
     selectedTableRowId = selectedApplication?.id;
   }
-  if (page.id === "gateway") {
+  if (page.id === "gateway" && activeTab === "API 路由") {
     selectedTableRowId = selectedRoute?.id;
+  }
+  if (page.id === "gateway" && activeTab === "模型路由") {
+    selectedTableRowId = selectedModelRoute?.id;
+  }
+  if (page.id === "gateway" && activeTab === "Skill 调用") {
+    selectedTableRowId = selectedSkill?.id;
+  }
+  if (page.id === "gateway" && activeTab === "请求日志") {
+    selectedTableRowId = selectedRowId;
   }
   if (page.id === "quota") {
     selectedTableRowId = selectedPlan?.id;
@@ -1217,14 +1276,14 @@ function ModulePage({
               rotating={rotatingCredentialId === selectedCredential?.id}
             />
           ) : null}
-          {page.id === "gateway" ? (
+          {page.id === "gateway" && activeTab === "API 路由" ? (
             <GatewayRoutePanel
               onPublish={onRoutePublish}
               publishing={publishingRouteId === selectedRoute?.id}
               route={selectedRoute}
             />
           ) : null}
-          {page.id === "gateway" ? (
+          {page.id === "gateway" && activeTab === "模型路由" ? (
             <ModelRoutePanel
               modelRoute={selectedModelRoute}
               onCreate={onModelRouteCreate}
@@ -1233,7 +1292,7 @@ function ModulePage({
               role={role}
             />
           ) : null}
-          {page.id === "gateway" ? (
+          {page.id === "gateway" && activeTab === "Skill 调用" ? (
             <SkillBindingPanel
               onCreate={onSkillBindingCreate}
               onPublish={onSkillBindingPublish}
@@ -1242,7 +1301,7 @@ function ModulePage({
               skill={selectedSkill}
             />
           ) : null}
-          {page.id === "gateway" ? (
+          {page.id === "gateway" && (activeTab === "模型路由" || activeTab === "Skill 调用") ? (
             <LLMInvokePanel modelRoutes={snapshot?.modelRoutes} onInvoked={onLLMInvoked} role={role} />
           ) : null}
           {page.id === "quota" ? (
