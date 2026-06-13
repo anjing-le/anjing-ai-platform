@@ -82,7 +82,27 @@ scripts/check-doc-links.mjs
 - 当前检查 `apps/`、`cmd/`、`contracts/`、`docs/`、`frontend/`、`infra/`、`internal/`、`scripts/` 和常见根文件。
 - `/api/*`、URL、绝对本机路径和未启用的 `.github` workflow 路径不会作为本地文件检查。
 
-## Gate 5：Go 测试
+## Gate 5：Compose 配置
+
+命令：
+
+```bash
+pnpm verify:compose
+```
+
+脚本：
+
+```text
+scripts/check-compose.sh
+```
+
+保护内容：
+
+- `infra/local/docker-compose.yml` 必须能通过 `docker compose config`。
+- `infra/local/docker-compose.image.yml` 必须能通过 `docker compose config`。
+- 本地 PostgreSQL 和单镜像预览的编排配置不能因为字段错误或路径错误而失效。
+
+## Gate 6：Go 测试
 
 命令：
 
@@ -104,11 +124,6 @@ CI 模板位于：
 docs/ci/github-actions-ci.yml
 ```
 
-模板中使用 `pnpm verify` 作为统一门禁入口，并额外校验本地 compose 文件：
-
-```bash
-docker compose -f infra/local/docker-compose.yml config
-docker compose -f infra/local/docker-compose.image.yml config
-```
+模板中使用 `pnpm verify` 作为统一门禁入口，本地和 CI 使用同一套 gate。
 
 当前没有直接提交 `.github/workflows/ci.yml`，因为自动化 token 需要 `workflow` scope。启用 GitHub Actions 时，把模板复制到 `.github/workflows/ci.yml` 即可。

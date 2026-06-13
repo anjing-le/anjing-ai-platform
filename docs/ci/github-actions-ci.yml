@@ -35,8 +35,3 @@ jobs:
 
       - name: Verify platform
         run: pnpm verify
-
-      - name: Validate compose files
-        run: |
-          docker compose -f infra/local/docker-compose.yml config >/dev/null
-          docker compose -f infra/local/docker-compose.image.yml config >/dev/null
