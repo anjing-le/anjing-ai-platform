@@ -17,6 +17,7 @@
 | `scripts/check-compose.sh` | `pnpm verify:compose` | 校验本地 PostgreSQL 和单镜像预览 compose 文件可以通过 `docker compose config`。 |
 | `scripts/check-dockerfile-paths.mjs` | `pnpm verify:dockerfile` | 检查 Dockerfile 本地 `COPY` 源路径是否真实存在。 |
 | `scripts/check-db-files.mjs` | `pnpm verify:db-files` | 检查 PostgreSQL migration / seed 编号、seed 和 Go repository 表引用、用户、应用、网关、计费与运营联动、迁移目录配置。 |
+| `scripts/check-local-dev-scripts.mjs` | `pnpm verify:local-dev` | 检查本地数据库准备和 Go API 启动脚本是否保持一键可用。 |
 | `scripts/check-gofmt.sh` | `pnpm verify:gofmt` | 检查 Go 源码是否已经通过 `gofmt` 格式化。 |
 | `scripts/check-govet.sh` | `pnpm verify:govet` | 运行 `go vet ./...`，检查 Go 代码中的可疑实现问题。 |
 | `go build ./cmd/...` | `pnpm verify:go-build` | 构建全部 Go command，确保本地和镜像交付入口可编译。 |

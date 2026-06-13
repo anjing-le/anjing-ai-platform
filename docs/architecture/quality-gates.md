@@ -291,7 +291,27 @@ scripts/check-db-files.mjs
 - Postgres 运营待办解决必须写入审计事件，保证后台首页的待办状态和审计流一致。
 - Go 默认 migrations / seeds 目录、单镜像 compose 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
 
-## Gate 15：Go 格式
+## Gate 15：本地开发入口
+
+命令：
+
+```bash
+pnpm verify:local-dev
+```
+
+脚本：
+
+```text
+scripts/check-local-dev-scripts.mjs
+```
+
+保护内容：
+
+- `db:prepare` 必须串起 `db:up`、`db:migrate`、`db:seed`，保证本地 PostgreSQL 可以一条命令准备好。
+- `dev:api` 必须启动 `cmd/platform-all`，作为默认内存模式 API。
+- `dev:api:db` 必须带默认 PostgreSQL 连接串启动 `cmd/platform-all`，作为真实数据库模式 API。
+
+## Gate 16：Go 格式
 
 命令：
 
@@ -311,7 +331,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 16：Go Vet
+## Gate 17：Go Vet
 
 命令：
 
@@ -330,7 +350,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 17：Go Command 构建
+## Gate 18：Go Command 构建
 
 命令：
 
@@ -344,7 +364,7 @@ pnpm verify:go-build
 - Dockerfile 中构建的交付入口必须先在本地门禁中被编译验证。
 - 新增 command 时，不能只通过包测试而遗漏真实可执行入口构建。
 
-## Gate 17：Go 测试
+## Gate 19：Go 测试
 
 命令：
 
