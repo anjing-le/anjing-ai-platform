@@ -15,7 +15,7 @@
 
 | 后台入口 | 合并能力 | 后端归属 | API 分组 |
 | --- | --- | --- | --- |
-| 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events` |
+| 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
 | 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/llm/invoke` |
 | 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/budget-alerts` |
@@ -150,6 +150,7 @@ internal/ops/
 ### `ops-api`
 
 - 运营总览
+- 后台聚合快照
 - 服务健康
 - 审计事件
 - 失败追踪
@@ -245,8 +246,15 @@ go run ./cmd/console-web      # :1818
 ### `ops-api`
 
 - `GET /api/ops/healthz`
+- `GET /api/ops/platform-snapshot`
 - `GET /api/ops/dashboard`
 - `GET /api/ops/todos`
 - `POST /api/ops/todos/resolve`
 - `GET /api/ops/service-health`
 - `GET /api/ops/audit-events`
+
+## 后台首页聚合策略
+
+控制台进入后台后优先调用 `GET /api/ops/platform-snapshot`。这个接口一次性返回首页和模块入口需要的核心数据：运营指标、待办、健康、审计、用户、应用、角色、API Key、凭据、网关路由、模型路由、Skill、请求日志、套餐、用量和预算告警。
+
+细分接口仍然保留，用于模块页刷新、单项操作后的局部更新，以及未来按服务拆分时的边界。当前前端如果发现聚合接口不可用，会自动回退到细分接口，保证旧本地服务也能预览控制台。
