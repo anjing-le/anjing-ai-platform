@@ -33,6 +33,41 @@ tags:
     description: Plans, usage records and budget alerts.
   - name: operations
     description: Dashboard, todos, service health and audit events.
+x-anjing-service-boundaries:
+  - consoleEntry: operations
+    label: 运营总览
+    owner: ops-api
+    apiGroups:
+      - /api/ops/dashboard
+      - /api/ops/todos
+      - /api/ops/audit-events
+  - consoleEntry: access
+    label: 用户与权限
+    owner: control-api
+    apiGroups:
+      - /api/control/users
+      - /api/control/applications
+      - /api/control/api-keys
+  - consoleEntry: gateway
+    label: 网关与模型
+    owner: gateway-api
+    apiGroups:
+      - /api/gateway/routes
+      - /api/gateway/model-routes
+      - /api/gateway/llm/invoke
+  - consoleEntry: billing
+    label: 计费与配额
+    owner: billing-service
+    apiGroups:
+      - /api/billing/plans
+      - /api/billing/usage
+      - /api/billing/budget-alerts
+  - consoleEntry: docs
+    label: 帮助文档
+    owner: console-web + APIs
+    apiGroups:
+      - /
+      - /api/*
 paths:
   /healthz:
     get:
