@@ -19,6 +19,7 @@
     "image:up": "docker compose -f infra/local/docker-compose.image.yml up -d --build",
     "image:down": "docker compose -f infra/local/docker-compose.image.yml down",
     "image:logs": "docker compose -f infra/local/docker-compose.image.yml logs -f platform",
+    "verify:workspace": "node scripts/check-workspace.mjs",
     "verify:boundaries": "node scripts/check-service-boundaries.mjs",
     "verify:compose": "bash scripts/check-compose.sh",
     "verify:docs": "node scripts/check-doc-links.mjs",
@@ -26,6 +27,6 @@
     "verify:gofmt": "bash scripts/check-gofmt.sh",
     "verify:govet": "bash scripts/check-govet.sh",
     "verify:openapi": "bash scripts/check-openapi-routes.sh",
-    "verify": "pnpm build:console && pnpm verify:openapi && pnpm verify:boundaries && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:gofmt && pnpm verify:govet && go test ./..."
+    "verify": "pnpm verify:workspace && pnpm build:console && pnpm verify:openapi && pnpm verify:boundaries && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:gofmt && pnpm verify:govet && go test ./..."
   }
 }

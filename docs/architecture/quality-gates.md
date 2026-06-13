@@ -1,6 +1,6 @@
 # 质量门禁
 
-当前阶段的质量门禁目标不是追求复杂流程，而是保护 V1 最容易漂移的边界：前端控制台、Go 后端路由、OpenAPI 合约和服务归属元数据。
+当前阶段的质量门禁目标不是追求复杂流程，而是保护 V1 最容易漂移的边界：workspace 入口、前端控制台、Go 后端路由、OpenAPI 合约和服务归属元数据。
 
 统一入口：
 
@@ -8,7 +8,28 @@
 pnpm verify
 ```
 
-## Gate 1：前端构建
+## Gate 1：Workspace 配置
+
+命令：
+
+```bash
+pnpm verify:workspace
+```
+
+脚本：
+
+```text
+scripts/check-workspace.mjs
+```
+
+保护内容：
+
+- 根 `package.json` 必须保持 private，并声明 `pnpm@` package manager。
+- `pnpm-workspace.yaml` 必须包含 apps workspace pattern，且该 pattern 能解析到真实 package。
+- 正式后台包必须是 `apps/console` 下的 `@anjing-ai-platform/console`。
+- 根目录 `dev:console`、`build:console`、`preview:console` 必须指向正式 console 包，避免早期 Vue 原型和正式后台入口漂移。
+
+## Gate 2：前端构建
 
 命令：
 
@@ -21,7 +42,7 @@ pnpm build:console
 - React + TypeScript 控制台可以完成类型检查和 Vite 生产构建。
 - 后台首页、模块页面、角色视角、服务边界和 Mock / API 串联没有基础编译错误。
 
-## Gate 2：OpenAPI 路由覆盖
+## Gate 3：OpenAPI 路由覆盖
 
 命令：
 
@@ -41,7 +62,7 @@ scripts/check-openapi-routes.sh
 - OpenAPI `paths` 里声明的 `/healthz`、`/api/*` 路径必须在 Go 里真实注册。
 - 新增后端接口时，不能只改 Go 代码而忘记更新合约。
 
-## Gate 3：服务边界一致性
+## Gate 4：服务边界一致性
 
 命令：
 
@@ -62,7 +83,7 @@ scripts/check-service-boundaries.mjs
 - 边界中列出的 API 分组必须存在于 OpenAPI `paths`，`/` 和 `/api/*` 作为帮助文档入口的虚拟分组保留。
 - 当前受保护的入口包括 `operations`、`access`、`gateway`、`billing` 和 `docs`。
 
-## Gate 4：文档本地引用
+## Gate 5：文档本地引用
 
 命令：
 
@@ -82,7 +103,7 @@ scripts/check-doc-links.mjs
 - 当前检查 `apps/`、`cmd/`、`contracts/`、`docs/`、`frontend/`、`infra/`、`internal/`、`scripts/` 和常见根文件。
 - `/api/*`、URL、绝对本机路径和未启用的 `.github` workflow 路径不会作为本地文件检查。
 
-## Gate 5：Compose 配置
+## Gate 6：Compose 配置
 
 命令：
 
@@ -102,7 +123,7 @@ scripts/check-compose.sh
 - `infra/local/docker-compose.image.yml` 必须能通过 `docker compose config`。
 - 本地 PostgreSQL 和单镜像预览的编排配置不能因为字段错误或路径错误而失效。
 
-## Gate 6：Dockerfile 路径
+## Gate 7：Dockerfile 路径
 
 命令：
 
@@ -122,7 +143,7 @@ scripts/check-dockerfile-paths.mjs
 - 多阶段构建里的 `COPY --from=...` 不作为本地路径检查。
 - 重构目录时，镜像构建入口不会静默引用不存在的路径。
 
-## Gate 7：Go 格式
+## Gate 8：Go 格式
 
 命令：
 
@@ -142,7 +163,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 8：Go Vet
+## Gate 9：Go Vet
 
 命令：
 
@@ -161,7 +182,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 9：Go 测试
+## Gate 10：Go 测试
 
 命令：
 
