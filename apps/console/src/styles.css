@@ -938,7 +938,7 @@ a {
 .service-map__head,
 .service-map__row {
   display: grid;
-  grid-template-columns: minmax(108px, 0.55fr) minmax(148px, 0.6fr) minmax(0, 1fr);
+  grid-template-columns: minmax(104px, 0.48fr) minmax(132px, 0.52fr) minmax(0, 0.9fr) minmax(180px, 0.95fr);
   min-height: 42px;
   border-bottom: 1px solid var(--line);
 }
@@ -950,7 +950,8 @@ a {
 .service-map__head span,
 .service-map__row strong,
 .service-map__row span,
-.service-map__row p {
+.service-map__row p,
+.service-map__row code {
   display: flex;
   align-items: center;
   min-width: 0;
@@ -960,7 +961,7 @@ a {
 }
 
 .service-map__head span:last-child,
-.service-map__row p {
+.service-map__row code {
   border-right: 0;
 }
 
@@ -990,6 +991,17 @@ a {
   color: var(--ink-soft);
   font-size: 0.84rem;
   line-height: 1.45;
+}
+
+.service-map__row code {
+  overflow: hidden;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tab-row {
@@ -1931,9 +1943,14 @@ tbody tr.is-selected td:first-child {
 
   .service-map__row strong,
   .service-map__row span,
-  .service-map__row p {
+  .service-map__row p,
+  .service-map__row code {
     padding: 2px 0;
     border-right: 0;
+  }
+
+  .service-map__row code {
+    white-space: normal;
   }
 
   .landing__nav,

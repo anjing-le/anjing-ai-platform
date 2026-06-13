@@ -964,12 +964,14 @@ function ConsoleHome({
               <span>Entry</span>
               <span>Owner</span>
               <span>Scope</span>
+              <span>API</span>
             </div>
             {consoleServiceMap.map((item) => (
               <div className="service-map__row" key={item.entry}>
                 <strong>{item.entry}</strong>
                 <span>{item.owner}</span>
                 <p>{item.scope}</p>
+                <code>{item.apis.join(" · ")}</code>
               </div>
             ))}
           </div>
@@ -1251,10 +1253,10 @@ function ModulePage({
       return {
         eyebrow: "Service Boundary",
         title: "服务边界",
-        columns: ["后台入口", "Owner", "职责范围", "状态"],
+        columns: ["后台入口", "Owner", "API 分组", "职责范围", "状态"],
         rows: consoleServiceMap.map((item) => ({
           id: `service-${item.owner}`,
-          cells: [item.entry, item.owner, item.scope, "Ready"],
+          cells: [item.entry, item.owner, item.apis.join(" · "), item.scope, "Ready"],
           status: "Ready",
           tone: "good",
         })),
