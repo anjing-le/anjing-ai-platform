@@ -752,6 +752,40 @@ function APIStateBadge({ detail, state }: { detail: string; state: ApiState }) {
   );
 }
 
+function RoleAccessMatrix({ activeRole, modules }: { activeRole: RoleId; modules: NavItem[] }) {
+  return (
+    <div className="role-access-matrix" aria-label="角色可见矩阵">
+      <div className="role-access-matrix__head">
+        <span>Module</span>
+        {roles.map((item) => (
+          <span className={item.id === activeRole ? "is-active" : ""} key={item.id}>
+            {item.label}
+          </span>
+        ))}
+      </div>
+      {modules.map((module) => (
+        <div className="role-access-matrix__row" key={module.id}>
+          <strong>{module.label}</strong>
+          {roles.map((item) => {
+            const allowed = module.roles.includes(item.id);
+
+            return (
+              <span
+                aria-label={`${item.label}${allowed ? "可见" : "不可见"}`}
+                className={`${allowed ? "is-allowed" : "is-denied"} ${item.id === activeRole ? "is-active" : ""}`}
+                key={item.id}
+                title={`${item.label}${allowed ? "可见" : "不可见"}`}
+              >
+                {allowed ? "●" : "—"}
+              </span>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ConsoleHome({
   metrics,
   notice,
@@ -903,6 +937,7 @@ function ConsoleHome({
             <p>{roles.find((item) => item.id === role)?.purpose}</p>
             <span>{businessItems.length} 个可见业务入口</span>
           </div>
+          <RoleAccessMatrix activeRole={role} modules={moduleAccessItems} />
         </Panel>
         <Panel title="后端服务规划" eyebrow="Backend">
           <div className="service-plan">

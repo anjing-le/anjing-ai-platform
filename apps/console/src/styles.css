@@ -784,6 +784,67 @@ a {
   font-weight: 900;
 }
 
+.role-access-matrix {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+
+.role-access-matrix__head,
+.role-access-matrix__row {
+  display: grid;
+  grid-template-columns: minmax(92px, 1fr) repeat(4, minmax(42px, 0.58fr));
+  align-items: center;
+  min-height: 42px;
+  border-bottom: 1px solid var(--line);
+}
+
+.role-access-matrix__row:last-child {
+  border-bottom: 0;
+}
+
+.role-access-matrix__head span,
+.role-access-matrix__row strong,
+.role-access-matrix__row span {
+  padding: 9px 10px;
+  border-right: 1px solid var(--line);
+}
+
+.role-access-matrix__head span:last-child,
+.role-access-matrix__row span:last-child {
+  border-right: 0;
+}
+
+.role-access-matrix__head span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.role-access-matrix__head span:not(:first-child),
+.role-access-matrix__row span {
+  text-align: center;
+}
+
+.role-access-matrix__row strong {
+  color: var(--ink);
+  font-size: 0.84rem;
+}
+
+.role-access-matrix__row span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.role-access-matrix .is-allowed {
+  color: #18794e;
+}
+
+.role-access-matrix .is-active {
+  background: #ffffff;
+}
+
 .service-plan {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
