@@ -75,14 +75,40 @@ func requestLog(logger *slog.Logger, serviceName string, next http.Handler) http
 		if requestID == "" {
 			requestID = time.Now().UTC().Format("20060102150405.000000000")
 		}
-		w.Header().Set("X-Request-ID", requestID)
-		next.ServeHTTP(w, r)
+		recorder := &statusRecorder{ResponseWriter: w}
+		recorder.Header().Set("X-Request-ID", requestID)
+		next.ServeHTTP(recorder, r)
 		logger.Info("request handled",
 			"service", serviceName,
 			"method", r.Method,
 			"path", r.URL.Path,
+			"status", recorder.Status(),
 			"request_id", requestID,
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
 	})
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rec *statusRecorder) WriteHeader(code int) {
+	rec.status = code
+	rec.ResponseWriter.WriteHeader(code)
+}
+
+func (rec *statusRecorder) Write(body []byte) (int, error) {
+	if rec.status == 0 {
+		rec.status = http.StatusOK
+	}
+	return rec.ResponseWriter.Write(body)
+}
+
+func (rec *statusRecorder) Status() int {
+	if rec.status == 0 {
+		return http.StatusOK
+	}
+	return rec.status
 }
