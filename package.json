@@ -22,7 +22,8 @@
     "verify:boundaries": "node scripts/check-service-boundaries.mjs",
     "verify:compose": "bash scripts/check-compose.sh",
     "verify:docs": "node scripts/check-doc-links.mjs",
+    "verify:gofmt": "bash scripts/check-gofmt.sh",
     "verify:openapi": "bash scripts/check-openapi-routes.sh",
-    "verify": "pnpm build:console && pnpm verify:openapi && pnpm verify:boundaries && pnpm verify:docs && pnpm verify:compose && go test ./..."
+    "verify": "pnpm build:console && pnpm verify:openapi && pnpm verify:boundaries && pnpm verify:docs && pnpm verify:compose && pnpm verify:gofmt && go test ./..."
   }
 }

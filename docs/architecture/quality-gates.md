@@ -102,7 +102,27 @@ scripts/check-compose.sh
 - `infra/local/docker-compose.image.yml` 必须能通过 `docker compose config`。
 - 本地 PostgreSQL 和单镜像预览的编排配置不能因为字段错误或路径错误而失效。
 
-## Gate 6：Go 测试
+## Gate 6：Go 格式
+
+命令：
+
+```bash
+pnpm verify:gofmt
+```
+
+脚本：
+
+```text
+scripts/check-gofmt.sh
+```
+
+保护内容：
+
+- 所有 Go 源码必须通过 `gofmt` 格式化。
+- 检查会跳过 `.git` 和 `node_modules`。
+- 失败时输出需要格式化的文件列表。
+
+## Gate 7：Go 测试
 
 命令：
 

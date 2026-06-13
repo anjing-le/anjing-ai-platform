@@ -8,6 +8,7 @@
 | `scripts/check-service-boundaries.mjs` | `pnpm verify:boundaries` | 比对前端 `consoleServiceMap` 与 OpenAPI `x-anjing-service-boundaries`，并确认 API 分组存在于 OpenAPI `paths`。 |
 | `scripts/check-doc-links.mjs` | `pnpm verify:docs` | 检查 README 和 `docs/` 中明显指向仓库内的路径是否真实存在。 |
 | `scripts/check-compose.sh` | `pnpm verify:compose` | 校验本地 PostgreSQL 和单镜像预览 compose 文件可以通过 `docker compose config`。 |
+| `scripts/check-gofmt.sh` | `pnpm verify:gofmt` | 检查 Go 源码是否已经通过 `gofmt` 格式化。 |
 
 新增脚本时，优先遵守这几个约定：
 
