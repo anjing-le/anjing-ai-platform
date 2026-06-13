@@ -895,13 +895,83 @@ function ModulePage({
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("全部状态");
   const [selectedRowId, setSelectedRowId] = useState("");
+  const [activeTab, setActiveTab] = useState(page.tabs[0] || "");
+
+  useEffect(() => {
+    setActiveTab(page.tabs[0] || "");
+    setQuery("");
+    setStatus("全部状态");
+    setSelectedRowId("");
+  }, [page.id, page.tabs]);
+
+  useEffect(() => {
+    setQuery("");
+    setStatus("全部状态");
+    setSelectedRowId("");
+  }, [activeTab]);
+
+  const tableView = useMemo(() => {
+    if (page.id !== "iam") {
+      return page.table;
+    }
+
+    if (activeTab === "角色权限") {
+      return {
+        eyebrow: "Roles",
+        title: "角色权限",
+        columns: ["角色", "可见入口", "配置范围", "限制", "状态"],
+        rows: (snapshot?.roles || []).map((policy) => ({
+          id: policy.id,
+          cells: [policy.name, policy.visibleEntries, policy.configScope, policy.restriction, policy.status],
+          status: policy.status,
+          tone: toneForStatus(policy.status),
+        })),
+      };
+    }
+
+    if (activeTab === "API Key") {
+      return {
+        eyebrow: "API Keys",
+        title: "密钥列表",
+        columns: ["Name", "Project", "Scope", "Expires", "状态"],
+        rows: (snapshot?.apiKeys || []).map((key) => ({
+          id: key.id,
+          cells: [key.name, key.project, key.scope, key.expiresAt || "No expiry", key.status],
+          status: key.status,
+          tone: toneForStatus(key.status),
+        })),
+      };
+    }
+
+    if (activeTab === "凭据") {
+      return {
+        eyebrow: "Credentials",
+        title: "凭据引用",
+        columns: ["Ref", "用途", "Scope", "Expires", "状态"],
+        rows: (snapshot?.credentials || []).map((credential) => ({
+          id: credential.id,
+          cells: [
+            credential.ref,
+            credential.purpose,
+            credential.scope,
+            credential.expiresAt || "No expiry",
+            credential.status,
+          ],
+          status: credential.status,
+          tone: toneForStatus(credential.status),
+        })),
+      };
+    }
+
+    return page.table;
+  }, [activeTab, page.id, page.table, snapshot?.apiKeys, snapshot?.credentials, snapshot?.roles]);
 
   const statuses = useMemo(
-    () => ["全部状态", ...Array.from(new Set(page.table.rows.map((row) => row.status)))],
-    [page.table.rows],
+    () => ["全部状态", ...Array.from(new Set(tableView.rows.map((row) => row.status)))],
+    [tableView.rows],
   );
 
-  const rows = page.table.rows.filter((row) => {
+  const rows = tableView.rows.filter((row) => {
     const matchesQuery = row.cells.join(" ").toLowerCase().includes(query.toLowerCase());
     const matchesStatus = status === "全部状态" || row.status === status;
     return matchesQuery && matchesStatus;
@@ -1005,11 +1075,12 @@ function ModulePage({
 
     return (
       snapshot.credentials.find((credential) => credential.id === selectedCredentialId) ||
+      snapshot.credentials.find((credential) => credential.id === selectedRowId) ||
       snapshot.credentials.find((credential) => credential.status === "Expiring") ||
       snapshot.credentials.find((credential) => credential.status === "Active") ||
       snapshot.credentials[0]
     );
-  }, [page.id, selectedCredentialId, snapshot?.credentials]);
+  }, [page.id, selectedCredentialId, selectedRowId, snapshot?.credentials]);
 
   const selectedAPIKey = useMemo(() => {
     if (page.id !== "iam" || !snapshot?.apiKeys?.length) {
@@ -1018,15 +1089,25 @@ function ModulePage({
 
     return (
       snapshot.apiKeys.find((key) => key.id === selectedAPIKeyId) ||
+      snapshot.apiKeys.find((key) => key.id === selectedRowId) ||
       snapshot.apiKeys.find((key) => key.status === "Active") ||
       snapshot.apiKeys[0]
     );
-  }, [page.id, selectedAPIKeyId, snapshot?.apiKeys]);
+  }, [page.id, selectedAPIKeyId, selectedRowId, snapshot?.apiKeys]);
 
   const selectableTable = page.id === "iam" || page.id === "docs" || page.id === "gateway" || page.id === "quota";
   let selectedTableRowId: string | undefined;
-  if (page.id === "iam") {
+  if (page.id === "iam" && activeTab === "用户") {
     selectedTableRowId = selectedUser?.id;
+  }
+  if (page.id === "iam" && activeTab === "API Key") {
+    selectedTableRowId = selectedAPIKey?.id;
+  }
+  if (page.id === "iam" && activeTab === "凭据") {
+    selectedTableRowId = selectedCredential?.id;
+  }
+  if (page.id === "iam" && activeTab === "角色权限") {
+    selectedTableRowId = selectedRowId;
   }
   if (page.id === "docs") {
     selectedTableRowId = selectedApplication?.id;
@@ -1072,8 +1153,13 @@ function ModulePage({
       {notice ? <p className="inline-notice">{notice}</p> : null}
 
       <div className="tab-row" aria-label={`${page.title} 页面视图`}>
-        {page.tabs.map((tab, index) => (
-          <button className={index === 0 ? "is-active" : ""} key={tab} type="button">
+        {page.tabs.map((tab) => (
+          <button
+            className={tab === activeTab ? "is-active" : ""}
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            type="button"
+          >
             {tab}
           </button>
         ))}
@@ -1082,7 +1168,7 @@ function ModulePage({
       <MetricGrid metrics={page.metrics} />
 
       <section className="content-grid">
-        <Panel className="content-grid__main" eyebrow={page.table.eyebrow} title={page.table.title}>
+        <Panel className="content-grid__main" eyebrow={tableView.eyebrow} title={tableView.title}>
           <div className="table-toolbar">
             <label className="search-field">
               <Search size={16} />
@@ -1099,7 +1185,7 @@ function ModulePage({
             </select>
           </div>
           <DataTable
-            columns={page.table.columns}
+            columns={tableView.columns}
             onRowSelect={selectableTable ? setSelectedRowId : undefined}
             rows={rows}
             selectedRowId={selectedTableRowId}
@@ -1107,7 +1193,7 @@ function ModulePage({
         </Panel>
 
         <div className="side-panels">
-          {page.id === "iam" ? (
+          {page.id === "iam" && activeTab === "用户" ? (
             <UserAccessPanel
               activating={activatingUserId === selectedUser?.id}
               onActivate={handleSelectedUserActivate}
@@ -1115,7 +1201,7 @@ function ModulePage({
               user={selectedUser}
             />
           ) : null}
-          {page.id === "iam" ? (
+          {page.id === "iam" && activeTab === "API Key" ? (
             <APIKeyPanel
               apiKey={selectedAPIKey}
               onRevoke={onAPIKeyRevoke}
@@ -1123,7 +1209,7 @@ function ModulePage({
               role={role}
             />
           ) : null}
-          {page.id === "iam" ? (
+          {page.id === "iam" && activeTab === "凭据" ? (
             <CredentialRefPanel
               credential={selectedCredential}
               onRotate={onCredentialRotate}
