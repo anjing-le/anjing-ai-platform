@@ -9,6 +9,7 @@
 | `scripts/check-doc-links.mjs` | `pnpm verify:docs` | 检查 README 和 `docs/` 中明显指向仓库内的路径是否真实存在。 |
 | `scripts/check-compose.sh` | `pnpm verify:compose` | 校验本地 PostgreSQL 和单镜像预览 compose 文件可以通过 `docker compose config`。 |
 | `scripts/check-gofmt.sh` | `pnpm verify:gofmt` | 检查 Go 源码是否已经通过 `gofmt` 格式化。 |
+| `scripts/check-govet.sh` | `pnpm verify:govet` | 运行 `go vet ./...`，检查 Go 代码中的可疑实现问题。 |
 
 新增脚本时，优先遵守这几个约定：
 

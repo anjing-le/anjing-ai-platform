@@ -122,7 +122,26 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 7：Go 测试
+## Gate 7：Go Vet
+
+命令：
+
+```bash
+pnpm verify:govet
+```
+
+脚本：
+
+```text
+scripts/check-govet.sh
+```
+
+保护内容：
+
+- 运行标准库 `go vet ./...`。
+- 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
+
+## Gate 8：Go 测试
 
 命令：
 
