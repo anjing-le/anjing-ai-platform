@@ -102,7 +102,27 @@ scripts/check-compose.sh
 - `infra/local/docker-compose.image.yml` 必须能通过 `docker compose config`。
 - 本地 PostgreSQL 和单镜像预览的编排配置不能因为字段错误或路径错误而失效。
 
-## Gate 6：Go 格式
+## Gate 6：Dockerfile 路径
+
+命令：
+
+```bash
+pnpm verify:dockerfile
+```
+
+脚本：
+
+```text
+scripts/check-dockerfile-paths.mjs
+```
+
+保护内容：
+
+- Dockerfile 中本地 `COPY` 源路径必须真实存在。
+- 多阶段构建里的 `COPY --from=...` 不作为本地路径检查。
+- 重构目录时，镜像构建入口不会静默引用不存在的路径。
+
+## Gate 7：Go 格式
 
 命令：
 
@@ -122,7 +142,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 7：Go Vet
+## Gate 8：Go Vet
 
 命令：
 
@@ -141,7 +161,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 8：Go 测试
+## Gate 9：Go 测试
 
 命令：
 
