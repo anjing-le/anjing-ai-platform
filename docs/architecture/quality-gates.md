@@ -234,6 +234,7 @@ go test ./...
 
 - control、gateway、billing、ops 业务包的核心行为仍然通过测试。
 - RBAC / demo token / API Key 的访问控制规则不会被无意破坏。
+- OpenAPI `x-anjing-roles` 必须和后端 `Allowed(role, method, path)` 访问控制规则一致。
 - route publish、model route、Skill binding、budget resolve、todo resolve 等闭环接口保持可用。
 
 ## CI 对齐

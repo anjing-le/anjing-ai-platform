@@ -102,6 +102,8 @@ ak_live_customer
 ak_live_knowledge
 ```
 
+OpenAPI 中每个业务操作使用 `x-anjing-roles` 声明允许角色，并由 `internal/platform/access/openapi_roles_test.go` 和后端 `Allowed(role, method, path)` 进行一致性校验。新增 API 或调整角色边界时，必须同时更新 OpenAPI 和 RBAC 规则。
+
 业务包建议：
 
 ```text
