@@ -96,6 +96,7 @@ function App() {
   const [publishingRouteId, setPublishingRouteId] = useState("");
   const [publishingModelRouteId, setPublishingModelRouteId] = useState("");
   const [publishingSkillId, setPublishingSkillId] = useState("");
+  const [selectedRouteId, setSelectedRouteId] = useState("");
   const [selectedModelRouteId, setSelectedModelRouteId] = useState("");
   const [selectedSkillId, setSelectedSkillId] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState("");
@@ -223,7 +224,7 @@ function App() {
       }
 
       if (actionMode === "gateway") {
-        await createRoute(
+        const route = await createRoute(
           {
             route: values.route,
             upstream: values.upstream,
@@ -231,7 +232,8 @@ function App() {
           },
           role,
         );
-        setNotice(`已创建路由：${values.route}`);
+        setSelectedRouteId(route.id);
+        setNotice(`已创建路由：${route.route}`);
       }
 
       if (actionMode === "quota") {
@@ -325,6 +327,7 @@ function App() {
     try {
       const route = await publishRoute(id, role);
       await refreshSnapshot();
+      setSelectedRouteId(route.id);
       setNotice(`已发布路由：${route.route}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "路由发布失败");
@@ -531,6 +534,7 @@ function App() {
             selectedApplicationId={selectedApplicationId}
             selectedModelRouteId={selectedModelRouteId}
             selectedPlanId={selectedPlanId}
+            selectedRouteId={selectedRouteId}
             selectedSkillId={selectedSkillId}
             snapshot={snapshot}
           />
@@ -835,6 +839,7 @@ function ModulePage({
   selectedApplicationId,
   selectedModelRouteId,
   selectedPlanId,
+  selectedRouteId,
   selectedSkillId,
   snapshot,
 }: {
@@ -868,6 +873,7 @@ function ModulePage({
   selectedApplicationId: string;
   selectedModelRouteId: string;
   selectedPlanId: string;
+  selectedRouteId: string;
   selectedSkillId: string;
   snapshot?: PlatformSnapshot;
 }) {
@@ -919,9 +925,12 @@ function ModulePage({
     }
 
     return (
-      snapshot.routes.find((route) => route.id === selectedRowId) || snapshot.routes[0]
+      snapshot.routes.find((route) => route.id === selectedRouteId) ||
+      snapshot.routes.find((route) => route.id === selectedRowId) ||
+      snapshot.routes.find((route) => route.status === "Draft") ||
+      snapshot.routes[0]
     );
-  }, [page.id, selectedRowId, snapshot?.routes]);
+  }, [page.id, selectedRouteId, selectedRowId, snapshot?.routes]);
 
   const selectedModelRoute = useMemo(() => {
     if (page.id !== "gateway" || !snapshot?.modelRoutes?.length) {
