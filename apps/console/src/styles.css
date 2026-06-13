@@ -775,6 +775,80 @@ a {
   font-weight: 800;
 }
 
+.workflow-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(160px, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.workflow-step {
+  position: relative;
+  display: flex;
+  min-height: 78px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 16px;
+  border-right: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.workflow-step:last-child {
+  border-right: 0;
+}
+
+.workflow-step span {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #f8f8f8;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.workflow-step div {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.workflow-step strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.workflow-step p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.workflow-step--done span,
+.workflow-step--active span {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.workflow-step--active {
+  background: #ffffff;
+  box-shadow: inset 0 -3px 0 var(--ink);
+}
+
+.workflow-step--next strong,
+.workflow-step--next p {
+  color: var(--muted);
+}
+
 .side-panels {
   display: grid;
   gap: 16px;
@@ -1557,6 +1631,16 @@ tbody tr.is-selected td:first-child {
 
   .role-switcher {
     justify-content: flex-start;
+  }
+
+  .workflow-strip {
+    grid-auto-columns: minmax(190px, 0.78fr);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .workflow-strip::-webkit-scrollbar {
+    display: none;
   }
 
   .page {

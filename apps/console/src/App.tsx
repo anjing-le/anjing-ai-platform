@@ -57,6 +57,12 @@ import type {
 
 type ApiState = "loading" | "live" | "fallback";
 
+interface WorkflowStep {
+  label: string;
+  note: string;
+  tab?: string;
+}
+
 const routeHash: Record<ConsoleRoute, string> = {
   home: "#/console/home",
   overview: "#/console/overview",
@@ -64,6 +70,36 @@ const routeHash: Record<ConsoleRoute, string> = {
   gateway: "#/console/gateway",
   quota: "#/console/quota",
   docs: "#/console/docs",
+};
+
+const moduleWorkflows: Record<Exclude<ConsoleRoute, "home">, WorkflowStep[]> = {
+  overview: [
+    { label: "Observe", note: "看整体水位", tab: "运营总览" },
+    { label: "Triage", note: "定位服务健康", tab: "服务健康" },
+    { label: "Review", note: "追踪调用与审计", tab: "调用与审计" },
+  ],
+  iam: [
+    { label: "Invite", note: "创建用户主体", tab: "用户" },
+    { label: "Scope", note: "定义角色权限", tab: "角色权限" },
+    { label: "Issue", note: "发放 API Key", tab: "API Key" },
+    { label: "Secure", note: "管理凭据引用", tab: "凭据" },
+  ],
+  gateway: [
+    { label: "Route", note: "配置 API 入口", tab: "API 路由" },
+    { label: "Model", note: "设置模型策略", tab: "模型路由" },
+    { label: "Skill", note: "治理 Skill 调用", tab: "Skill 调用" },
+    { label: "Audit", note: "查看请求日志", tab: "请求日志" },
+  ],
+  quota: [
+    { label: "Plan", note: "定义套餐配额", tab: "套餐" },
+    { label: "Usage", note: "追踪项目用量", tab: "用量" },
+    { label: "Budget", note: "处理预算告警", tab: "预算告警" },
+  ],
+  docs: [
+    { label: "Start", note: "创建接入应用", tab: "Quickstart" },
+    { label: "Reference", note: "查看 API 边界", tab: "API 文档" },
+    { label: "Support", note: "排查常见问题", tab: "FAQ" },
+  ],
 };
 
 function parseRoute(): ConsoleRoute | "landing" {
@@ -1393,6 +1429,8 @@ function ModulePage({
 
       {notice ? <p className="inline-notice">{notice}</p> : null}
 
+      <ModuleWorkflow activeTab={activeTab} steps={moduleWorkflows[page.id]} />
+
       <div className="tab-row" aria-label={`${page.title} 页面视图`}>
         {page.tabs.map((tab) => (
           <button
@@ -2495,6 +2533,31 @@ function MetricGrid({ metrics }: { metrics: MetricItem[] }) {
           {metric.tone ? <StatusDot tone={metric.tone} /> : null}
         </article>
       ))}
+    </section>
+  );
+}
+
+function ModuleWorkflow({ activeTab, steps }: { activeTab: string; steps: WorkflowStep[] }) {
+  const activeIndex = Math.max(
+    0,
+    steps.findIndex((step) => step.tab === activeTab),
+  );
+
+  return (
+    <section className="workflow-strip" aria-label="模块工作流">
+      {steps.map((step, index) => {
+        const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "next";
+
+        return (
+          <article className={`workflow-step workflow-step--${state}`} key={step.label}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <div>
+              <strong>{step.label}</strong>
+              <p>{step.note}</p>
+            </div>
+          </article>
+        );
+      })}
     </section>
   );
 }
