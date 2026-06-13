@@ -1,0 +1,16 @@
+# Scripts
+
+这个目录放仓库级质量门禁脚本。它们都通过根目录 `package.json` 暴露为 `pnpm verify:*` 命令，并被统一入口 `pnpm verify` 串起来。
+
+| Script | NPM command | Purpose |
+| --- | --- | --- |
+| `scripts/check-openapi-routes.sh` | `pnpm verify:openapi` | 比对 Go `mux.HandleFunc` 注册路径与 OpenAPI `paths`，防止接口和合约漂移。 |
+| `scripts/check-service-boundaries.mjs` | `pnpm verify:boundaries` | 比对前端 `consoleServiceMap` 与 OpenAPI `x-anjing-service-boundaries`，并确认 API 分组存在于 OpenAPI `paths`。 |
+| `scripts/check-doc-links.mjs` | `pnpm verify:docs` | 检查 README 和 `docs/` 中明显指向仓库内的路径是否真实存在。 |
+| `scripts/check-compose.sh` | `pnpm verify:compose` | 校验本地 PostgreSQL 和单镜像预览 compose 文件可以通过 `docker compose config`。 |
+
+新增脚本时，优先遵守这几个约定：
+
+- 脚本只检查一个清晰边界，失败信息要能直接指出需要修改的文件。
+- 脚本应能在本地和 CI 中用同一命令运行。
+- 新脚本接入 `pnpm verify` 后，同步更新 `docs/architecture/quality-gates.md`。
