@@ -223,7 +223,27 @@ scripts/check-dockerfile-paths.mjs
 - 多阶段构建里的 `COPY --from=...` 不作为本地路径检查。
 - 重构目录时，镜像构建入口不会静默引用不存在的路径。
 
-## Gate 12：Go 格式
+## Gate 12：数据库文件一致性
+
+命令：
+
+```bash
+pnpm verify:db-files
+```
+
+脚本：
+
+```text
+scripts/check-db-files.mjs
+```
+
+保护内容：
+
+- `infra/postgres/migrations` 和 `infra/postgres/seeds` 下的 SQL 文件必须使用连续三位编号和 snake_case 文件名。
+- seed 文件 `INSERT INTO` 的表必须由 migration 文件创建。
+- Go 默认 migrations 目录、单镜像 compose migrations 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
+
+## Gate 13：Go 格式
 
 命令：
 
@@ -243,7 +263,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 13：Go Vet
+## Gate 14：Go Vet
 
 命令：
 
@@ -262,7 +282,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 14：Go 测试
+## Gate 15：Go 测试
 
 命令：
 
