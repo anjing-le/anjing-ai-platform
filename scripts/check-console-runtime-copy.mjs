@@ -18,6 +18,12 @@ for (const port of ["1820", "1821", "1822", "1823"]) {
   }
 }
 
+for (const command of ["pnpm dev:control", "pnpm dev:gateway", "pnpm dev:billing", "pnpm dev:ops"]) {
+  if (!dataSource.includes(command)) {
+    errors.push(`Console backend plan must show ${command}.`);
+  }
+}
+
 for (const stalePath of ["/api/control/healthz", "/api/gateway/healthz", "/api/billing/healthz", "/api/ops/healthz"]) {
   if (dataSource.includes(stalePath)) {
     errors.push(`Console backend plan must not show stale health path ${stalePath}.`);

@@ -156,11 +156,11 @@ docs/ci/github-actions-ci.yml
 单服务启动：
 
 ```bash
-go run ./cmd/control-api      # :1820
-go run ./cmd/gateway-api      # :1821
-go run ./cmd/billing-service  # :1822
-go run ./cmd/ops-api          # :1823
-go run ./cmd/console-web      # :1818
+pnpm dev:control      # :1820
+pnpm dev:gateway      # :1821
+pnpm dev:billing      # :1822
+pnpm dev:ops          # :1823
+pnpm dev:console-web  # :1818
 ```
 
 ## 方向

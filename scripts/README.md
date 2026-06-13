@@ -18,7 +18,7 @@
 | `scripts/check-compose.sh` | `pnpm verify:compose` | 校验本地 PostgreSQL 和单镜像预览 compose 文件可以通过 `docker compose config`。 |
 | `scripts/check-dockerfile-paths.mjs` | `pnpm verify:dockerfile` | 检查 Dockerfile 本地 `COPY` 源路径是否真实存在。 |
 | `scripts/check-db-files.mjs` | `pnpm verify:db-files` | 检查 PostgreSQL migration / seed 编号、seed 和 Go repository 表引用、用户、应用、网关、计费与运营联动、迁移目录配置。 |
-| `scripts/check-local-dev-scripts.mjs` | `pnpm verify:local-dev` | 检查本地数据库准备、Go API 启动、PostgreSQL smoke 和控制台 API 连接配置是否保持一键可用。 |
+| `scripts/check-local-dev-scripts.mjs` | `pnpm verify:local-dev` | 检查本地数据库准备、Go API 启动、单服务启动、PostgreSQL smoke 和控制台 API 连接配置是否保持一键可用。 |
 | `scripts/smoke-platform-api.mjs` | `pnpm verify:smoke-api` | 启动 `cmd/platform-all` 并检查 `/healthz` 和聚合快照接口可用；数据库模式会校验核心 seed。 |
 | `scripts/smoke-postgres-api.mjs` | `pnpm smoke:api:db` | 预检 Docker daemon，准备 PostgreSQL 后用真实数据库模式复用 platform API smoke。 |
 | `scripts/check-gofmt.sh` | `pnpm verify:gofmt` | 检查 Go 源码是否已经通过 `gofmt` 格式化。 |

@@ -11,6 +11,11 @@ expectScript("dev:api:db", [
   "postgres://anjing:anjing@localhost:54329/anjing_ai_platform?sslmode=disable",
   "go run ./cmd/platform-all",
 ]);
+expectScript("dev:control", ["go run ./cmd/control-api"]);
+expectScript("dev:gateway", ["go run ./cmd/gateway-api"]);
+expectScript("dev:billing", ["go run ./cmd/billing-service"]);
+expectScript("dev:ops", ["go run ./cmd/ops-api"]);
+expectScript("dev:console-web", ["go run ./cmd/console-web"]);
 expectScript("smoke:api:db", [
   "node scripts/smoke-postgres-api.mjs",
 ]);
