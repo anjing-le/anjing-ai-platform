@@ -208,6 +208,7 @@ export interface SnapshotResult {
   ok: boolean;
   loaded: number;
   failed: number;
+  source: "aggregate" | "granular" | "none";
 }
 
 export interface CreateUserInput {
@@ -285,6 +286,7 @@ export async function loadPlatformSnapshot(role?: RoleId): Promise<SnapshotResul
       ok: true,
       loaded: 1,
       failed: 0,
+      source: "aggregate",
     };
   } catch {
     // Older local servers may not expose the aggregate endpoint yet.
@@ -314,6 +316,7 @@ export async function loadPlatformSnapshot(role?: RoleId): Promise<SnapshotResul
     ok: loaded > 0,
     loaded,
     failed,
+    source: loaded > 0 ? "granular" : "none",
   };
 }
 

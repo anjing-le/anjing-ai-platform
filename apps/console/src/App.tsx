@@ -166,7 +166,7 @@ function App() {
     if (result.ok) {
       setSnapshot(result.snapshot);
       setApiState("live");
-      setApiDetail(`${result.loaded} 个接口已连接`);
+      setApiDetail(result.source === "aggregate" ? "聚合快照已连接" : `${result.loaded} 个接口已连接`);
     } else {
       setApiState("fallback");
       setApiDetail("未连接后端，使用页面默认数据");

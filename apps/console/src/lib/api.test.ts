@@ -42,7 +42,7 @@ describe("console API client", () => {
 
     const result = await loadPlatformSnapshot("admin");
 
-    expect(result).toMatchObject({ ok: true, loaded: 1, failed: 0 });
+    expect(result).toMatchObject({ ok: true, loaded: 1, failed: 0, source: "aggregate" });
     expect(result.snapshot.dashboard?.metrics[0].value).toBe("99.9%");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toBe("/api/ops/platform-snapshot");
@@ -64,6 +64,7 @@ describe("console API client", () => {
     const result = await loadPlatformSnapshot("developer");
 
     expect(result.ok).toBe(true);
+    expect(result.source).toBe("granular");
     expect(result.loaded).toBeGreaterThan(1);
     expect(result.snapshot.dashboard?.metrics[0].label).toBe("成功率");
     expect(fetchMock.mock.calls.map((call) => call[0])).toContain("/api/control/users");
