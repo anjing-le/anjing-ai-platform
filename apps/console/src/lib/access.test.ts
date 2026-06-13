@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { navItems, roles } from "../data/console";
 import type { ConsoleRoute, RoleId } from "../types";
-import { canAccessRoute, fallbackRouteForRole, visibleNavItems } from "./access";
+import { canAccessRoute, canRunPrimaryAction, fallbackRouteForRole, primaryActionHint, visibleNavItems } from "./access";
 
 const routeIds = navItems.map((item) => item.id);
 
@@ -29,5 +29,13 @@ describe("console role access", () => {
     for (const role of roles) {
       expect(fallbackRouteForRole(role.id)).toBe("home");
     }
+  });
+
+  it("keeps primary actions stricter than read visibility", () => {
+    expect(canRunPrimaryAction("user", "quota")).toBe(false);
+    expect(canRunPrimaryAction("operator", "overview")).toBe(true);
+    expect(canRunPrimaryAction("developer", "gateway")).toBe(true);
+    expect(canRunPrimaryAction("developer", "iam")).toBe(false);
+    expect(primaryActionHint("user", "quota")).toContain("管理员");
   });
 });

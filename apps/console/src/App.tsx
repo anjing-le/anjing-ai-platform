@@ -43,7 +43,7 @@ import {
   type PlatformSnapshot,
   type SkillBinding,
 } from "./lib/api";
-import { canAccessRoute, visibleNavItems } from "./lib/access";
+import { canAccessRoute, canRunPrimaryAction, primaryActionHint, visibleNavItems } from "./lib/access";
 import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
 import type {
   ConsoleRoute,
@@ -220,6 +220,11 @@ function App() {
   async function handleModuleAction(pageId: ConsoleRoute) {
     setNotice("");
     setActionError("");
+
+    if (!canRunPrimaryAction(role, pageId)) {
+      setNotice(primaryActionHint(role, pageId));
+      return;
+    }
 
     if (pageId === "overview") {
       const pendingTodo = snapshot?.dashboard?.todos.find((todo) => todo.status !== "Resolved");
@@ -1450,6 +1455,8 @@ function ModulePage({
   const selectableTable =
     page.id === "overview" || page.id === "iam" || page.id === "docs" || page.id === "gateway" || page.id === "quota";
   const selectedGenericRow = rows.find((row) => row.id === selectedRowId) || rows[0];
+  const primaryAllowed = canRunPrimaryAction(role, page.id);
+  const primaryHint = primaryActionHint(role, page.id);
   let selectedTableRowId: string | undefined;
   if (page.id === "overview") {
     selectedTableRowId = selectedRowId;
@@ -1519,10 +1526,19 @@ function ModulePage({
           <h2>{page.title}</h2>
           <p>{page.description}</p>
         </div>
-        <button className="button button--primary" onClick={() => void onPrimaryAction(page.id)} type="button">
-          {page.primaryAction}
-          <ChevronRight size={16} />
-        </button>
+        <div className="page-heading__action">
+          <button
+            className="button button--primary"
+            disabled={!primaryAllowed}
+            onClick={() => void onPrimaryAction(page.id)}
+            title={primaryAllowed ? undefined : primaryHint}
+            type="button"
+          >
+            {page.primaryAction}
+            <ChevronRight size={16} />
+          </button>
+          {!primaryAllowed ? <ActionHint>{primaryHint}</ActionHint> : null}
+        </div>
       </section>
 
       {notice ? <p className="inline-notice">{notice}</p> : null}
