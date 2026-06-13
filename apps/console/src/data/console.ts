@@ -452,9 +452,9 @@ export const modulePages: ModulePageDefinition[] = [
     id: "docs",
     eyebrow: "Docs",
     title: "帮助文档",
-    description: "给使用者和开发者一个轻量接入入口：Quickstart、API 文档和常见问题先跑通。",
+    description: "给使用者和开发者一个轻量接入入口：Quickstart、服务边界、API 文档和常见问题先跑通。",
     primaryAction: "创建接入应用",
-    tabs: ["Quickstart", "API 文档", "FAQ"],
+    tabs: ["Quickstart", "服务边界", "API 文档", "FAQ"],
     metrics: [
       { label: "文档", value: "12", note: "quickstart / api / faq", tone: "neutral" },
       { label: "示例", value: "3", note: "客服 / RAG / AIGC", tone: "neutral" },

@@ -97,6 +97,7 @@ const moduleWorkflows: Record<Exclude<ConsoleRoute, "home">, WorkflowStep[]> = {
   ],
   docs: [
     { label: "Start", note: "创建接入应用", tab: "Quickstart" },
+    { label: "Boundary", note: "确认服务归属", tab: "服务边界" },
     { label: "Reference", note: "查看 API 边界", tab: "API 文档" },
     { label: "Support", note: "排查常见问题", tab: "FAQ" },
   ],
@@ -1243,6 +1244,20 @@ function ModulePage({
         title: "接口参考",
         columns: ["入口", "类型", "主配置", "治理", "状态"],
         rows: [...routeRows, ...modelRows, ...skillRows],
+      };
+    }
+
+    if (page.id === "docs" && activeTab === "服务边界") {
+      return {
+        eyebrow: "Service Boundary",
+        title: "服务边界",
+        columns: ["后台入口", "Owner", "职责范围", "状态"],
+        rows: consoleServiceMap.map((item) => ({
+          id: `service-${item.owner}`,
+          cells: [item.entry, item.owner, item.scope, "Ready"],
+          status: "Ready",
+          tone: "good",
+        })),
       };
     }
 
