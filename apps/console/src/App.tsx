@@ -1298,8 +1298,13 @@ function ModulePage({
     );
   }, [page.id, selectedAPIKeyId, selectedRowId, snapshot?.apiKeys]);
 
-  const selectableTable = page.id === "iam" || page.id === "docs" || page.id === "gateway" || page.id === "quota";
+  const selectableTable =
+    page.id === "overview" || page.id === "iam" || page.id === "docs" || page.id === "gateway" || page.id === "quota";
+  const selectedGenericRow = rows.find((row) => row.id === selectedRowId) || rows[0];
   let selectedTableRowId: string | undefined;
+  if (page.id === "overview") {
+    selectedTableRowId = selectedRowId;
+  }
   if (page.id === "iam" && activeTab === "用户") {
     selectedTableRowId = selectedUser?.id;
   }
@@ -1414,6 +1419,9 @@ function ModulePage({
         </Panel>
 
         <div className="side-panels">
+          {page.id === "overview" ? (
+            <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
+          ) : null}
           {page.id === "iam" && activeTab === "用户" ? (
             <UserAccessPanel
               activating={activatingUserId === selectedUser?.id}
@@ -1466,6 +1474,9 @@ function ModulePage({
           {page.id === "gateway" && (activeTab === "模型路由" || activeTab === "Skill 调用") ? (
             <LLMInvokePanel modelRoutes={snapshot?.modelRoutes} onInvoked={onLLMInvoked} role={role} />
           ) : null}
+          {page.id === "gateway" && activeTab === "请求日志" ? (
+            <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
+          ) : null}
           {page.id === "quota" && activeTab === "套餐" ? (
             <BillingPlanPanel
               activating={activatingPlanId === selectedPlan?.id}
@@ -1482,6 +1493,9 @@ function ModulePage({
               role={role}
             />
           ) : null}
+          {page.id === "quota" && activeTab === "用量" ? (
+            <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
+          ) : null}
           {page.id === "docs" && activeTab === "Quickstart" ? (
             <ApplicationJourneyPanel
               activating={activatingApplicationId === selectedApplication?.id}
@@ -1491,6 +1505,9 @@ function ModulePage({
               rotating={rotatingApplicationId === selectedApplication?.id}
               snapshot={snapshot}
             />
+          ) : null}
+          {page.id === "docs" && activeTab !== "Quickstart" ? (
+            <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
           ) : null}
           {page.id === "overview" ? <OperationsSignalPanel snapshot={snapshot} /> : null}
           {page.panels.map((panel) => (
@@ -1560,6 +1577,66 @@ function OperationsSignalPanel({ snapshot }: { snapshot?: PlatformSnapshot }) {
         )}
       </Panel>
     </>
+  );
+}
+
+function SelectedRowPanel({
+  columns,
+  row,
+  title,
+}: {
+  columns: string[];
+  row?: TableRow;
+  title: string;
+}) {
+  if (!row) {
+    return (
+      <Panel eyebrow="Selection" title="选中详情">
+        <div className="empty-panel">
+          <strong>暂无选中记录</strong>
+          <p>切换筛选条件或选择表格行后，这里会展示关键字段。</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  const fields = columns.map((column, index) => ({
+    label: column,
+    value: row.cells[index] || "-",
+  }));
+  const headline = row.cells[0] || title;
+  const description = fields
+    .slice(1, 3)
+    .map((field) => `${field.label}: ${field.value}`)
+    .join(" · ");
+
+  return (
+    <Panel eyebrow="Selection" title="选中详情">
+      <div className="selected-row-summary">
+        <div>
+          <span>{title}</span>
+          <strong>{headline}</strong>
+          <p>{description || "查看当前记录的关键字段和状态。"}</p>
+        </div>
+        <StatusBadge tone={row.tone}>{row.status}</StatusBadge>
+      </div>
+
+      <div className="selected-row-fields">
+        {fields.map((field, index) => (
+          <article key={`${row.id}-${field.label}`}>
+            <span>{field.label}</span>
+            <strong>{field.value}</strong>
+            {index === fields.length - 1 ? <StatusDot tone={row.tone} /> : null}
+          </article>
+        ))}
+      </div>
+
+      <div className="selected-row-next">
+        <span>Next</span>
+        <strong>{nextStepForStatus(row.status)}</strong>
+        <p>先看状态，再进入对应模块处理配置、调用、预算或审计问题。</p>
+      </div>
+    </Panel>
   );
 }
 
@@ -2520,6 +2597,24 @@ function toneForStatus(status = ""): StatusTone {
   }
 
   return "neutral";
+}
+
+function nextStepForStatus(status = "") {
+  const normalized = status.toLowerCase();
+
+  if (["warning", "degraded", "expiring"].includes(normalized)) {
+    return "优先处理";
+  }
+
+  if (["pending", "draft", "invited", "provisioning", "watching", "guarded"].includes(normalized)) {
+    return "继续推进";
+  }
+
+  if (["active", "success", "normal", "ready", "published", "resolved"].includes(normalized)) {
+    return "保持观察";
+  }
+
+  return "查看上下文";
 }
 
 export default App;

@@ -1042,7 +1042,8 @@ tbody tr.is-selected td:first-child {
 .plan-summary,
 .budget-alert-summary,
 .api-key-summary,
-.credential-summary {
+.credential-summary,
+.selected-row-summary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1058,7 +1059,8 @@ tbody tr.is-selected td:first-child {
 .plan-summary div,
 .budget-alert-summary div,
 .api-key-summary div,
-.credential-summary div {
+.credential-summary div,
+.selected-row-summary div {
   display: grid;
   min-width: 0;
   gap: 7px;
@@ -1073,6 +1075,9 @@ tbody tr.is-selected td:first-child {
 .budget-alert-summary span,
 .api-key-summary span,
 .credential-summary span,
+.selected-row-summary span,
+.selected-row-fields span,
+.selected-row-next span,
 .journey-list small,
 .application-usage span,
 .mini-log-list span,
@@ -1099,7 +1104,8 @@ tbody tr.is-selected td:first-child {
 .plan-summary strong,
 .budget-alert-summary strong,
 .api-key-summary strong,
-.credential-summary strong {
+.credential-summary strong,
+.selected-row-summary strong {
   overflow-wrap: anywhere;
   font-size: 1.28rem;
 }
@@ -1113,6 +1119,8 @@ tbody tr.is-selected td:first-child {
 .budget-alert-summary p,
 .api-key-summary p,
 .credential-summary p,
+.selected-row-summary p,
+.selected-row-next p,
 .journey-list p,
 .application-usage p,
 .mini-log-list p,
@@ -1137,7 +1145,8 @@ tbody tr.is-selected td:first-child {
 .plan-checks,
 .budget-alert-checks,
 .api-key-checks,
-.credential-checks {
+.credential-checks,
+.selected-row-fields {
   display: grid;
 }
 
@@ -1148,7 +1157,8 @@ tbody tr.is-selected td:first-child {
 .plan-checks article,
 .budget-alert-checks article,
 .api-key-checks article,
-.credential-checks article {
+.credential-checks article,
+.selected-row-fields article {
   position: relative;
   display: grid;
   gap: 7px;
@@ -1164,7 +1174,8 @@ tbody tr.is-selected td:first-child {
 .plan-checks article:last-child,
 .budget-alert-checks article:last-child,
 .api-key-checks article:last-child,
-.credential-checks article:last-child {
+.credential-checks article:last-child,
+.selected-row-fields article:last-child {
   border-bottom: 0;
 }
 
@@ -1175,10 +1186,28 @@ tbody tr.is-selected td:first-child {
 .plan-checks .status-dot,
 .budget-alert-checks .status-dot,
 .api-key-checks .status-dot,
-.credential-checks .status-dot {
+.credential-checks .status-dot,
+.selected-row-fields .status-dot {
   position: absolute;
   top: 16px;
   right: 16px;
+}
+
+.selected-row-fields strong {
+  overflow-wrap: anywhere;
+  font-size: 0.98rem;
+}
+
+.selected-row-next {
+  display: grid;
+  gap: 7px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+  background: #f8f8f8;
+}
+
+.selected-row-next strong {
+  font-size: 1rem;
 }
 
 .journey-list {
