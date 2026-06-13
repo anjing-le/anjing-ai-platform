@@ -40,7 +40,12 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
 			return
 		}
-		httpjson.OK(w, st.Snapshot())
+		snapshot, err := repos.Snapshot.LoadSnapshot(r.Context())
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		httpjson.OK(w, snapshot)
 	})
 	mux.HandleFunc("/api/ops/todos", todosHandler(repos.Todos))
 	mux.HandleFunc("/api/ops/todos/resolve", resolveTodoHandler(repos.Todos))

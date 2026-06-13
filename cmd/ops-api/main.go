@@ -4,10 +4,14 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/anjing-le/anjing-ai-platform/internal/billing"
+	"github.com/anjing-le/anjing-ai-platform/internal/control"
+	"github.com/anjing-le/anjing-ai-platform/internal/gateway"
 	"github.com/anjing-le/anjing-ai-platform/internal/ops"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/config"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/db"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/service"
+	platformsnapshot "github.com/anjing-le/anjing-ai-platform/internal/platform/snapshot"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
 
@@ -27,6 +31,23 @@ func main() {
 		repos.Todos = ops.NewPostgresTodoRepository(pool)
 		repos.Health = ops.NewPostgresHealthRepository(pool)
 		repos.Audit = ops.NewPostgresAuditRepository(pool)
+		repos.Snapshot = platformsnapshot.NewRepository(platformsnapshot.Sources{
+			Users:        control.NewPostgresUserRepository(pool),
+			Applications: control.NewPostgresApplicationRepository(pool),
+			Roles:        control.NewPostgresRoleRepository(pool),
+			APIKeys:      control.NewPostgresAPIKeyRepository(pool),
+			Credentials:  control.NewPostgresCredentialRepository(pool),
+			Routes:       gateway.NewPostgresRouteRepository(pool),
+			ModelRoutes:  gateway.NewPostgresModelRouteRepository(pool),
+			Skills:       gateway.NewPostgresSkillRepository(pool),
+			RequestLogs:  gateway.NewPostgresRequestLogRepository(pool),
+			Plans:        billing.NewPostgresPlanRepository(pool),
+			Usage:        billing.NewPostgresUsageRepository(pool),
+			BudgetAlerts: billing.NewPostgresBudgetAlertRepository(pool),
+			Todos:        repos.Todos,
+			Health:       repos.Health,
+			Audit:        repos.Audit,
+		})
 		opsRegister = func(mux *http.ServeMux, st *store.Store) {
 			ops.RegisterWithRepositories(mux, st, repos)
 		}

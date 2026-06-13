@@ -23,17 +23,23 @@ type AuditRepository interface {
 	ListAudit(ctx context.Context) ([]store.AuditEvent, error)
 }
 
+type SnapshotRepository interface {
+	LoadSnapshot(ctx context.Context) (store.PlatformSnapshot, error)
+}
+
 type Repositories struct {
-	Todos  TodoRepository
-	Health HealthRepository
-	Audit  AuditRepository
+	Todos    TodoRepository
+	Health   HealthRepository
+	Audit    AuditRepository
+	Snapshot SnapshotRepository
 }
 
 func NewMemoryRepositories(st *store.Store) Repositories {
 	return Repositories{
-		Todos:  NewMemoryTodoRepository(st),
-		Health: NewMemoryHealthRepository(st),
-		Audit:  NewMemoryAuditRepository(st),
+		Todos:    NewMemoryTodoRepository(st),
+		Health:   NewMemoryHealthRepository(st),
+		Audit:    NewMemoryAuditRepository(st),
+		Snapshot: NewMemorySnapshotRepository(st),
 	}
 }
 
@@ -76,6 +82,18 @@ func NewMemoryAuditRepository(st *store.Store) MemoryAuditRepository {
 
 func (repo MemoryAuditRepository) ListAudit(context.Context) ([]store.AuditEvent, error) {
 	return repo.store.ListAudit(), nil
+}
+
+type MemorySnapshotRepository struct {
+	store *store.Store
+}
+
+func NewMemorySnapshotRepository(st *store.Store) MemorySnapshotRepository {
+	return MemorySnapshotRepository{store: st}
+}
+
+func (repo MemorySnapshotRepository) LoadSnapshot(context.Context) (store.PlatformSnapshot, error) {
+	return repo.store.Snapshot(), nil
 }
 
 type PostgresTodoRepository struct {

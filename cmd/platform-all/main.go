@@ -12,6 +12,7 @@ import (
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/config"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/db"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/service"
+	platformsnapshot "github.com/anjing-le/anjing-ai-platform/internal/platform/snapshot"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
 
@@ -59,6 +60,23 @@ func main() {
 		opsRepos.Todos = ops.NewPostgresTodoRepository(pool)
 		opsRepos.Health = ops.NewPostgresHealthRepository(pool)
 		opsRepos.Audit = ops.NewPostgresAuditRepository(pool)
+		opsRepos.Snapshot = platformsnapshot.NewRepository(platformsnapshot.Sources{
+			Users:        controlRepos.Users,
+			Applications: controlRepos.Applications,
+			Roles:        controlRepos.Roles,
+			APIKeys:      controlRepos.APIKeys,
+			Credentials:  controlRepos.Credentials,
+			Routes:       gatewayRepos.Routes,
+			ModelRoutes:  gatewayRepos.ModelRoutes,
+			Skills:       gatewayRepos.Skills,
+			RequestLogs:  gatewayRepos.RequestLogs,
+			Plans:        billingRepos.Plans,
+			Usage:        billingRepos.Usage,
+			BudgetAlerts: billingRepos.BudgetAlerts,
+			Todos:        opsRepos.Todos,
+			Health:       opsRepos.Health,
+			Audit:        opsRepos.Audit,
+		})
 		opsRegister = func(mux *http.ServeMux, st *store.Store) {
 			ops.RegisterWithRepositories(mux, st, opsRepos)
 		}
