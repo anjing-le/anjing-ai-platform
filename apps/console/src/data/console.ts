@@ -154,6 +154,7 @@ export const backendPlan = [
     title: "Access / IAM",
     note: ":1820 · 用户、角色、API Key、credentialRef。",
     command: "go run ./cmd/control-api",
+    health: "/api/control/healthz",
     icon: Gauge,
   },
   {
@@ -161,6 +162,7 @@ export const backendPlan = [
     title: "Gateway / Model",
     note: ":1821 · API 路由、模型路由、Skill、请求日志。",
     command: "go run ./cmd/gateway-api",
+    health: "/api/gateway/healthz",
     icon: ShieldCheck,
   },
   {
@@ -168,6 +170,7 @@ export const backendPlan = [
     title: "Quota / Billing",
     note: ":1822 · 套餐、配额、用量、预算告警。",
     command: "go run ./cmd/billing-service",
+    health: "/api/billing/healthz",
     icon: KeyRound,
   },
   {
@@ -175,6 +178,7 @@ export const backendPlan = [
     title: "Operations",
     note: ":1823 · 总览、健康、审计、待办。",
     command: "go run ./cmd/ops-api",
+    health: "/api/ops/healthz",
     icon: Gauge,
   },
 ];

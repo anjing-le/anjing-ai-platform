@@ -921,6 +921,15 @@ a {
   white-space: nowrap;
 }
 
+.service-plan small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .tab-row {
   display: flex;
   flex-wrap: wrap;

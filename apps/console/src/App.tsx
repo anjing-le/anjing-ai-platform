@@ -954,6 +954,7 @@ function ConsoleHome({
                 <strong>{item.title}</strong>
                 <p>{item.note}</p>
                 {"command" in item ? <code>{item.command}</code> : null}
+                {"health" in item ? <small>{item.health}</small> : null}
               </article>
             ))}
           </div>
