@@ -940,6 +940,34 @@ function ModulePage({
   }, [activeTab]);
 
   const tableView = useMemo<ModulePageDefinition["table"]>(() => {
+    if (page.id === "overview" && activeTab === "服务健康") {
+      return {
+        eyebrow: "Health",
+        title: "服务健康",
+        columns: ["服务", "SLO", "P95", "状态"],
+        rows: (snapshot?.dashboard?.health || []).map((service) => ({
+          id: service.id,
+          cells: [service.name, service.slo, service.p95, service.status],
+          status: service.status,
+          tone: toneForStatus(service.status),
+        })),
+      };
+    }
+
+    if (page.id === "overview" && activeTab === "调用与审计") {
+      return {
+        eyebrow: "Audit",
+        title: "调用与审计",
+        columns: ["时间", "模块", "动作", "对象", "状态"],
+        rows: (snapshot?.dashboard?.audit || []).map((event) => ({
+          id: event.id,
+          cells: [event.time, event.module, event.action, event.object, event.status],
+          status: event.status,
+          tone: toneForStatus(event.status),
+        })),
+      };
+    }
+
     if (page.id === "iam" && activeTab === "角色权限") {
       return {
         eyebrow: "Roles",
@@ -1127,6 +1155,8 @@ function ModulePage({
     page.table,
     snapshot?.apiKeys,
     snapshot?.credentials,
+    snapshot?.dashboard?.audit,
+    snapshot?.dashboard?.health,
     snapshot?.modelRoutes,
     snapshot?.requestLogs,
     snapshot?.routes,
