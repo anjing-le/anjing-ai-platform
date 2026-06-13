@@ -33,7 +33,8 @@
     "verify:govet": "bash scripts/check-govet.sh",
     "verify:openapi-meta": "node scripts/check-openapi-metadata.mjs",
     "verify:openapi": "bash scripts/check-openapi-routes.sh",
+    "verify:snapshot": "node scripts/check-platform-snapshot-contract.mjs",
     "verify:role-seeds": "node scripts/check-role-policy-seeds.mjs",
-    "verify": "pnpm verify:workspace && pnpm build:console && pnpm test:console && pnpm verify:openapi && pnpm verify:openapi-meta && pnpm verify:boundaries && pnpm verify:console-api && pnpm verify:commands && pnpm verify:role-seeds && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:db-files && pnpm verify:gofmt && pnpm verify:govet && pnpm verify:go-build && go test ./..."
+    "verify": "pnpm verify:workspace && pnpm build:console && pnpm test:console && pnpm verify:openapi && pnpm verify:openapi-meta && pnpm verify:boundaries && pnpm verify:console-api && pnpm verify:snapshot && pnpm verify:commands && pnpm verify:role-seeds && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:db-files && pnpm verify:gofmt && pnpm verify:govet && pnpm verify:go-build && go test ./..."
   }
 }
