@@ -310,6 +310,7 @@ scripts/check-local-dev-scripts.mjs
 - `db:prepare` 必须串起 `db:up`、`db:migrate`、`db:seed`，保证本地 PostgreSQL 可以一条命令准备好。
 - `dev:api` 必须启动 `cmd/platform-all`，作为默认内存模式 API。
 - `dev:api:db` 必须带默认 PostgreSQL 连接串启动 `cmd/platform-all`，作为真实数据库模式 API。
+- `smoke:api:db` 必须预检 Docker daemon，准备 PostgreSQL，再用真实数据库模式复用 platform API smoke。
 - `apps/console` 必须保留 Vite `/api` 代理、`VITE_API_BASE_URL` client 配置和 `.env.example`，保证控制台可以稳定连接本地或独立部署的 Go API。
 
 ## Gate 16：Platform API Smoke
@@ -331,6 +332,7 @@ scripts/smoke-platform-api.mjs
 - 自动选择空闲端口启动 `cmd/platform-all`。
 - `/healthz` 必须返回成功状态。
 - `/api/ops/platform-snapshot` 必须返回可供控制台首页使用的聚合快照。
+- 当设置 `ANJING_SMOKE_DATABASE_URL` 时，必须验证 PostgreSQL seed 中的核心用户和应用已经进入聚合快照。
 
 ## Gate 17：Go 格式
 

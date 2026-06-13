@@ -96,6 +96,12 @@ http://localhost:18080/api/billing/plans
 pnpm dev:api:db
 ```
 
+真实 PostgreSQL 链路 smoke：
+
+```bash
+pnpm smoke:api:db
+```
+
 强制开启后端鉴权：
 
 ```bash

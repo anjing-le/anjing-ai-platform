@@ -11,6 +11,9 @@ expectScript("dev:api:db", [
   "postgres://anjing:anjing@localhost:54329/anjing_ai_platform?sslmode=disable",
   "go run ./cmd/platform-all",
 ]);
+expectScript("smoke:api:db", [
+  "node scripts/smoke-postgres-api.mjs",
+]);
 
 if (!scripts.verify?.includes("pnpm verify:local-dev")) {
   errors.push("package.json verify must include pnpm verify:local-dev.");

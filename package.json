@@ -13,6 +13,7 @@
     "db:prepare": "pnpm db:up && pnpm db:migrate && pnpm db:seed",
     "dev:api": "go run ./cmd/platform-all",
     "dev:api:db": "ANJING_DATABASE_URL='postgres://anjing:anjing@localhost:54329/anjing_ai_platform?sslmode=disable' go run ./cmd/platform-all",
+    "smoke:api:db": "node scripts/smoke-postgres-api.mjs",
     "dev:console": "pnpm --filter @anjing-ai-platform/console dev",
     "build:console": "pnpm --filter @anjing-ai-platform/console build",
     "preview:console": "pnpm --filter @anjing-ai-platform/console preview",

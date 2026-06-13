@@ -5,11 +5,13 @@ import net from "node:net";
 const port = await freePort();
 const baseURL = `http://127.0.0.1:${port}`;
 const output = [];
+const databaseURL = process.env.ANJING_SMOKE_DATABASE_URL ?? "";
 
 const server = spawn("go", ["run", "./cmd/platform-all"], {
   env: {
     ...process.env,
     ANJING_ADDR: `127.0.0.1:${port}`,
+    ANJING_DATABASE_URL: databaseURL,
   },
   detached: true,
   stdio: ["ignore", "pipe", "pipe"],
@@ -20,11 +22,14 @@ server.stderr.on("data", (chunk) => output.push(chunk.toString()));
 
 try {
   await waitForJSON(`${baseURL}/healthz`, (payload) => payload.success === true && payload.data?.status === "ok");
-  await waitForJSON(
+  const snapshot = await waitForJSON(
     `${baseURL}/api/ops/platform-snapshot`,
     (payload) => payload.success === true && Array.isArray(payload.data?.dashboard?.metrics),
   );
-  console.log(`Platform API smoke check passed on ${baseURL}.`);
+  if (databaseURL !== "") {
+    assertSeededSnapshot(snapshot);
+  }
+  console.log(`Platform API smoke check passed on ${baseURL}${databaseURL === "" ? "" : " with PostgreSQL"}.`);
 } catch (error) {
   console.error("Platform API smoke check failed:");
   console.error(error.message);
@@ -32,6 +37,16 @@ try {
   process.exitCode = 1;
 } finally {
   await stop(server);
+}
+
+function assertSeededSnapshot(payload) {
+  const data = payload.data ?? {};
+  if (!data.users?.some((user) => user.id === "usr_admin")) {
+    throw new Error("PostgreSQL smoke expected seeded admin user usr_admin.");
+  }
+  if (!data.applications?.some((application) => application.id === "app_customer")) {
+    throw new Error("PostgreSQL smoke expected seeded application app_customer.");
+  }
 }
 
 async function freePort() {
