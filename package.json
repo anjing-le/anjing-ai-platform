@@ -32,6 +32,7 @@
     "verify:dockerfile": "node scripts/check-dockerfile-paths.mjs",
     "verify:db-files": "node scripts/check-db-files.mjs",
     "verify:local-dev": "node scripts/check-local-dev-scripts.mjs",
+    "verify:smoke-api": "node scripts/smoke-platform-api.mjs",
     "verify:go-build": "pnpm build:go",
     "verify:gofmt": "bash scripts/check-gofmt.sh",
     "verify:govet": "bash scripts/check-govet.sh",
@@ -39,6 +40,6 @@
     "verify:openapi": "bash scripts/check-openapi-routes.sh",
     "verify:snapshot": "node scripts/check-platform-snapshot-contract.mjs",
     "verify:role-seeds": "node scripts/check-role-policy-seeds.mjs",
-    "verify": "pnpm verify:workspace && pnpm build:console && pnpm test:console && pnpm verify:openapi && pnpm verify:openapi-meta && pnpm verify:boundaries && pnpm verify:console-api && pnpm verify:snapshot && pnpm verify:commands && pnpm verify:role-seeds && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:db-files && pnpm verify:local-dev && pnpm verify:gofmt && pnpm verify:govet && pnpm verify:go-build && go test ./..."
+    "verify": "pnpm verify:workspace && pnpm build:console && pnpm test:console && pnpm verify:openapi && pnpm verify:openapi-meta && pnpm verify:boundaries && pnpm verify:console-api && pnpm verify:snapshot && pnpm verify:commands && pnpm verify:role-seeds && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:db-files && pnpm verify:local-dev && pnpm verify:smoke-api && pnpm verify:gofmt && pnpm verify:govet && pnpm verify:go-build && go test ./..."
   }
 }

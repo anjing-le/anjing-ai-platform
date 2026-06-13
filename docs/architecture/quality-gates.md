@@ -312,7 +312,27 @@ scripts/check-local-dev-scripts.mjs
 - `dev:api:db` 必须带默认 PostgreSQL 连接串启动 `cmd/platform-all`，作为真实数据库模式 API。
 - `apps/console` 必须保留 Vite `/api` 代理、`VITE_API_BASE_URL` client 配置和 `.env.example`，保证控制台可以稳定连接本地或独立部署的 Go API。
 
-## Gate 16：Go 格式
+## Gate 16：Platform API Smoke
+
+命令：
+
+```bash
+pnpm verify:smoke-api
+```
+
+脚本：
+
+```text
+scripts/smoke-platform-api.mjs
+```
+
+保护内容：
+
+- 自动选择空闲端口启动 `cmd/platform-all`。
+- `/healthz` 必须返回成功状态。
+- `/api/ops/platform-snapshot` 必须返回可供控制台首页使用的聚合快照。
+
+## Gate 17：Go 格式
 
 命令：
 
@@ -332,7 +352,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 17：Go Vet
+## Gate 18：Go Vet
 
 命令：
 
@@ -351,7 +371,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 18：Go Command 构建
+## Gate 19：Go Command 构建
 
 命令：
 
@@ -365,7 +385,7 @@ pnpm verify:go-build
 - Dockerfile 中构建的交付入口必须先在本地门禁中被编译验证。
 - 新增 command 时，不能只通过包测试而遗漏真实可执行入口构建。
 
-## Gate 19：Go 测试
+## Gate 20：Go 测试
 
 命令：
 
