@@ -46,6 +46,7 @@ postgres://anjing:anjing@localhost:54329/anjing_ai_platform?sslmode=disable
 
 ```bash
 pnpm install
+pnpm dev:api
 pnpm dev:console
 ```
 
@@ -54,6 +55,8 @@ pnpm dev:console
 ```text
 http://localhost:1818/
 ```
+
+`pnpm dev:console` 会通过 Vite proxy 把 `/api` 转发到 `http://localhost:18080`。如果前端构建产物和 Go API 分开部署，可以参考 `apps/console/.env.example` 设置 `VITE_API_BASE_URL`。
 
 前端构建：
 

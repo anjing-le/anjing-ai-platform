@@ -310,6 +310,7 @@ scripts/check-local-dev-scripts.mjs
 - `db:prepare` 必须串起 `db:up`、`db:migrate`、`db:seed`，保证本地 PostgreSQL 可以一条命令准备好。
 - `dev:api` 必须启动 `cmd/platform-all`，作为默认内存模式 API。
 - `dev:api:db` 必须带默认 PostgreSQL 连接串启动 `cmd/platform-all`，作为真实数据库模式 API。
+- `apps/console` 必须保留 Vite `/api` 代理、`VITE_API_BASE_URL` client 配置和 `.env.example`，保证控制台可以稳定连接本地或独立部署的 Go API。
 
 ## Gate 16：Go 格式
 
