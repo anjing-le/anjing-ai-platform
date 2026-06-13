@@ -36,6 +36,12 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 		}
 		httpjson.OK(w, dashboard)
 	})
+	mux.HandleFunc("/api/ops/platform-snapshot", func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodGet) {
+			return
+		}
+		httpjson.OK(w, st.Snapshot())
+	})
 	mux.HandleFunc("/api/ops/todos", todosHandler(repos.Todos))
 	mux.HandleFunc("/api/ops/todos/resolve", resolveTodoHandler(repos.Todos))
 	mux.HandleFunc("/api/ops/service-health", healthHandler(repos.Health))

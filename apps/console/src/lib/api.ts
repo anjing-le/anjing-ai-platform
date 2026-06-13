@@ -278,6 +278,18 @@ const endpoints = {
 type EndpointKey = keyof typeof endpoints;
 
 export async function loadPlatformSnapshot(role?: RoleId): Promise<SnapshotResult> {
+  try {
+    const snapshot = await requestJson<PlatformSnapshot>("/api/ops/platform-snapshot", undefined, role);
+    return {
+      snapshot,
+      ok: true,
+      loaded: 1,
+      failed: 0,
+    };
+  } catch {
+    // Older local servers may not expose the aggregate endpoint yet.
+  }
+
   const entries = Object.entries(endpoints) as Array<[EndpointKey, string]>;
   const settled = await Promise.allSettled(
     entries.map(async ([key, path]) => [key, await requestJson<unknown>(path, undefined, role)] as const),

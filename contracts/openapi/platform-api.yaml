@@ -40,6 +40,7 @@ x-anjing-service-boundaries:
     label: 运营总览
     owner: ops-api
     apiGroups:
+      - /api/ops/platform-snapshot
       - /api/ops/dashboard
       - /api/ops/todos
       - /api/ops/audit-events
@@ -961,6 +962,28 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/ops/platform-snapshot:
+    get:
+      tags: [operations]
+      operationId: getPlatformSnapshot
+      summary: Get one console-ready platform snapshot.
+      x-anjing-roles: [Administrator, User, Developer, Operator]
+      responses:
+        "200":
+          description: Platform snapshot returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/PlatformSnapshot"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/ops/todos:
     get:
       tags: [operations]
@@ -1599,6 +1622,73 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuditEvent"
+    PlatformSnapshot:
+      type: object
+      required:
+        - dashboard
+        - users
+        - applications
+        - roles
+        - apiKeys
+        - credentials
+        - routes
+        - modelRoutes
+        - skills
+        - requestLogs
+        - plans
+        - usage
+        - budgetAlerts
+      properties:
+        dashboard:
+          $ref: "#/components/schemas/OpsDashboard"
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        applications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Application"
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RolePolicy"
+        apiKeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/APIKey"
+        credentials:
+          type: array
+          items:
+            $ref: "#/components/schemas/Credential"
+        routes:
+          type: array
+          items:
+            $ref: "#/components/schemas/GatewayRoute"
+        modelRoutes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModelRoute"
+        skills:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillBinding"
+        requestLogs:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequestLog"
+        plans:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillingPlan"
+        usage:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsageRecord"
+        budgetAlerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetAlert"
     OpsTodo:
       type: object
       required: [id, title, source, owner, status, updatedAt]

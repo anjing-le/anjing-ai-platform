@@ -191,6 +191,22 @@ type OpsDashboard struct {
 	Audit   []AuditEvent    `json:"audit"`
 }
 
+type PlatformSnapshot struct {
+	Dashboard    OpsDashboard   `json:"dashboard"`
+	Users        []User         `json:"users"`
+	Applications []Application  `json:"applications"`
+	Roles        []RolePolicy   `json:"roles"`
+	APIKeys      []APIKey       `json:"apiKeys"`
+	Credentials  []Credential   `json:"credentials"`
+	Routes       []GatewayRoute `json:"routes"`
+	ModelRoutes  []ModelRoute   `json:"modelRoutes"`
+	Skills       []SkillBinding `json:"skills"`
+	RequestLogs  []RequestLog   `json:"requestLogs"`
+	Plans        []BillingPlan  `json:"plans"`
+	Usage        []UsageRecord  `json:"usage"`
+	BudgetAlerts []BudgetAlert  `json:"budgetAlerts"`
+}
+
 type Metric struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
@@ -714,6 +730,31 @@ func (s *Store) ResolveBudgetAlert(id string) (BudgetAlert, bool) {
 func (s *Store) Dashboard() OpsDashboard {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+	return s.dashboardLocked()
+}
+
+func (s *Store) Snapshot() PlatformSnapshot {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return PlatformSnapshot{
+		Dashboard:    s.dashboardLocked(),
+		Users:        append([]User(nil), s.users...),
+		Applications: append([]Application(nil), s.applications...),
+		Roles:        append([]RolePolicy(nil), s.roles...),
+		APIKeys:      append([]APIKey(nil), s.apiKeys...),
+		Credentials:  append([]Credential(nil), s.credentials...),
+		Routes:       append([]GatewayRoute(nil), s.routes...),
+		ModelRoutes:  append([]ModelRoute(nil), s.modelRoutes...),
+		Skills:       append([]SkillBinding(nil), s.skills...),
+		RequestLogs:  append([]RequestLog(nil), s.requestLogs...),
+		Plans:        append([]BillingPlan(nil), s.plans...),
+		Usage:        append([]UsageRecord(nil), s.usageRecords...),
+		BudgetAlerts: append([]BudgetAlert(nil), s.budgetAlerts...),
+	}
+}
+
+func (s *Store) dashboardLocked() OpsDashboard {
 	pending := 0
 	for _, todo := range s.todos {
 		if todo.Status != "Resolved" {

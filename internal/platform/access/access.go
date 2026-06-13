@@ -161,6 +161,7 @@ func authenticate(cfg Config, r *http.Request) (Principal, bool) {
 func allowUser(method, path string) bool {
 	if method == http.MethodGet {
 		return path == "/api/ops/dashboard" ||
+			path == "/api/ops/platform-snapshot" ||
 			path == "/api/control/applications" ||
 			strings.HasPrefix(path, "/api/billing/")
 	}

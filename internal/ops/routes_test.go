@@ -79,6 +79,37 @@ func TestDashboardPendingMetricFollowsResolvedTodos(t *testing.T) {
 	}
 }
 
+func TestPlatformSnapshotIncludesConsoleData(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/ops/platform-snapshot", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool                   `json:"success"`
+		Data    store.PlatformSnapshot `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode snapshot response: %v", err)
+	}
+	if !payload.Success {
+		t.Fatalf("expected successful snapshot response, got %+v", payload)
+	}
+	if len(payload.Data.Users) == 0 || len(payload.Data.Routes) == 0 || len(payload.Data.Plans) == 0 {
+		t.Fatalf("expected snapshot to include users, routes and plans: %+v", payload.Data)
+	}
+	if metricValue(t, payload.Data.Dashboard.Metrics, "待处理") != "3" {
+		t.Fatalf("expected pending metric to be included in snapshot")
+	}
+}
+
 func requestDashboard(t *testing.T, mux *http.ServeMux) struct {
 	Success bool               `json:"success"`
 	Data    store.OpsDashboard `json:"data"`

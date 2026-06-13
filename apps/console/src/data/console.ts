@@ -189,7 +189,7 @@ export const consoleServiceMap = [
     entry: "运营总览",
     owner: "ops-api",
     scope: "服务健康、调用日志、审计事件、今日待办",
-    apis: ["/api/ops/dashboard", "/api/ops/todos", "/api/ops/audit-events"],
+    apis: ["/api/ops/platform-snapshot", "/api/ops/dashboard", "/api/ops/todos", "/api/ops/audit-events"],
   },
   {
     id: "access",
