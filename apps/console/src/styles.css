@@ -421,6 +421,33 @@ a {
   justify-content: flex-end;
 }
 
+.icon-command {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.icon-command:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.icon-command:hover:not(:disabled),
+.icon-command:focus-visible {
+  border-color: var(--line-strong);
+  outline: none;
+}
+
 .role-switcher button,
 .tab-row button {
   min-height: 34px;

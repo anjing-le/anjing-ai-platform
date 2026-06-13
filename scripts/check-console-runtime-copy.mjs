@@ -12,6 +12,10 @@ if (appSource.includes("<code>go run ./cmd/platform-all</code>")) {
   errors.push("Console home must not show raw go run ./cmd/platform-all as the primary runtime command.");
 }
 
+if (!appSource.includes("刷新平台数据") || !appSource.includes("RefreshCw")) {
+  errors.push("Console topbar must expose a manual platform data refresh action.");
+}
+
 for (const port of ["1820", "1821", "1822", "1823"]) {
   if (!dataSource.includes(`http://localhost:${port}/healthz`)) {
     errors.push(`Console backend plan must show http://localhost:${port}/healthz.`);

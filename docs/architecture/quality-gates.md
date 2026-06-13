@@ -161,6 +161,7 @@ scripts/check-console-runtime-copy.mjs
 保护内容：
 
 - 后台首页的主运行命令必须展示 `pnpm dev:api`。
+- 顶部工具区必须保留手动刷新平台数据的动作。
 - 单服务规划中的健康检查地址必须展示真实的 `http://localhost:182x/healthz`。
 - 不能把不存在的 `/api/*/healthz` 当成服务健康地址展示。
 

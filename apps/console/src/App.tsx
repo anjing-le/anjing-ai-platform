@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleAlert,
+  RefreshCw,
   Search,
 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
@@ -125,6 +126,7 @@ function App() {
   const [snapshot, setSnapshot] = useState<PlatformSnapshot>();
   const [apiState, setApiState] = useState<ApiState>("loading");
   const [apiDetail, setApiDetail] = useState("正在连接 Go API");
+  const [refreshingSnapshot, setRefreshingSnapshot] = useState(false);
   const [actionMode, setActionMode] = useState<ActionMode | null>(null);
   const [actionError, setActionError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
@@ -174,6 +176,23 @@ function App() {
 
     return result;
   }, [role]);
+
+  async function handleManualRefresh() {
+    setRefreshingSnapshot(true);
+    setApiState("loading");
+    setApiDetail("正在刷新平台数据");
+
+    try {
+      const result = await refreshSnapshot();
+      setNotice(result.ok ? "平台数据已刷新。" : "刷新未连接到后端，继续使用页面默认数据。");
+    } catch {
+      setApiState("fallback");
+      setApiDetail("刷新失败，使用页面默认数据");
+      setNotice("刷新失败，继续使用页面默认数据。");
+    } finally {
+      setRefreshingSnapshot(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -535,6 +554,8 @@ function App() {
         apiDetail={apiDetail}
         apiState={apiState}
         activeRoute={activeRoute}
+        onRefresh={() => void handleManualRefresh()}
+        refreshing={refreshingSnapshot}
         role={role}
         setRole={setRole}
         visibleItems={visibleItems}
@@ -671,6 +692,8 @@ interface ConsoleShellProps {
   apiDetail: string;
   apiState: ApiState;
   children: React.ReactNode;
+  onRefresh: () => void;
+  refreshing: boolean;
   role: RoleId;
   setRole: (role: RoleId) => void;
   visibleItems: NavItem[];
@@ -681,6 +704,8 @@ function ConsoleShell({
   apiDetail,
   apiState,
   children,
+  onRefresh,
+  refreshing,
   role,
   setRole,
   visibleItems,
@@ -720,6 +745,16 @@ function ConsoleShell({
           </div>
           <div className="topbar__actions">
             <APIStateBadge detail={apiDetail} state={apiState} />
+            <button
+              className="icon-command"
+              disabled={refreshing}
+              onClick={onRefresh}
+              title="刷新平台数据"
+              type="button"
+            >
+              <RefreshCw size={16} />
+              <span>{refreshing ? "刷新中" : "刷新"}</span>
+            </button>
             <div className="role-switcher" aria-label="角色视角">
               {roles.map((item) => (
                 <button
