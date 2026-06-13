@@ -7,7 +7,9 @@ info:
     Anjing AI Platform V1 keeps a modular Go service boundary while allowing
     local development through the platform-all command. Business APIs return a
     unified envelope and can be protected by Bearer token or X-API-Key when
-    ANJING_AUTH_MODE=enforced.
+    ANJING_AUTH_MODE=enforced. The x-anjing-service-boundaries extension is the
+    contract between console entries, owner commands and API groups; it is
+    verified against the frontend consoleServiceMap during pnpm verify.
 servers:
   - url: http://localhost:18080
     description: platform-all local server
