@@ -14,6 +14,7 @@ checkSeedTables(migrations, seeds);
 checkRepositoryTables(migrations);
 checkControlUserSideEffects();
 checkControlApplicationSideEffects();
+checkGatewaySideEffects();
 checkMigrationDirConfig();
 
 if (errors.length > 0) {
@@ -157,6 +158,27 @@ function checkControlApplicationSideEffects() {
   }
   if (!rotateApplicationKey.includes("audit_events")) {
     errors.push("PostgresApplicationRepository.RotateApplicationKey must write an audit event.");
+  }
+}
+
+function checkGatewaySideEffects() {
+  const source = readFileSync("internal/gateway/repository.go", "utf8");
+  const checks = [
+    ["PostgresRouteRepository.CreateRoute", "func (repo PostgresRouteRepository) CreateRoute", ["request_logs", "audit_events"]],
+    ["PostgresRouteRepository.PublishRoute", "func (repo PostgresRouteRepository) PublishRoute", ["request_logs", "audit_events"]],
+    ["PostgresModelRouteRepository.CreateModelRoute", "func (repo PostgresModelRouteRepository) CreateModelRoute", ["audit_events"]],
+    ["PostgresModelRouteRepository.PublishModelRoute", "func (repo PostgresModelRouteRepository) PublishModelRoute", ["request_logs", "audit_events"]],
+    ["PostgresSkillRepository.CreateSkillBinding", "func (repo PostgresSkillRepository) CreateSkillBinding", ["audit_events"]],
+    ["PostgresSkillRepository.PublishSkillBinding", "func (repo PostgresSkillRepository) PublishSkillBinding", ["request_logs", "audit_events"]],
+  ];
+
+  for (const [label, signature, requiredSignals] of checks) {
+    const body = functionBody(source, signature);
+    for (const signal of requiredSignals) {
+      if (!body.includes(signal)) {
+        errors.push(`${label} must write ${signal}.`);
+      }
+    }
   }
 }
 

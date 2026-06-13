@@ -207,7 +207,7 @@ func (repo PostgresRouteRepository) ListRoutes(ctx context.Context) ([]store.Gat
 
 func (repo PostgresRouteRepository) CreateRoute(ctx context.Context, input CreateRouteInput) (store.GatewayRoute, error) {
 	item := store.GatewayRoute{
-		ID:       fmt.Sprintf("route_%d", time.Now().UnixNano()),
+		ID:       nextID("route"),
 		Route:    input.Route,
 		Upstream: input.Upstream,
 		Auth:     "API Key",
@@ -215,8 +215,14 @@ func (repo PostgresRouteRepository) CreateRoute(ctx context.Context, input Creat
 		Status:   "Draft",
 	}
 
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.GatewayRoute{}, fmt.Errorf("begin create gateway route: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	var updatedAt time.Time
-	if err := repo.pool.QueryRow(ctx, `
+	if err := tx.QueryRow(ctx, `
 		insert into gateway_routes(id, route, upstream, auth, rate_limit, status)
 		values($1, $2, $3, $4, $5, $6)
 		returning updated_at
@@ -224,12 +230,36 @@ func (repo PostgresRouteRepository) CreateRoute(ctx context.Context, input Creat
 		return store.GatewayRoute{}, fmt.Errorf("insert gateway route: %w", err)
 	}
 
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "POST "+item.Route, "demo-agent-workbench", "64ms", "201", "Mocked"); err != nil {
+		return store.GatewayRoute{}, fmt.Errorf("insert gateway route request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "create route", item.Route, "Success", nextID("req")); err != nil {
+		return store.GatewayRoute{}, fmt.Errorf("insert gateway route create audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.GatewayRoute{}, fmt.Errorf("commit create gateway route: %w", err)
+	}
+
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil
 }
 
 func (repo PostgresRouteRepository) PublishRoute(ctx context.Context, id string) (store.GatewayRoute, bool, error) {
-	rows, err := repo.pool.Query(ctx, `
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("begin publish gateway route: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
 		update gateway_routes
 		set status = 'Active', updated_at = now()
 		where id = $1
@@ -246,6 +276,25 @@ func (repo PostgresRouteRepository) PublishRoute(ctx context.Context, id string)
 			return store.GatewayRoute{}, false, nil
 		}
 		return store.GatewayRoute{}, false, fmt.Errorf("collect published gateway route: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "PUBLISH "+route.Route, route.Upstream, "28ms", "200", "Success"); err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("insert gateway route publish request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "publish route", route.Route, "Success", nextID("req")); err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("insert gateway route publish audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("commit publish gateway route: %w", err)
 	}
 
 	return route, true, nil
@@ -280,7 +329,7 @@ func (repo PostgresModelRouteRepository) ListModelRoutes(ctx context.Context) ([
 
 func (repo PostgresModelRouteRepository) CreateModelRoute(ctx context.Context, input CreateModelRouteInput) (store.ModelRoute, error) {
 	item := store.ModelRoute{
-		ID:       fmt.Sprintf("model_%d", time.Now().UnixNano()),
+		ID:       nextID("model"),
 		Alias:    input.Alias,
 		Scenario: input.Scenario,
 		Primary:  input.Primary,
@@ -288,8 +337,14 @@ func (repo PostgresModelRouteRepository) CreateModelRoute(ctx context.Context, i
 		Status:   "Draft",
 	}
 
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.ModelRoute{}, fmt.Errorf("begin create model route: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	var updatedAt time.Time
-	if err := repo.pool.QueryRow(ctx, `
+	if err := tx.QueryRow(ctx, `
 		insert into model_routes(id, alias, scenario, primary_model, fallback_model, status)
 		values($1, $2, $3, $4, $5, $6)
 		returning updated_at
@@ -297,12 +352,29 @@ func (repo PostgresModelRouteRepository) CreateModelRoute(ctx context.Context, i
 		return store.ModelRoute{}, fmt.Errorf("insert model route: %w", err)
 	}
 
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "create model route", item.Alias, "Success", nextID("req")); err != nil {
+		return store.ModelRoute{}, fmt.Errorf("insert model route create audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.ModelRoute{}, fmt.Errorf("commit create model route: %w", err)
+	}
+
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil
 }
 
 func (repo PostgresModelRouteRepository) PublishModelRoute(ctx context.Context, id string) (store.ModelRoute, bool, error) {
-	rows, err := repo.pool.Query(ctx, `
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("begin publish model route: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
 		update model_routes
 		set status = 'Active', updated_at = now()
 		where id = $1
@@ -319,6 +391,25 @@ func (repo PostgresModelRouteRepository) PublishModelRoute(ctx context.Context, 
 			return store.ModelRoute{}, false, nil
 		}
 		return store.ModelRoute{}, false, fmt.Errorf("collect published model route: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "PUBLISH model:"+route.Alias, route.Scenario, "34ms", "200", "Success"); err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("insert model route publish request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "publish model route", route.Alias, "Success", nextID("req")); err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("insert model route publish audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("commit publish model route: %w", err)
 	}
 
 	return route, true, nil
@@ -363,7 +454,7 @@ func (repo PostgresSkillRepository) ListSkills(ctx context.Context) ([]store.Ski
 
 func (repo PostgresSkillRepository) CreateSkillBinding(ctx context.Context, input CreateSkillBindingInput) (store.SkillBinding, error) {
 	item := store.SkillBinding{
-		ID:       fmt.Sprintf("skill_%d", time.Now().UnixNano()),
+		ID:       nextID("skill"),
 		Name:     input.Name,
 		Protocol: input.Protocol,
 		Route:    input.Route,
@@ -371,8 +462,14 @@ func (repo PostgresSkillRepository) CreateSkillBinding(ctx context.Context, inpu
 		Status:   "Draft",
 	}
 
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.SkillBinding{}, fmt.Errorf("begin create skill binding: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	var updatedAt time.Time
-	if err := repo.pool.QueryRow(ctx, `
+	if err := tx.QueryRow(ctx, `
 		insert into skill_bindings(id, name, protocol, route, timeout, status)
 		values($1, $2, $3, $4, $5, $6)
 		returning updated_at
@@ -380,12 +477,29 @@ func (repo PostgresSkillRepository) CreateSkillBinding(ctx context.Context, inpu
 		return store.SkillBinding{}, fmt.Errorf("insert skill binding: %w", err)
 	}
 
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "create skill binding", item.Name, "Success", nextID("req")); err != nil {
+		return store.SkillBinding{}, fmt.Errorf("insert skill binding create audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.SkillBinding{}, fmt.Errorf("commit create skill binding: %w", err)
+	}
+
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil
 }
 
 func (repo PostgresSkillRepository) PublishSkillBinding(ctx context.Context, id string) (store.SkillBinding, bool, error) {
-	rows, err := repo.pool.Query(ctx, `
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("begin publish skill binding: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
 		update skill_bindings
 		set status = 'Published', updated_at = now()
 		where id = $1
@@ -402,6 +516,25 @@ func (repo PostgresSkillRepository) PublishSkillBinding(ctx context.Context, id 
 			return store.SkillBinding{}, false, nil
 		}
 		return store.SkillBinding{}, false, fmt.Errorf("collect published skill binding: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "PUBLISH skill:"+skill.Name, skill.Protocol, "41ms", "200", "Success"); err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("insert skill binding publish request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "publish skill binding", skill.Name, "Success", nextID("req")); err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("insert skill binding publish audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("commit publish skill binding: %w", err)
 	}
 
 	return skill, true, nil
@@ -507,6 +640,10 @@ func estimateMockCost(tokens int) string {
 		return "$0.0000"
 	}
 	return fmt.Sprintf("$%.4f", float64(tokens)*0.000002)
+}
+
+func nextID(prefix string) string {
+	return fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
 }
 
 func scanGatewayRoute(row pgx.CollectableRow) (store.GatewayRoute, error) {
