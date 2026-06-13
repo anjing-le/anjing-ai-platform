@@ -910,7 +910,7 @@ function ModulePage({
     setSelectedRowId("");
   }, [activeTab]);
 
-  const tableView = useMemo(() => {
+  const tableView = useMemo<ModulePageDefinition["table"]>(() => {
     if (page.id === "iam" && activeTab === "角色权限") {
       return {
         eyebrow: "Roles",
@@ -1029,6 +1029,68 @@ function ModulePage({
       };
     }
 
+    if (page.id === "docs" && activeTab === "API 文档") {
+      const routeRows: TableRow[] = (snapshot?.routes || []).map((route) => ({
+        id: `doc-route-${route.id}`,
+        cells: [route.route, "API Route", route.auth, route.limit, route.status],
+        status: route.status,
+        tone: toneForStatus(route.status),
+      }));
+      const modelRows: TableRow[] = (snapshot?.modelRoutes || []).map((route) => ({
+        id: `doc-model-${route.id}`,
+        cells: [route.alias, "Model Alias", route.primary, route.fallback, route.status],
+        status: route.status,
+        tone: toneForStatus(route.status),
+      }));
+      const skillRows: TableRow[] = (snapshot?.skills || []).map((skill) => ({
+        id: `doc-skill-${skill.id}`,
+        cells: [skill.route, `Skill ${skill.protocol}`, skill.name, skill.timeout, skill.status],
+        status: skill.status,
+        tone: toneForStatus(skill.status),
+      }));
+
+      return {
+        eyebrow: "API Reference",
+        title: "接口参考",
+        columns: ["入口", "类型", "主配置", "治理", "状态"],
+        rows: [...routeRows, ...modelRows, ...skillRows],
+      };
+    }
+
+    if (page.id === "docs" && activeTab === "FAQ") {
+      return {
+        eyebrow: "FAQ",
+        title: "常见问题",
+        columns: ["问题", "处理建议", "模块", "状态"],
+        rows: [
+          {
+            id: "faq-auth",
+            cells: ["调用返回 401", "检查 API Key、scope 和 RBAC 角色", "用户与权限", "Ready"],
+            status: "Ready",
+            tone: "good",
+          },
+          {
+            id: "faq-route",
+            cells: ["模型别名不可用", "确认模型路由已发布且 fallback 可用", "网关与模型", "Ready"],
+            status: "Ready",
+            tone: "good",
+          },
+          {
+            id: "faq-budget",
+            cells: ["预算接近阈值", "查看用量项目并处理预算告警", "计费与配额", "Ready"],
+            status: "Ready",
+            tone: "good",
+          },
+          {
+            id: "faq-sdk",
+            cells: ["SDK 如何接入", "先按 OpenAPI 调用，SDK 后续补充", "帮助文档", "Draft"],
+            status: "Draft",
+            tone: "watch",
+          },
+        ],
+      };
+    }
+
     return page.table;
   }, [
     activeTab,
@@ -1038,6 +1100,7 @@ function ModulePage({
     snapshot?.credentials,
     snapshot?.modelRoutes,
     snapshot?.requestLogs,
+    snapshot?.routes,
     snapshot?.roles,
     snapshot?.skills,
     snapshot?.budgetAlerts,
@@ -1190,8 +1253,11 @@ function ModulePage({
   if (page.id === "iam" && activeTab === "角色权限") {
     selectedTableRowId = selectedRowId;
   }
-  if (page.id === "docs") {
+  if (page.id === "docs" && activeTab === "Quickstart") {
     selectedTableRowId = selectedApplication?.id;
+  }
+  if (page.id === "docs" && activeTab !== "Quickstart") {
+    selectedTableRowId = selectedRowId;
   }
   if (page.id === "gateway" && activeTab === "API 路由") {
     selectedTableRowId = selectedRoute?.id;
@@ -1357,7 +1423,7 @@ function ModulePage({
               role={role}
             />
           ) : null}
-          {page.id === "docs" ? (
+          {page.id === "docs" && activeTab === "Quickstart" ? (
             <ApplicationJourneyPanel
               activating={activatingApplicationId === selectedApplication?.id}
               application={selectedApplication}
