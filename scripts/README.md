@@ -7,6 +7,7 @@
 | `scripts/check-workspace.mjs` | `pnpm verify:workspace` | 检查 pnpm workspace、正式 console 包名和根脚本 filter 是否一致。 |
 | `apps/console/src/**/*.test.ts` | `pnpm test:console` | 验证前端快照 hydration、模块表格和状态 tone 映射。 |
 | `scripts/check-openapi-routes.sh` | `pnpm verify:openapi` | 比对 Go `mux.HandleFunc` 注册路径与 OpenAPI `paths`，防止接口和合约漂移。 |
+| `scripts/check-openapi-metadata.mjs` | `pnpm verify:openapi-meta` | 检查 OpenAPI operationId、summary、角色、错误响应和 POST requestBody 元数据。 |
 | `scripts/check-service-boundaries.mjs` | `pnpm verify:boundaries` | 比对前端 `consoleServiceMap` 与 OpenAPI `x-anjing-service-boundaries`，并确认 API 分组存在于 OpenAPI `paths`。 |
 | `scripts/check-console-api-client.mjs` | `pnpm verify:console-api` | 检查前端 API client 中的 `/api/*` 路径是否都已写入 OpenAPI。 |
 | `scripts/check-doc-links.mjs` | `pnpm verify:docs` | 检查 README 和 `docs/` 中明显指向仓库内的路径是否真实存在。 |
