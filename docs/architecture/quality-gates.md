@@ -99,6 +99,7 @@ scripts/check-openapi-metadata.mjs
 保护内容：
 
 - 每个 OpenAPI operation 必须声明唯一 `operationId`、`summary` 和 `responses`。
+- OpenAPI 文件不允许出现同一缩进下相邻重复 key，例如重复的 `responses:` 或 `$ref:`。
 - 业务 `/api/*` 接口必须声明 `x-anjing-roles`、`401` 和 `403` 响应。
 - 业务 POST 接口必须声明 `requestBody`，避免前端和后端对请求体形状各自猜测。
 

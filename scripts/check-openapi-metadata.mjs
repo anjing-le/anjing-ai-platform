@@ -35,6 +35,10 @@ for (let index = 0; index < lines.length; index += 1) {
 const errors = [];
 const operationIds = new Map();
 
+for (const duplicate of adjacentDuplicateKeys(lines)) {
+  errors.push(`Line ${duplicate.line} repeats adjacent YAML key '${duplicate.key}'.`);
+}
+
 for (const operation of operations) {
   const text = operation.block.join("\n");
   const label = `${operation.method} ${operation.path}`;
@@ -90,4 +94,36 @@ console.log("OpenAPI operation metadata is complete.");
 
 function matchValue(text, pattern) {
   return text.match(pattern)?.[1]?.trim() ?? "";
+}
+
+function adjacentDuplicateKeys(sourceLines) {
+  const duplicates = [];
+  let previous;
+
+  for (let index = 0; index < sourceLines.length; index += 1) {
+    const line = sourceLines[index];
+    const match = line.match(/^( *)([^:\s][^:#]*):(?:\s|$)/);
+    if (!match) {
+      previous = undefined;
+      continue;
+    }
+
+    const current = {
+      indent: match[1].length,
+      key: match[2].trim(),
+      line: index + 1,
+    };
+
+    if (
+      previous &&
+      previous.indent === current.indent &&
+      previous.key === current.key
+    ) {
+      duplicates.push(current);
+    }
+
+    previous = current;
+  }
+
+  return duplicates;
 }
