@@ -15,6 +15,7 @@ checkRepositoryTables(migrations);
 checkControlUserSideEffects();
 checkControlApplicationSideEffects();
 checkGatewaySideEffects();
+checkBillingSideEffects();
 checkMigrationDirConfig();
 
 if (errors.length > 0) {
@@ -179,6 +180,27 @@ function checkGatewaySideEffects() {
         errors.push(`${label} must write ${signal}.`);
       }
     }
+  }
+}
+
+function checkBillingSideEffects() {
+  const source = readFileSync("internal/billing/repository.go", "utf8");
+  const createPlan = functionBody(source, "func (repo PostgresPlanRepository) CreatePlan");
+  const activatePlan = functionBody(source, "func (repo PostgresPlanRepository) ActivatePlan");
+  const resolveBudgetAlert = functionBody(source, "func (repo PostgresBudgetAlertRepository) ResolveBudgetAlert");
+
+  for (const [label, body] of [
+    ["PostgresPlanRepository.CreatePlan", createPlan],
+    ["PostgresPlanRepository.ActivatePlan", activatePlan],
+    ["PostgresBudgetAlertRepository.ResolveBudgetAlert", resolveBudgetAlert],
+  ]) {
+    if (!body.includes("audit_events")) {
+      errors.push(`${label} must write audit events.`);
+    }
+  }
+
+  if (!createPlan.includes("budget_alerts")) {
+    errors.push("PostgresPlanRepository.CreatePlan must create a budget alert.");
   }
 }
 

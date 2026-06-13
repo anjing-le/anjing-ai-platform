@@ -287,6 +287,7 @@ scripts/check-db-files.mjs
 - Postgres 用户邀请和激活必须同步 `ops_todos` 和 `audit_events`，保持真实数据库模式的运营闭环。
 - Postgres 应用创建、激活和 Key 轮换必须同步 API Key、运营待办、请求日志与审计事件，保证后台总览能看到完整接入链路。
 - Postgres 网关路由、模型路由和 Skill 绑定的创建/发布必须同步请求日志与审计事件，保证运营总览可以追踪配置变更。
+- Postgres 计费套餐创建、启用和预算告警处理必须同步预算告警与审计事件，保证配额运营动作可追溯。
 - Go 默认 migrations / seeds 目录、单镜像 compose 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
 
 ## Gate 15：Go 格式

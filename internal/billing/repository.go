@@ -124,7 +124,7 @@ func (repo PostgresPlanRepository) ListPlans(ctx context.Context) ([]store.Billi
 
 func (repo PostgresPlanRepository) CreatePlan(ctx context.Context, input CreatePlanInput) (store.BillingPlan, error) {
 	item := store.BillingPlan{
-		ID:          fmt.Sprintf("plan_%d", time.Now().UnixNano()),
+		ID:          nextID("plan"),
 		Name:        input.Name,
 		Target:      "new projects",
 		RPS:         input.RPS,
@@ -132,18 +132,48 @@ func (repo PostgresPlanRepository) CreatePlan(ctx context.Context, input CreateP
 		Status:      "Draft",
 	}
 
-	if _, err := repo.pool.Exec(ctx, `
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.BillingPlan{}, fmt.Errorf("begin create billing plan: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `
 		insert into billing_plans(id, name, target, rps, token_per_day, status)
 		values($1, $2, $3, $4, $5, $6)
 	`, item.ID, item.Name, item.Target, item.RPS, item.TokenPerDay, item.Status); err != nil {
 		return store.BillingPlan{}, fmt.Errorf("insert billing plan: %w", err)
 	}
 
+	if _, err := tx.Exec(ctx, `
+		insert into budget_alerts(id, project, budget, current, threshold, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("budget"), item.Name, "$300/day", "$0", "70%", "Ready"); err != nil {
+		return store.BillingPlan{}, fmt.Errorf("insert billing plan budget alert: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "计费与配额", "create plan", item.Name, "Success", nextID("req")); err != nil {
+		return store.BillingPlan{}, fmt.Errorf("insert billing plan create audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.BillingPlan{}, fmt.Errorf("commit create billing plan: %w", err)
+	}
+
 	return item, nil
 }
 
 func (repo PostgresPlanRepository) ActivatePlan(ctx context.Context, id string) (store.BillingPlan, bool, error) {
-	rows, err := repo.pool.Query(ctx, `
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.BillingPlan{}, false, fmt.Errorf("begin activate billing plan: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
 		update billing_plans
 		set status = 'Active'
 		where id = $1
@@ -160,6 +190,18 @@ func (repo PostgresPlanRepository) ActivatePlan(ctx context.Context, id string) 
 			return store.BillingPlan{}, false, nil
 		}
 		return store.BillingPlan{}, false, fmt.Errorf("collect activated billing plan: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "计费与配额", "activate plan", plan.Name, "Success", nextID("req")); err != nil {
+		return store.BillingPlan{}, false, fmt.Errorf("insert billing plan activation audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.BillingPlan{}, false, fmt.Errorf("commit activate billing plan: %w", err)
 	}
 
 	return plan, true, nil
@@ -230,7 +272,13 @@ func (repo PostgresBudgetAlertRepository) ListBudgetAlerts(ctx context.Context) 
 }
 
 func (repo PostgresBudgetAlertRepository) ResolveBudgetAlert(ctx context.Context, id string) (store.BudgetAlert, bool, error) {
-	rows, err := repo.pool.Query(ctx, `
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.BudgetAlert{}, false, fmt.Errorf("begin resolve budget alert: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
 		update budget_alerts
 		set status = 'Resolved'
 		where id = $1
@@ -247,6 +295,18 @@ func (repo PostgresBudgetAlertRepository) ResolveBudgetAlert(ctx context.Context
 			return store.BudgetAlert{}, false, nil
 		}
 		return store.BudgetAlert{}, false, fmt.Errorf("collect resolved budget alert: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "计费与配额", "resolve budget alert", alert.Project, "Success", nextID("req")); err != nil {
+		return store.BudgetAlert{}, false, fmt.Errorf("insert budget alert resolution audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.BudgetAlert{}, false, fmt.Errorf("commit resolve budget alert: %w", err)
 	}
 
 	return alert, true, nil
@@ -266,4 +326,8 @@ func scanBillingPlan(row pgx.CollectableRow) (store.BillingPlan, error) {
 		return store.BillingPlan{}, err
 	}
 	return item, nil
+}
+
+func nextID(prefix string) string {
+	return fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
 }
