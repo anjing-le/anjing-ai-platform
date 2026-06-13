@@ -5,7 +5,7 @@ VALUES
   ('role_admin', 'Administrator', 'all', 'all', 'none', 'Active'),
   ('role_user', 'User', 'overview,quota,docs', 'self-service', 'no runtime config', 'Active'),
   ('role_developer', 'Developer', 'overview,gateway,quota,docs', 'gateway routes,model aliases,skill adapters', 'no billing settlement', 'Active'),
-  ('role_operator', 'Operator', 'overview,gateway,quota', 'runtime policy', 'no developer-owned route schema', 'Active')
+  ('role_operator', 'Operator', 'overview,quota', 'runtime policy', 'no developer-owned route schema', 'Active')
 ON CONFLICT (id) DO UPDATE
 SET
   name = EXCLUDED.name,

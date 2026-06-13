@@ -213,7 +213,7 @@ func NewSeedStore() *Store {
 			{ID: "role_admin", Name: "Administrator", VisibleEntries: "all", ConfigScope: "all", Restriction: "none", Status: "Active"},
 			{ID: "role_user", Name: "User", VisibleEntries: "overview,quota,docs", ConfigScope: "self-service", Restriction: "no runtime config", Status: "Active"},
 			{ID: "role_developer", Name: "Developer", VisibleEntries: "overview,gateway,quota,docs", ConfigScope: "gateway routes,model aliases,skill adapters", Restriction: "no billing settlement", Status: "Active"},
-			{ID: "role_operator", Name: "Operator", VisibleEntries: "overview,gateway,quota", ConfigScope: "runtime policy", Restriction: "no developer-owned route schema", Status: "Active"},
+			{ID: "role_operator", Name: "Operator", VisibleEntries: "overview,quota", ConfigScope: "runtime policy", Restriction: "no developer-owned route schema", Status: "Active"},
 		},
 		apiKeys: []APIKey{
 			{ID: "key_customer", Name: "ak_live_customer", Project: "customer-service-agent", Scope: "llm:chat skill:invoke", ExpiresAt: "2026-09-01", Status: "Active"},

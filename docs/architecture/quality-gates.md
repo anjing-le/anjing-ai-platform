@@ -143,7 +143,27 @@ scripts/check-console-api-client.mjs
 - 后台按钮、列表刷新和 Live API 接入不能绕过合约。
 - 新增前端 API 调用时，必须同步补充 `contracts/openapi/platform-api.yaml`。
 
-## Gate 8：文档本地引用
+## Gate 8：角色 Seed 可见性
+
+命令：
+
+```bash
+pnpm verify:role-seeds
+```
+
+脚本：
+
+```text
+scripts/check-role-policy-seeds.mjs
+```
+
+保护内容：
+
+- 内存 seed `internal/platform/store/store.go` 的 `RolePolicy.VisibleEntries` 必须匹配前端 `navItems`。
+- PostgreSQL seed `infra/postgres/seeds/006_demo_role_policies.sql` 的 `visible_entries` 必须匹配前端 `navItems`。
+- 运维、开发、使用用户的后台入口展示不能在 Mock / 内存 / PostgreSQL 三种模式下漂移。
+
+## Gate 9：文档本地引用
 
 命令：
 
@@ -163,7 +183,7 @@ scripts/check-doc-links.mjs
 - 当前检查 `apps/`、`cmd/`、`contracts/`、`docs/`、`frontend/`、`infra/`、`internal/`、`scripts/` 和常见根文件。
 - `/api/*`、URL、绝对本机路径和未启用的 `.github` workflow 路径不会作为本地文件检查。
 
-## Gate 9：Compose 配置
+## Gate 10：Compose 配置
 
 命令：
 
@@ -183,7 +203,7 @@ scripts/check-compose.sh
 - `infra/local/docker-compose.image.yml` 必须能通过 `docker compose config`。
 - 本地 PostgreSQL 和单镜像预览的编排配置不能因为字段错误或路径错误而失效。
 
-## Gate 10：Dockerfile 路径
+## Gate 11：Dockerfile 路径
 
 命令：
 
@@ -203,7 +223,7 @@ scripts/check-dockerfile-paths.mjs
 - 多阶段构建里的 `COPY --from=...` 不作为本地路径检查。
 - 重构目录时，镜像构建入口不会静默引用不存在的路径。
 
-## Gate 11：Go 格式
+## Gate 12：Go 格式
 
 命令：
 
@@ -223,7 +243,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 12：Go Vet
+## Gate 13：Go Vet
 
 命令：
 
@@ -242,7 +262,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 13：Go 测试
+## Gate 14：Go 测试
 
 命令：
 
