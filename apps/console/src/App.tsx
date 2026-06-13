@@ -102,6 +102,7 @@ function App() {
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [activatingPlanId, setActivatingPlanId] = useState("");
   const [resolvingBudgetAlertId, setResolvingBudgetAlertId] = useState("");
+  const [selectedBudgetAlertId, setSelectedBudgetAlertId] = useState("");
   const [rotatingCredentialId, setRotatingCredentialId] = useState("");
   const [revokingAPIKeyId, setRevokingAPIKeyId] = useState("");
   const [selectedAPIKeyId, setSelectedAPIKeyId] = useState("");
@@ -445,6 +446,7 @@ function App() {
     try {
       const alert = await resolveBudgetAlert(id, role);
       await refreshSnapshot();
+      setSelectedBudgetAlertId(alert.id);
       setNotice(`已处理预算告警：${alert.project}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "预算告警处理失败");
@@ -537,6 +539,7 @@ function App() {
             rotatingApplicationId={rotatingApplicationId}
             selectedApplicationId={selectedApplicationId}
             selectedAPIKeyId={selectedAPIKeyId}
+            selectedBudgetAlertId={selectedBudgetAlertId}
             selectedCredentialId={selectedCredentialId}
             selectedModelRouteId={selectedModelRouteId}
             selectedPlanId={selectedPlanId}
@@ -844,6 +847,7 @@ function ModulePage({
   rotatingApplicationId,
   selectedApplicationId,
   selectedAPIKeyId,
+  selectedBudgetAlertId,
   selectedCredentialId,
   selectedModelRouteId,
   selectedPlanId,
@@ -880,6 +884,7 @@ function ModulePage({
   rotatingApplicationId: string;
   selectedApplicationId: string;
   selectedAPIKeyId: string;
+  selectedBudgetAlertId: string;
   selectedCredentialId: string;
   selectedModelRouteId: string;
   selectedPlanId: string;
@@ -987,10 +992,11 @@ function ModulePage({
     }
 
     return (
+      snapshot.budgetAlerts.find((alert) => alert.id === selectedBudgetAlertId) ||
       snapshot.budgetAlerts.find((alert) => alert.status === "Warning") ||
       snapshot.budgetAlerts[0]
     );
-  }, [page.id, snapshot?.budgetAlerts]);
+  }, [page.id, selectedBudgetAlertId, snapshot?.budgetAlerts]);
 
   const selectedCredential = useMemo(() => {
     if (page.id !== "iam" || !snapshot?.credentials?.length) {
