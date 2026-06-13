@@ -1001,6 +1001,34 @@ function ModulePage({
       };
     }
 
+    if (page.id === "quota" && activeTab === "用量") {
+      return {
+        eyebrow: "Usage",
+        title: "项目用量",
+        columns: ["Project", "Tokens", "Skill Calls", "Cost", "状态"],
+        rows: (snapshot?.usage || []).map((usage) => ({
+          id: usage.id,
+          cells: [usage.project, usage.tokens, usage.skillCalls, usage.cost, usage.status],
+          status: usage.status,
+          tone: toneForStatus(usage.status),
+        })),
+      };
+    }
+
+    if (page.id === "quota" && activeTab === "预算告警") {
+      return {
+        eyebrow: "Budgets",
+        title: "预算告警",
+        columns: ["Project", "Budget", "Current", "Threshold", "状态"],
+        rows: (snapshot?.budgetAlerts || []).map((alert) => ({
+          id: alert.id,
+          cells: [alert.project, alert.budget, alert.current, alert.threshold, alert.status],
+          status: alert.status,
+          tone: toneForStatus(alert.status),
+        })),
+      };
+    }
+
     return page.table;
   }, [
     activeTab,
@@ -1012,6 +1040,8 @@ function ModulePage({
     snapshot?.requestLogs,
     snapshot?.roles,
     snapshot?.skills,
+    snapshot?.budgetAlerts,
+    snapshot?.usage,
   ]);
 
   const statuses = useMemo(
@@ -1113,10 +1143,11 @@ function ModulePage({
 
     return (
       snapshot.budgetAlerts.find((alert) => alert.id === selectedBudgetAlertId) ||
+      snapshot.budgetAlerts.find((alert) => alert.id === selectedRowId) ||
       snapshot.budgetAlerts.find((alert) => alert.status === "Warning") ||
       snapshot.budgetAlerts[0]
     );
-  }, [page.id, selectedBudgetAlertId, snapshot?.budgetAlerts]);
+  }, [page.id, selectedBudgetAlertId, selectedRowId, snapshot?.budgetAlerts]);
 
   const selectedCredential = useMemo(() => {
     if (page.id !== "iam" || !snapshot?.credentials?.length) {
@@ -1174,8 +1205,14 @@ function ModulePage({
   if (page.id === "gateway" && activeTab === "请求日志") {
     selectedTableRowId = selectedRowId;
   }
-  if (page.id === "quota") {
+  if (page.id === "quota" && activeTab === "套餐") {
     selectedTableRowId = selectedPlan?.id;
+  }
+  if (page.id === "quota" && activeTab === "用量") {
+    selectedTableRowId = selectedRowId;
+  }
+  if (page.id === "quota" && activeTab === "预算告警") {
+    selectedTableRowId = selectedBudgetAlert?.id;
   }
 
   useEffect(() => {
@@ -1304,14 +1341,19 @@ function ModulePage({
           {page.id === "gateway" && (activeTab === "模型路由" || activeTab === "Skill 调用") ? (
             <LLMInvokePanel modelRoutes={snapshot?.modelRoutes} onInvoked={onLLMInvoked} role={role} />
           ) : null}
-          {page.id === "quota" ? (
+          {page.id === "quota" && activeTab === "套餐" ? (
             <BillingPlanPanel
               activating={activatingPlanId === selectedPlan?.id}
-              budgetAlert={selectedBudgetAlert}
               onActivate={onPlanActivate}
-              onBudgetAlertResolve={onBudgetAlertResolve}
               plan={selectedPlan}
-              resolvingBudgetAlertId={resolvingBudgetAlertId}
+              role={role}
+            />
+          ) : null}
+          {page.id === "quota" && activeTab === "预算告警" ? (
+            <BudgetAlertPanel
+              alert={selectedBudgetAlert}
+              onResolve={onBudgetAlertResolve}
+              resolving={resolvingBudgetAlertId === selectedBudgetAlert?.id}
               role={role}
             />
           ) : null}
@@ -1826,19 +1868,13 @@ function SkillBindingPanel({
 
 function BillingPlanPanel({
   activating,
-  budgetAlert,
   onActivate,
-  onBudgetAlertResolve,
   plan,
-  resolvingBudgetAlertId,
   role,
 }: {
   activating: boolean;
-  budgetAlert?: BudgetAlert;
   onActivate: (id: string) => Promise<void>;
-  onBudgetAlertResolve: (id: string) => Promise<void>;
   plan?: BillingPlan;
-  resolvingBudgetAlertId: string;
   role: RoleId;
 }) {
   if (!plan) {
@@ -1860,48 +1896,39 @@ function BillingPlanPanel({
   ] as const;
 
   return (
-    <>
-      <Panel eyebrow="Plan" title="套餐详情">
-        <div className="plan-summary">
-          <div>
-            <span>Selected Plan</span>
-            <strong>{plan.name}</strong>
-            <p>{canActivate ? "管理员可启用套餐" : "当前角色只读计费配置"}</p>
-          </div>
-          <StatusBadge tone={toneForStatus(plan.status)}>{plan.status}</StatusBadge>
+    <Panel eyebrow="Plan" title="套餐详情">
+      <div className="plan-summary">
+        <div>
+          <span>Selected Plan</span>
+          <strong>{plan.name}</strong>
+          <p>{canActivate ? "管理员可启用套餐" : "当前角色只读计费配置"}</p>
         </div>
+        <StatusBadge tone={toneForStatus(plan.status)}>{plan.status}</StatusBadge>
+      </div>
 
-        <div className="plan-checks">
-          {checks.map((item) => (
-            <article key={item.label}>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-              <p>{item.note}</p>
-              <StatusDot tone={item.tone} />
-            </article>
-          ))}
-        </div>
+      <div className="plan-checks">
+        {checks.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <p>{item.note}</p>
+            <StatusDot tone={item.tone} />
+          </article>
+        ))}
+      </div>
 
-        <div className="application-actions">
-          <button
-            className="button button--primary"
-            disabled={!canActivate || activating || plan.status === "Active"}
-            onClick={() => void onActivate(plan.id)}
-            type="button"
-          >
-            {plan.status === "Active" ? "已启用" : activating ? "启用中" : "启用套餐"}
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </Panel>
-
-      <BudgetAlertPanel
-        alert={budgetAlert}
-        onResolve={onBudgetAlertResolve}
-        resolving={resolvingBudgetAlertId === budgetAlert?.id}
-        role={role}
-      />
-    </>
+      <div className="application-actions">
+        <button
+          className="button button--primary"
+          disabled={!canActivate || activating || plan.status === "Active"}
+          onClick={() => void onActivate(plan.id)}
+          type="button"
+        >
+          {plan.status === "Active" ? "已启用" : activating ? "启用中" : "启用套餐"}
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    </Panel>
   );
 }
 
