@@ -575,6 +575,27 @@ a {
   font-size: 1rem;
 }
 
+.module-search {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.module-search .search-field {
+  min-width: min(360px, 100%);
+}
+
+.module-search > span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .module-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -612,6 +633,30 @@ a {
 
 .module-card--locked:hover {
   background: rgba(248, 248, 248, 0.7);
+}
+
+.module-empty {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  justify-items: center;
+  min-height: 150px;
+  align-content: center;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.module-empty strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.module-empty p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .module-card__top {
@@ -1667,6 +1712,11 @@ tbody tr.is-selected td:first-child {
   .service-plan,
   .architecture-grid {
     grid-template-columns: 1fr;
+  }
+
+  .module-search {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .module-card,

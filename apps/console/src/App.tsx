@@ -771,6 +771,13 @@ function ConsoleHome({
 }) {
   const businessItems = visibleItems.filter((item) => item.id !== "home");
   const moduleAccessItems = navItems.filter((item) => item.id !== "home");
+  const [moduleQuery, setModuleQuery] = useState("");
+  const normalizedModuleQuery = moduleQuery.trim().toLowerCase();
+  const filteredModuleItems = normalizedModuleQuery
+    ? moduleAccessItems.filter((item) =>
+        [item.name, item.label, item.summary, ...item.tags].join(" ").toLowerCase().includes(normalizedModuleQuery),
+      )
+    : moduleAccessItems;
   const roleLabel = roles.find((item) => item.id === role)?.label || "管理员";
   const liveTodos = hydrateTodos(snapshot) || todos;
   const canResolveTodo = role === "admin" || role === "operator";
@@ -797,8 +804,19 @@ function ConsoleHome({
 
       <section className="home-grid">
         <Panel title="模块入口" eyebrow="Modules" className="home-grid__main">
+          <div className="module-search">
+            <label className="search-field">
+              <Search size={16} />
+              <input
+                onChange={(event) => setModuleQuery(event.target.value)}
+                placeholder="搜索模块、能力或入口"
+                value={moduleQuery}
+              />
+            </label>
+            <span>{filteredModuleItems.length} / {moduleAccessItems.length} modules</span>
+          </div>
           <div className="module-grid">
-            {moduleAccessItems.map((item) => {
+            {filteredModuleItems.map((item) => {
               const allowed = item.roles.includes(role);
               const allowedRoleLabels = item.roles
                 .map((roleId) => roles.find((candidate) => candidate.id === roleId)?.label || roleId)
@@ -841,6 +859,12 @@ function ConsoleHome({
                 </a>
               );
             })}
+            {!filteredModuleItems.length ? (
+              <div className="module-empty">
+                <strong>没有找到模块</strong>
+                <p>换一个关键词，例如 Gateway、Billing、API 或权限。</p>
+              </div>
+            ) : null}
           </div>
         </Panel>
 
