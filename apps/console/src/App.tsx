@@ -43,6 +43,7 @@ import {
   type PlatformSnapshot,
   type SkillBinding,
 } from "./lib/api";
+import { canAccessRoute, visibleNavItems } from "./lib/access";
 import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
 import type {
   ConsoleRoute,
@@ -155,7 +156,7 @@ function App() {
   }, []);
 
   const visibleItems = useMemo(
-    () => navItems.filter((item) => item.roles.includes(role)),
+    () => visibleNavItems(role),
     [role],
   );
 
@@ -203,11 +204,10 @@ function App() {
       return;
     }
 
-    const canAccess = visibleItems.some((item) => item.id === route);
-    if (!canAccess) {
+    if (!canAccessRoute(role, route)) {
       window.location.hash = routeHash.home;
     }
-  }, [role, route, visibleItems]);
+  }, [role, route]);
 
   if (route === "landing") {
     return <LandingPage />;
