@@ -21,6 +21,7 @@ import {
   createUser,
   invokeLLM,
   loadPlatformSnapshot,
+  publishModelRoute,
   publishRoute,
   resolveBudgetAlert,
   resolveTodo,
@@ -92,6 +93,8 @@ function App() {
   const [activatingApplicationId, setActivatingApplicationId] = useState("");
   const [rotatingApplicationId, setRotatingApplicationId] = useState("");
   const [publishingRouteId, setPublishingRouteId] = useState("");
+  const [publishingModelRouteId, setPublishingModelRouteId] = useState("");
+  const [selectedModelRouteId, setSelectedModelRouteId] = useState("");
   const [activatingPlanId, setActivatingPlanId] = useState("");
   const [resolvingBudgetAlertId, setResolvingBudgetAlertId] = useState("");
   const [rotatingCredentialId, setRotatingCredentialId] = useState("");
@@ -327,9 +330,26 @@ function App() {
     try {
       const modelRoute = await createModelRoute(input, role);
       await refreshSnapshot();
+      setSelectedModelRouteId(modelRoute.id);
       setNotice(`已创建模型路由：${modelRoute.alias}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "模型路由创建失败");
+    }
+  }
+
+  async function handleModelRoutePublish(id: string) {
+    setNotice("");
+    setPublishingModelRouteId(id);
+
+    try {
+      const modelRoute = await publishModelRoute(id, role);
+      await refreshSnapshot();
+      setSelectedModelRouteId(modelRoute.id);
+      setNotice(`已发布模型路由：${modelRoute.alias}`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "模型路由发布失败");
+    } finally {
+      setPublishingModelRouteId("");
     }
   }
 
@@ -460,6 +480,7 @@ function App() {
             onApplicationKeyRotate={handleApplicationKeyRotate}
             onCredentialRotate={handleCredentialRotate}
             onModelRouteCreate={handleModelRouteCreate}
+            onModelRoutePublish={handleModelRoutePublish}
             onBudgetAlertResolve={handleBudgetAlertResolve}
             onPlanActivate={handlePlanActivate}
             onRoutePublish={handleRoutePublish}
@@ -470,12 +491,14 @@ function App() {
             activatingUserId={activatingUserId}
             onPrimaryAction={handleModuleAction}
             page={activePage}
+            publishingModelRouteId={publishingModelRouteId}
             publishingRouteId={publishingRouteId}
             resolvingBudgetAlertId={resolvingBudgetAlertId}
             role={role}
             revokingAPIKeyId={revokingAPIKeyId}
             rotatingCredentialId={rotatingCredentialId}
             rotatingApplicationId={rotatingApplicationId}
+            selectedModelRouteId={selectedModelRouteId}
             snapshot={snapshot}
           />
         ) : null}
@@ -757,6 +780,7 @@ function ModulePage({
   onBudgetAlertResolve,
   onCredentialRotate,
   onModelRouteCreate,
+  onModelRoutePublish,
   onPlanActivate,
   onPrimaryAction,
   onRoutePublish,
@@ -766,11 +790,13 @@ function ModulePage({
   activatingUserId,
   activatingPlanId,
   publishingRouteId,
+  publishingModelRouteId,
   resolvingBudgetAlertId,
   revokingAPIKeyId,
   role,
   rotatingCredentialId,
   rotatingApplicationId,
+  selectedModelRouteId,
   snapshot,
 }: {
   activatingApplicationId: string;
@@ -782,6 +808,7 @@ function ModulePage({
   onBudgetAlertResolve: (id: string) => Promise<void>;
   onCredentialRotate: (id: string) => Promise<void>;
   onModelRouteCreate: (input: CreateModelRouteInput) => Promise<void>;
+  onModelRoutePublish: (id: string) => Promise<void>;
   onPlanActivate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   onRoutePublish: (id: string) => Promise<void>;
@@ -789,12 +816,14 @@ function ModulePage({
   onUserActivate: (id: string) => Promise<void>;
   activatingPlanId: string;
   page: ModulePageDefinition;
+  publishingModelRouteId: string;
   publishingRouteId: string;
   resolvingBudgetAlertId: string;
   revokingAPIKeyId: string;
   role: RoleId;
   rotatingCredentialId: string;
   rotatingApplicationId: string;
+  selectedModelRouteId: string;
   snapshot?: PlatformSnapshot;
 }) {
   const [query, setQuery] = useState("");
@@ -853,10 +882,12 @@ function ModulePage({
     }
 
     return (
+      snapshot.modelRoutes.find((route) => route.id === selectedModelRouteId) ||
+      snapshot.modelRoutes.find((route) => route.status === "Draft") ||
       snapshot.modelRoutes.find((route) => route.alias === "chat-default") ||
       snapshot.modelRoutes[0]
     );
-  }, [page.id, snapshot?.modelRoutes]);
+  }, [page.id, selectedModelRouteId, snapshot?.modelRoutes]);
 
   const selectedSkill = useMemo(() => {
     if (page.id !== "gateway" || !snapshot?.skills?.length) {
@@ -1027,6 +1058,8 @@ function ModulePage({
             <ModelRoutePanel
               modelRoute={selectedModelRoute}
               onCreate={onModelRouteCreate}
+              onPublish={onModelRoutePublish}
+              publishing={publishingModelRouteId === selectedModelRoute?.id}
               role={role}
             />
           ) : null}
@@ -1342,10 +1375,14 @@ function GatewayRoutePanel({
 function ModelRoutePanel({
   modelRoute,
   onCreate,
+  onPublish,
+  publishing,
   role,
 }: {
   modelRoute?: ModelRoute;
   onCreate: (input: CreateModelRouteInput) => Promise<void>;
+  onPublish: (id: string) => Promise<void>;
+  publishing: boolean;
   role: RoleId;
 }) {
   const [alias, setAlias] = useState("agent-default");
@@ -1396,6 +1433,18 @@ function ModelRoutePanel({
               <p>失败切换目标</p>
               <StatusDot tone="watch" />
             </article>
+          </div>
+
+          <div className="application-actions">
+            <button
+              className="button button--primary"
+              disabled={publishing || modelRoute.status === "Active" || role === "operator"}
+              onClick={() => void onPublish(modelRoute.id)}
+              type="button"
+            >
+              {modelRoute.status === "Active" ? "已发布" : publishing ? "发布中" : "发布模型路由"}
+              <ChevronRight size={16} />
+            </button>
           </div>
         </>
       ) : (

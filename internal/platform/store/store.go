@@ -536,6 +536,31 @@ func (s *Store) CreateModelRoute(alias, scenario, primary, fallback string) Mode
 	return route
 }
 
+func (s *Store) PublishModelRoute(id string) (ModelRoute, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.modelRoutes {
+		if s.modelRoutes[index].ID != id {
+			continue
+		}
+
+		s.modelRoutes[index].Status = "Active"
+		s.modelRoutes[index].UpdatedAt = nowLabel()
+		s.requestLogs = append([]RequestLog{{
+			ID:        nextID("req"),
+			Request:   "PUBLISH model:" + s.modelRoutes[index].Alias,
+			Consumer:  s.modelRoutes[index].Scenario,
+			Latency:   "34ms",
+			Result:    "200",
+			Status:    "Success",
+			CreatedAt: nowLabel(),
+		}}, s.requestLogs...)
+		s.addAuditLocked("网关与模型", "publish model route", s.modelRoutes[index].Alias, "Success")
+		return s.modelRoutes[index], true
+	}
+	return ModelRoute{}, false
+}
+
 func (s *Store) ListSkills() []SkillBinding {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

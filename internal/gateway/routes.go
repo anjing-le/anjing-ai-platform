@@ -30,6 +30,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/gateway/routes", routesHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/routes/publish", publishRouteHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/model-routes", modelRoutesHandler(repos.ModelRoutes))
+	mux.HandleFunc("/api/gateway/model-routes/publish", publishModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/skills", skillsHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/request-logs", requestLogsHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/llm/invoke", llmInvokeHandler(repos.ModelRoutes))
@@ -168,6 +169,40 @@ func modelRoutesHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {
 		default:
 			httpjson.MethodNotAllowed(w)
 		}
+	}
+}
+
+func publishModelRouteHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {
+	type publishModelRouteRequest struct {
+		ID string `json:"id"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req publishModelRouteRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+
+		route, ok, err := modelRoutes.PublishModelRoute(r.Context(), req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "model route not found")
+			return
+		}
+
+		httpjson.OK(w, route)
 	}
 }
 

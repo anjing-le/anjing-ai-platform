@@ -370,6 +370,13 @@ export function createModelRoute(input: CreateModelRouteInput, role?: RoleId): P
   }, role);
 }
 
+export function publishModelRoute(id: string, role?: RoleId): Promise<ModelRoute> {
+  return requestJson<ModelRoute>("/api/gateway/model-routes/publish", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
+}
+
 export function createSkillBinding(input: CreateSkillBindingInput, role?: RoleId): Promise<SkillBinding> {
   return requestJson<SkillBinding>("/api/gateway/skills", {
     method: "POST",

@@ -39,6 +39,7 @@ type RouteRepository interface {
 type ModelRouteRepository interface {
 	ListModelRoutes(ctx context.Context) ([]store.ModelRoute, error)
 	CreateModelRoute(ctx context.Context, input CreateModelRouteInput) (store.ModelRoute, error)
+	PublishModelRoute(ctx context.Context, id string) (store.ModelRoute, bool, error)
 }
 
 type SkillRepository interface {
@@ -101,6 +102,11 @@ func (repo MemoryModelRouteRepository) ListModelRoutes(context.Context) ([]store
 
 func (repo MemoryModelRouteRepository) CreateModelRoute(_ context.Context, input CreateModelRouteInput) (store.ModelRoute, error) {
 	return repo.store.CreateModelRoute(input.Alias, input.Scenario, input.Primary, input.Fallback), nil
+}
+
+func (repo MemoryModelRouteRepository) PublishModelRoute(_ context.Context, id string) (store.ModelRoute, bool, error) {
+	route, ok := repo.store.PublishModelRoute(id)
+	return route, ok, nil
 }
 
 type MemorySkillRepository struct {
@@ -252,6 +258,29 @@ func (repo PostgresModelRouteRepository) CreateModelRoute(ctx context.Context, i
 
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil
+}
+
+func (repo PostgresModelRouteRepository) PublishModelRoute(ctx context.Context, id string) (store.ModelRoute, bool, error) {
+	rows, err := repo.pool.Query(ctx, `
+		update model_routes
+		set status = 'Active', updated_at = now()
+		where id = $1
+		returning id, alias, scenario, primary_model, fallback_model, status, updated_at
+	`, id)
+	if err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("publish model route: %w", err)
+	}
+	defer rows.Close()
+
+	route, err := pgx.CollectOneRow(rows, scanModelRoute)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.ModelRoute{}, false, nil
+		}
+		return store.ModelRoute{}, false, fmt.Errorf("collect published model route: %w", err)
+	}
+
+	return route, true, nil
 }
 
 func scanModelRoute(row pgx.CollectableRow) (store.ModelRoute, error) {
