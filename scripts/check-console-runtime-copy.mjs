@@ -16,6 +16,10 @@ if (!appSource.includes("刷新平台数据") || !appSource.includes("RefreshCw"
   errors.push("Console topbar must expose a manual platform data refresh action.");
 }
 
+if (!appSource.includes("window.setTimeout") || !appSource.includes("setNotice(\"\")")) {
+  errors.push("Console notices must clear automatically after a short delay.");
+}
+
 for (const port of ["1820", "1821", "1822", "1823"]) {
   if (!dataSource.includes(`http://localhost:${port}/healthz`)) {
     errors.push(`Console backend plan must show http://localhost:${port}/healthz.`);
