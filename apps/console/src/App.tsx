@@ -98,6 +98,7 @@ function App() {
   const [publishingSkillId, setPublishingSkillId] = useState("");
   const [selectedModelRouteId, setSelectedModelRouteId] = useState("");
   const [selectedSkillId, setSelectedSkillId] = useState("");
+  const [selectedPlanId, setSelectedPlanId] = useState("");
   const [activatingPlanId, setActivatingPlanId] = useState("");
   const [resolvingBudgetAlertId, setResolvingBudgetAlertId] = useState("");
   const [rotatingCredentialId, setRotatingCredentialId] = useState("");
@@ -233,7 +234,7 @@ function App() {
       }
 
       if (actionMode === "quota") {
-        await createPlan(
+        const plan = await createPlan(
           {
             name: values.name,
             rps: values.rps,
@@ -241,7 +242,8 @@ function App() {
           },
           role,
         );
-        setNotice(`已创建套餐：${values.name}`);
+        setSelectedPlanId(plan.id);
+        setNotice(`已创建套餐：${plan.name}`);
       }
 
       if (actionMode === "docs") {
@@ -418,6 +420,7 @@ function App() {
     try {
       const plan = await activatePlan(id, role);
       await refreshSnapshot();
+      setSelectedPlanId(plan.id);
       setNotice(`已启用套餐：${plan.name}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "套餐启用失败");
@@ -522,6 +525,7 @@ function App() {
             rotatingCredentialId={rotatingCredentialId}
             rotatingApplicationId={rotatingApplicationId}
             selectedModelRouteId={selectedModelRouteId}
+            selectedPlanId={selectedPlanId}
             selectedSkillId={selectedSkillId}
             snapshot={snapshot}
           />
@@ -824,6 +828,7 @@ function ModulePage({
   rotatingCredentialId,
   rotatingApplicationId,
   selectedModelRouteId,
+  selectedPlanId,
   selectedSkillId,
   snapshot,
 }: {
@@ -855,6 +860,7 @@ function ModulePage({
   rotatingCredentialId: string;
   rotatingApplicationId: string;
   selectedModelRouteId: string;
+  selectedPlanId: string;
   selectedSkillId: string;
   snapshot?: PlatformSnapshot;
 }) {
@@ -939,8 +945,13 @@ function ModulePage({
       return undefined;
     }
 
-    return snapshot.plans.find((plan) => plan.id === selectedRowId) || snapshot.plans[0];
-  }, [page.id, selectedRowId, snapshot?.plans]);
+    return (
+      snapshot.plans.find((plan) => plan.id === selectedPlanId) ||
+      snapshot.plans.find((plan) => plan.id === selectedRowId) ||
+      snapshot.plans.find((plan) => plan.status === "Draft") ||
+      snapshot.plans[0]
+    );
+  }, [page.id, selectedPlanId, selectedRowId, snapshot?.plans]);
 
   const selectedBudgetAlert = useMemo(() => {
     if (page.id !== "quota" || !snapshot?.budgetAlerts?.length) {
