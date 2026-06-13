@@ -129,6 +129,8 @@ go run ./cmd/platform-all
 pnpm image:up
 ```
 
+`image:up` 会先运行 `/app/migrate-db` 和 `/app/seed-db`，再启动 `platform-all`。
+
 默认访问：
 
 ```text

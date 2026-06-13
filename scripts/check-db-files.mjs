@@ -71,14 +71,23 @@ function checkMigrationDirConfig() {
   if (!configSource.includes('"infra/postgres/migrations"')) {
     errors.push("internal/platform/config/config.go must default ANJING_MIGRATIONS_DIR to infra/postgres/migrations.");
   }
+  if (!configSource.includes('"infra/postgres/seeds"')) {
+    errors.push("internal/platform/config/config.go must default ANJING_SEEDS_DIR to infra/postgres/seeds.");
+  }
 
   const composeSource = readFileSync("infra/local/docker-compose.image.yml", "utf8");
   if (!composeSource.includes("ANJING_MIGRATIONS_DIR: /app/infra/postgres/migrations")) {
     errors.push("infra/local/docker-compose.image.yml must mount /app/infra/postgres/migrations for migrate command.");
   }
+  if (!composeSource.includes("ANJING_SEEDS_DIR: /app/infra/postgres/seeds")) {
+    errors.push("infra/local/docker-compose.image.yml must mount /app/infra/postgres/seeds for seed command.");
+  }
+  if (!composeSource.includes('command: ["/app/seed-db"]')) {
+    errors.push("infra/local/docker-compose.image.yml must run /app/seed-db before platform starts.");
+  }
 
   const packageSource = readFileSync("package.json", "utf8");
-  if (!packageSource.includes("infra/postgres/seeds/*.sql")) {
-    errors.push("package.json db:seed must execute infra/postgres/seeds/*.sql.");
+  if (!packageSource.includes("go run ./cmd/seed-db")) {
+    errors.push("package.json db:seed must run ./cmd/seed-db.");
   }
 }

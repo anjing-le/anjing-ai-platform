@@ -221,6 +221,7 @@ scripts/check-dockerfile-paths.mjs
 
 - Dockerfile 中本地 `COPY` 源路径必须真实存在。
 - 多阶段构建里的 `COPY --from=...` 不作为本地路径检查。
+- 镜像必须构建并复制 `migrate-db`、`seed-db`，同时复制 PostgreSQL migrations 和 seeds 目录。
 - 重构目录时，镜像构建入口不会静默引用不存在的路径。
 
 ## Gate 12：数据库文件一致性
@@ -241,7 +242,7 @@ scripts/check-db-files.mjs
 
 - `infra/postgres/migrations` 和 `infra/postgres/seeds` 下的 SQL 文件必须使用连续三位编号和 snake_case 文件名。
 - seed 文件 `INSERT INTO` 的表必须由 migration 文件创建。
-- Go 默认 migrations 目录、单镜像 compose migrations 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
+- Go 默认 migrations / seeds 目录、单镜像 compose 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
 
 ## Gate 13：Go 格式
 

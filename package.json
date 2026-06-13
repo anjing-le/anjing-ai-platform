@@ -9,7 +9,7 @@
     "db:logs": "docker compose -f infra/local/docker-compose.yml logs -f postgres",
     "db:psql": "docker compose -f infra/local/docker-compose.yml exec postgres psql -U anjing -d anjing_ai_platform",
     "db:migrate": "ANJING_DATABASE_URL='postgres://anjing:anjing@localhost:54329/anjing_ai_platform?sslmode=disable' go run ./cmd/migrate-db",
-    "db:seed": "for f in infra/postgres/seeds/*.sql; do docker compose -f infra/local/docker-compose.yml exec -T postgres psql -U anjing -d anjing_ai_platform < \"$f\"; done",
+    "db:seed": "ANJING_DATABASE_URL='postgres://anjing:anjing@localhost:54329/anjing_ai_platform?sslmode=disable' go run ./cmd/seed-db",
     "dev:console": "pnpm --filter @anjing-ai-platform/console dev",
     "build:console": "pnpm --filter @anjing-ai-platform/console build",
     "preview:console": "pnpm --filter @anjing-ai-platform/console preview",

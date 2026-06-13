@@ -11,6 +11,7 @@ type Config struct {
 	StaticDir     string
 	DatabaseURL   string
 	MigrationsDir string
+	SeedsDir      string
 }
 
 func Load(serviceName, defaultPort string) Config {
@@ -20,6 +21,7 @@ func Load(serviceName, defaultPort string) Config {
 		StaticDir:     env("ANJING_CONSOLE_DIST", "apps/console/dist"),
 		DatabaseURL:   env("ANJING_DATABASE_URL", ""),
 		MigrationsDir: env("ANJING_MIGRATIONS_DIR", "infra/postgres/migrations"),
+		SeedsDir:      env("ANJING_SEEDS_DIR", "infra/postgres/seeds"),
 	}
 }
 

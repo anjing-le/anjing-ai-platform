@@ -22,6 +22,7 @@ COPY cmd cmd
 COPY internal internal
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/platform-all ./cmd/platform-all
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/migrate-db ./cmd/migrate-db
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/seed-db ./cmd/seed-db
 
 FROM alpine:3.20
 
@@ -31,12 +32,15 @@ WORKDIR /app
 
 COPY --from=go-builder /out/platform-all /app/platform-all
 COPY --from=go-builder /out/migrate-db /app/migrate-db
+COPY --from=go-builder /out/seed-db /app/seed-db
 COPY --from=console-builder /src/apps/console/dist /app/apps/console/dist
 COPY infra/postgres/migrations /app/infra/postgres/migrations
+COPY infra/postgres/seeds /app/infra/postgres/seeds
 
 ENV ANJING_ADDR=:18080
 ENV ANJING_CONSOLE_DIST=/app/apps/console/dist
 ENV ANJING_MIGRATIONS_DIR=/app/infra/postgres/migrations
+ENV ANJING_SEEDS_DIR=/app/infra/postgres/seeds
 
 EXPOSE 18080
 

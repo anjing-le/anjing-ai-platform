@@ -37,4 +37,24 @@ if (missing.length) {
   process.exit(1);
 }
 
+const requiredSnippets = [
+  "go build -o /out/migrate-db ./cmd/migrate-db",
+  "go build -o /out/seed-db ./cmd/seed-db",
+  "COPY --from=go-builder /out/migrate-db /app/migrate-db",
+  "COPY --from=go-builder /out/seed-db /app/seed-db",
+  "COPY infra/postgres/migrations /app/infra/postgres/migrations",
+  "COPY infra/postgres/seeds /app/infra/postgres/seeds",
+  "ENV ANJING_MIGRATIONS_DIR=/app/infra/postgres/migrations",
+  "ENV ANJING_SEEDS_DIR=/app/infra/postgres/seeds",
+];
+
+const missingSnippets = requiredSnippets.filter((snippet) => !source.includes(snippet));
+if (missingSnippets.length) {
+  console.error("Dockerfile is missing required database runtime wiring.");
+  for (const snippet of missingSnippets) {
+    console.error(`- ${snippet}`);
+  }
+  process.exit(1);
+}
+
 console.log("Dockerfile local COPY sources exist.");

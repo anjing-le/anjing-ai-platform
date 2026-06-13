@@ -29,6 +29,19 @@ services:
       postgres:
         condition: service_healthy
 
+  seed:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: anjing-ai-platform:local
+    command: ["/app/seed-db"]
+    environment:
+      ANJING_DATABASE_URL: postgres://anjing:anjing@postgres:5432/anjing_ai_platform?sslmode=disable
+      ANJING_SEEDS_DIR: /app/infra/postgres/seeds
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   platform:
     build:
       context: ../..
@@ -44,6 +57,8 @@ services:
       postgres:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      seed:
         condition: service_completed_successfully
 
 volumes:
