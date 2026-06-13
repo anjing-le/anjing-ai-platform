@@ -570,6 +570,11 @@ a {
   border-bottom: 1px solid var(--line);
 }
 
+.module-card--locked {
+  color: var(--muted);
+  background: rgba(248, 248, 248, 0.7);
+}
+
 .module-card:nth-child(2n) {
   border-right: 0;
 }
@@ -585,6 +590,10 @@ a {
   outline: none;
 }
 
+.module-card--locked:hover {
+  background: rgba(248, 248, 248, 0.7);
+}
+
 .module-card__top {
   display: flex;
   align-items: center;
@@ -593,6 +602,23 @@ a {
 
 .module-card strong {
   font-size: 1.18rem;
+}
+
+.module-card__meta {
+  display: flex;
+  min-height: 26px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.module-card__meta small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: right;
 }
 
 .chip-row {

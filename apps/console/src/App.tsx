@@ -719,6 +719,7 @@ function ConsoleHome({
   visibleItems: NavItem[];
 }) {
   const businessItems = visibleItems.filter((item) => item.id !== "home");
+  const moduleAccessItems = navItems.filter((item) => item.id !== "home");
   const roleLabel = roles.find((item) => item.id === role)?.label || "管理员";
   const liveTodos = hydrateTodos(snapshot) || todos;
   const canResolveTodo = role === "admin" || role === "operator";
@@ -746,21 +747,49 @@ function ConsoleHome({
       <section className="home-grid">
         <Panel title="模块入口" eyebrow="Modules" className="home-grid__main">
           <div className="module-grid">
-            {businessItems.map((item) => (
-              <a className="module-card" href={routeHash[item.id]} key={item.id}>
-                <div className="module-card__top">
-                  <item.icon size={21} />
-                  <span>{item.name}</span>
-                </div>
-                <strong>{item.label}</strong>
-                <p>{item.summary}</p>
-                <div className="chip-row">
-                  {item.tags.map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
-                </div>
-              </a>
-            ))}
+            {moduleAccessItems.map((item) => {
+              const allowed = item.roles.includes(role);
+              const allowedRoleLabels = item.roles
+                .map((roleId) => roles.find((candidate) => candidate.id === roleId)?.label || roleId)
+                .join(" / ");
+              const moduleCard = (
+                <>
+                  <div className="module-card__top">
+                    <item.icon size={21} />
+                    <span>{item.name}</span>
+                  </div>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <p>{item.summary}</p>
+                  </div>
+                  <div className="module-card__meta">
+                    <StatusBadge tone={allowed ? "good" : "neutral"}>
+                      {allowed ? "可进入" : "当前角色不可见"}
+                    </StatusBadge>
+                    <small>{allowedRoleLabels}</small>
+                  </div>
+                  <div className="chip-row">
+                    {item.tags.map((tag) => (
+                      <span key={tag}>{tag}</span>
+                    ))}
+                  </div>
+                </>
+              );
+
+              if (!allowed) {
+                return (
+                  <article aria-disabled="true" className="module-card module-card--locked" key={item.id}>
+                    {moduleCard}
+                  </article>
+                );
+              }
+
+              return (
+                <a className="module-card" href={routeHash[item.id]} key={item.id}>
+                  {moduleCard}
+                </a>
+              );
+            })}
           </div>
         </Panel>
 
