@@ -285,6 +285,7 @@ scripts/check-db-files.mjs
 - seed 文件 `INSERT INTO` 的表必须由 migration 文件创建。
 - Go repository SQL 中 `from`、`insert into`、`update` 引用的表必须由 migration 文件创建。
 - Postgres 用户邀请和激活必须同步 `ops_todos` 和 `audit_events`，保持真实数据库模式的运营闭环。
+- Postgres 应用创建、激活和 Key 轮换必须同步 API Key、运营待办、请求日志与审计事件，保证后台总览能看到完整接入链路。
 - Go 默认 migrations / seeds 目录、单镜像 compose 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
 
 ## Gate 15：Go 格式

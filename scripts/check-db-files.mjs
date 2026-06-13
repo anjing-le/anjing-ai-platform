@@ -13,6 +13,7 @@ checkSequence("seed", seeds);
 checkSeedTables(migrations, seeds);
 checkRepositoryTables(migrations);
 checkControlUserSideEffects();
+checkControlApplicationSideEffects();
 checkMigrationDirConfig();
 
 if (errors.length > 0) {
@@ -130,6 +131,32 @@ function checkControlUserSideEffects() {
     if (!body.includes("audit_events")) {
       errors.push(`${label} must write audit events.`);
     }
+  }
+}
+
+function checkControlApplicationSideEffects() {
+  const source = readFileSync("internal/control/repository.go", "utf8");
+  const createApplication = functionBody(source, "func (repo PostgresApplicationRepository) CreateApplication");
+  const activateApplication = functionBody(source, "func (repo PostgresApplicationRepository) ActivateApplication");
+  const rotateApplicationKey = functionBody(source, "func (repo PostgresApplicationRepository) RotateApplicationKey");
+
+  for (const [label, body] of [
+    ["PostgresApplicationRepository.CreateApplication", createApplication],
+    ["PostgresApplicationRepository.ActivateApplication", activateApplication],
+  ]) {
+    if (!body.includes("ops_todos")) {
+      errors.push(`${label} must keep application onboarding todos in sync.`);
+    }
+    if (!body.includes("audit_events")) {
+      errors.push(`${label} must write audit events.`);
+    }
+  }
+
+  if (!activateApplication.includes("request_logs")) {
+    errors.push("PostgresApplicationRepository.ActivateApplication must write a first request log.");
+  }
+  if (!rotateApplicationKey.includes("audit_events")) {
+    errors.push("PostgresApplicationRepository.RotateApplicationKey must write an audit event.");
   }
 }
 

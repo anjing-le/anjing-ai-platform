@@ -363,9 +363,23 @@ func (repo PostgresApplicationRepository) CreateApplication(ctx context.Context,
 		insert into api_keys(id, name, project, scope, status)
 		values($1, $2, $3, $4, $5)
 		on conflict (id) do nothing
-	`, fmt.Sprintf("key_%d", time.Now().UnixNano()), app.APIKey, app.Name, "llm:chat skill:invoke", app.Status)
+	`, nextID("key"), app.APIKey, app.Name, "llm:chat skill:invoke", app.Status)
 	if err != nil {
 		return store.Application{}, fmt.Errorf("insert application api key: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into ops_todos(id, title, source, owner, status)
+		values($1, $2, $3, $4, $5)
+	`, nextID("todo"), app.Name+" 完成接入校验", "帮助文档", app.Owner, "Pending"); err != nil {
+		return store.Application{}, fmt.Errorf("insert application onboarding todo: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "帮助文档", "create application", app.Name, "Success", nextID("req")); err != nil {
+		return store.Application{}, fmt.Errorf("insert application create audit: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -409,6 +423,28 @@ func (repo PostgresApplicationRepository) ActivateApplication(ctx context.Contex
 	`, app.Name, app.APIKey)
 	if err != nil {
 		return store.Application{}, false, fmt.Errorf("activate application api key: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		update ops_todos
+		set status = 'Resolved', updated_at = now()
+		where title = $1
+	`, app.Name+" 完成接入校验"); err != nil {
+		return store.Application{}, false, fmt.Errorf("resolve application onboarding todo: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "POST "+app.DefaultRoute, app.Name, "64ms", "200", "Success"); err != nil {
+		return store.Application{}, false, fmt.Errorf("insert application activation request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "帮助文档", "activate application", app.Name, "Success", nextID("req")); err != nil {
+		return store.Application{}, false, fmt.Errorf("insert application activation audit: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -475,9 +511,16 @@ func (repo PostgresApplicationRepository) RotateApplicationKey(ctx context.Conte
 	_, err = tx.Exec(ctx, `
 		insert into api_keys(id, name, project, scope, status)
 		values($1, $2, $3, $4, $5)
-	`, fmt.Sprintf("key_%d", time.Now().UnixNano()), app.APIKey, app.Name, "llm:chat skill:invoke", "Active")
+	`, nextID("key"), app.APIKey, app.Name, "llm:chat skill:invoke", "Active")
 	if err != nil {
 		return store.Application{}, false, fmt.Errorf("insert rotated application api key: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "用户与权限", "rotate api key", app.Name, "Success", nextID("req")); err != nil {
+		return store.Application{}, false, fmt.Errorf("insert application key rotation audit: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {

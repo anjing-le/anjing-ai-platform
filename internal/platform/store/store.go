@@ -384,6 +384,12 @@ func (s *Store) ActivateApplication(id string) (Application, bool) {
 
 		s.applications[index].Status = "Active"
 		s.addAuditLocked("帮助文档", "activate application", s.applications[index].Name, "Success")
+		for todoIndex := range s.todos {
+			if s.todos[todoIndex].Title == s.applications[index].Name+" 完成接入校验" {
+				s.todos[todoIndex].Status = "Resolved"
+				s.todos[todoIndex].UpdatedAt = nowLabel()
+			}
+		}
 		for keyIndex := range s.apiKeys {
 			if s.apiKeys[keyIndex].Project == s.applications[index].Name ||
 				s.apiKeys[keyIndex].Name == s.applications[index].APIKey {
