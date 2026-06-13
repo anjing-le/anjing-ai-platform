@@ -144,7 +144,27 @@ scripts/check-console-api-client.mjs
 - 后台按钮、列表刷新和 Live API 接入不能绕过合约。
 - 新增前端 API 调用时，必须同步补充 `contracts/openapi/platform-api.yaml`。
 
-## Gate 8：Command 运行时约束
+## Gate 8：前端运行文案
+
+命令：
+
+```bash
+pnpm verify:console-copy
+```
+
+脚本：
+
+```text
+scripts/check-console-runtime-copy.mjs
+```
+
+保护内容：
+
+- 后台首页的主运行命令必须展示 `pnpm dev:api`。
+- 单服务规划中的健康检查地址必须展示真实的 `http://localhost:182x/healthz`。
+- 不能把不存在的 `/api/*/healthz` 当成服务健康地址展示。
+
+## Gate 9：平台快照合约
 
 命令：
 
@@ -164,7 +184,7 @@ scripts/check-platform-snapshot-contract.mjs
 - OpenAPI `PlatformSnapshot.required` 和 `properties` 必须一致。
 - 后台首页聚合快照不能在 Go、合约和前端类型之间漂移。
 
-## Gate 9：Command 运行时约束
+## Gate 10：Command 运行时约束
 
 命令：
 
@@ -184,7 +204,7 @@ scripts/check-command-runtime.mjs
 - Go command 不允许用 `panic` 处理运行时启动错误。
 - `migrate-db` 和 `seed-db` 保持一次性 command，使用结构化日志和显式退出码。
 
-## Gate 10：角色 Seed 可见性
+## Gate 11：角色 Seed 可见性
 
 命令：
 
@@ -204,7 +224,7 @@ scripts/check-role-policy-seeds.mjs
 - PostgreSQL seed `infra/postgres/seeds/006_demo_role_policies.sql` 的 `visible_entries` 必须匹配前端 `navItems`。
 - 运维、开发、使用用户的后台入口展示不能在 Mock / 内存 / PostgreSQL 三种模式下漂移。
 
-## Gate 11：文档本地引用
+## Gate 12：文档本地引用
 
 命令：
 
@@ -224,7 +244,7 @@ scripts/check-doc-links.mjs
 - 当前检查 `apps/`、`cmd/`、`contracts/`、`docs/`、`frontend/`、`infra/`、`internal/`、`scripts/` 和常见根文件。
 - `/api/*`、URL、绝对本机路径和未启用的 `.github` workflow 路径不会作为本地文件检查。
 
-## Gate 12：Compose 配置
+## Gate 13：Compose 配置
 
 命令：
 
@@ -244,7 +264,7 @@ scripts/check-compose.sh
 - `infra/local/docker-compose.image.yml` 必须能通过 `docker compose config`。
 - 本地 PostgreSQL 和单镜像预览的编排配置不能因为字段错误或路径错误而失效。
 
-## Gate 13：Dockerfile 路径
+## Gate 14：Dockerfile 路径
 
 命令：
 
@@ -265,7 +285,7 @@ scripts/check-dockerfile-paths.mjs
 - 镜像必须构建并复制 `migrate-db`、`seed-db`，同时复制 PostgreSQL migrations 和 seeds 目录。
 - 重构目录时，镜像构建入口不会静默引用不存在的路径。
 
-## Gate 14：数据库文件一致性
+## Gate 15：数据库文件一致性
 
 命令：
 
@@ -291,7 +311,7 @@ scripts/check-db-files.mjs
 - Postgres 运营待办解决必须写入审计事件，保证后台首页的待办状态和审计流一致。
 - Go 默认 migrations / seeds 目录、单镜像 compose 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
 
-## Gate 15：本地开发入口
+## Gate 16：本地开发入口
 
 命令：
 
@@ -313,7 +333,7 @@ scripts/check-local-dev-scripts.mjs
 - `smoke:api:db` 必须预检 Docker daemon，准备 PostgreSQL，再用真实数据库模式复用 platform API smoke。
 - `apps/console` 必须保留 Vite `/api` 代理、`VITE_API_BASE_URL` client 配置和 `.env.example`，保证控制台可以稳定连接本地或独立部署的 Go API。
 
-## Gate 16：Platform API Smoke
+## Gate 17：Platform API Smoke
 
 命令：
 
@@ -334,7 +354,7 @@ scripts/smoke-platform-api.mjs
 - `/api/ops/platform-snapshot` 必须返回可供控制台首页使用的聚合快照。
 - 当设置 `ANJING_SMOKE_DATABASE_URL` 时，必须验证 PostgreSQL seed 中的核心用户和应用已经进入聚合快照。
 
-## Gate 17：Go 格式
+## Gate 18：Go 格式
 
 命令：
 
@@ -354,7 +374,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 18：Go Vet
+## Gate 19：Go Vet
 
 命令：
 
@@ -373,7 +393,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 19：Go Command 构建
+## Gate 20：Go Command 构建
 
 命令：
 
@@ -387,7 +407,7 @@ pnpm verify:go-build
 - Dockerfile 中构建的交付入口必须先在本地门禁中被编译验证。
 - 新增 command 时，不能只通过包测试而遗漏真实可执行入口构建。
 
-## Gate 20：Go 测试
+## Gate 21：Go 测试
 
 命令：
 

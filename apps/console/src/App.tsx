@@ -950,7 +950,7 @@ function ConsoleHome({
             <span>Dev Runtime</span>
             <strong>platform-all</strong>
             <p>本地一键启动完整控制台和 V1 API。</p>
-            <code>go run ./cmd/platform-all</code>
+            <code>pnpm dev:api</code>
           </div>
           <div className="service-plan">
             {backendPlan.map((item) => (

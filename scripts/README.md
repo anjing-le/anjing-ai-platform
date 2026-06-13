@@ -10,6 +10,7 @@
 | `scripts/check-openapi-metadata.mjs` | `pnpm verify:openapi-meta` | 检查 OpenAPI operationId、summary、角色、错误响应、POST requestBody 和相邻重复 YAML key。 |
 | `scripts/check-service-boundaries.mjs` | `pnpm verify:boundaries` | 比对前端 `consoleServiceMap` 与 OpenAPI `x-anjing-service-boundaries`，并确认 API 分组存在于 OpenAPI `paths`。 |
 | `scripts/check-console-api-client.mjs` | `pnpm verify:console-api` | 检查前端 API client 中的 `/api/*` 路径是否都已写入 OpenAPI。 |
+| `scripts/check-console-runtime-copy.mjs` | `pnpm verify:console-copy` | 检查后台首页展示的本地运行命令和服务健康地址是否与真实命令一致。 |
 | `scripts/check-platform-snapshot-contract.mjs` | `pnpm verify:snapshot` | 检查 Go、OpenAPI 和前端 TypeScript 的 `PlatformSnapshot` 字段一致。 |
 | `scripts/check-command-runtime.mjs` | `pnpm verify:commands` | 检查 Go command 使用结构化日志启动，不使用 `panic` 作为运行时错误处理。 |
 | `scripts/check-role-policy-seeds.mjs` | `pnpm verify:role-seeds` | 检查内存 seed 和 PostgreSQL role policies seed 的可见入口是否匹配前端导航角色规则。 |
