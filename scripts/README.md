@@ -8,6 +8,7 @@
 | `apps/console/src/**/*.test.ts` | `pnpm test:console` | 验证前端快照 hydration、模块表格和状态 tone 映射。 |
 | `scripts/check-openapi-routes.sh` | `pnpm verify:openapi` | 比对 Go `mux.HandleFunc` 注册路径与 OpenAPI `paths`，防止接口和合约漂移。 |
 | `scripts/check-service-boundaries.mjs` | `pnpm verify:boundaries` | 比对前端 `consoleServiceMap` 与 OpenAPI `x-anjing-service-boundaries`，并确认 API 分组存在于 OpenAPI `paths`。 |
+| `scripts/check-console-api-client.mjs` | `pnpm verify:console-api` | 检查前端 API client 中的 `/api/*` 路径是否都已写入 OpenAPI。 |
 | `scripts/check-doc-links.mjs` | `pnpm verify:docs` | 检查 README 和 `docs/` 中明显指向仓库内的路径是否真实存在。 |
 | `scripts/check-compose.sh` | `pnpm verify:compose` | 校验本地 PostgreSQL 和单镜像预览 compose 文件可以通过 `docker compose config`。 |
 | `scripts/check-dockerfile-paths.mjs` | `pnpm verify:dockerfile` | 检查 Dockerfile 本地 `COPY` 源路径是否真实存在。 |

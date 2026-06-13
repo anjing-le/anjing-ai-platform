@@ -22,12 +22,13 @@
     "image:logs": "docker compose -f infra/local/docker-compose.image.yml logs -f platform",
     "verify:workspace": "node scripts/check-workspace.mjs",
     "verify:boundaries": "node scripts/check-service-boundaries.mjs",
+    "verify:console-api": "node scripts/check-console-api-client.mjs",
     "verify:compose": "bash scripts/check-compose.sh",
     "verify:docs": "node scripts/check-doc-links.mjs",
     "verify:dockerfile": "node scripts/check-dockerfile-paths.mjs",
     "verify:gofmt": "bash scripts/check-gofmt.sh",
     "verify:govet": "bash scripts/check-govet.sh",
     "verify:openapi": "bash scripts/check-openapi-routes.sh",
-    "verify": "pnpm verify:workspace && pnpm build:console && pnpm test:console && pnpm verify:openapi && pnpm verify:boundaries && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:gofmt && pnpm verify:govet && go test ./..."
+    "verify": "pnpm verify:workspace && pnpm build:console && pnpm test:console && pnpm verify:openapi && pnpm verify:boundaries && pnpm verify:console-api && pnpm verify:docs && pnpm verify:compose && pnpm verify:dockerfile && pnpm verify:gofmt && pnpm verify:govet && go test ./..."
   }
 }

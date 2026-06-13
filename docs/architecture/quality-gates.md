@@ -103,7 +103,27 @@ scripts/check-service-boundaries.mjs
 - 边界中列出的 API 分组必须存在于 OpenAPI `paths`，`/` 和 `/api/*` 作为帮助文档入口的虚拟分组保留。
 - 当前受保护的入口包括 `operations`、`access`、`gateway`、`billing` 和 `docs`。
 
-## Gate 6：文档本地引用
+## Gate 6：前端 API Client 覆盖
+
+命令：
+
+```bash
+pnpm verify:console-api
+```
+
+脚本：
+
+```text
+scripts/check-console-api-client.mjs
+```
+
+保护内容：
+
+- 前端 `apps/console/src/lib/api.ts` 中直接调用的 `/api/*` 路径必须存在于 OpenAPI `paths`。
+- 后台按钮、列表刷新和 Live API 接入不能绕过合约。
+- 新增前端 API 调用时，必须同步补充 `contracts/openapi/platform-api.yaml`。
+
+## Gate 7：文档本地引用
 
 命令：
 
@@ -123,7 +143,7 @@ scripts/check-doc-links.mjs
 - 当前检查 `apps/`、`cmd/`、`contracts/`、`docs/`、`frontend/`、`infra/`、`internal/`、`scripts/` 和常见根文件。
 - `/api/*`、URL、绝对本机路径和未启用的 `.github` workflow 路径不会作为本地文件检查。
 
-## Gate 7：Compose 配置
+## Gate 8：Compose 配置
 
 命令：
 
@@ -143,7 +163,7 @@ scripts/check-compose.sh
 - `infra/local/docker-compose.image.yml` 必须能通过 `docker compose config`。
 - 本地 PostgreSQL 和单镜像预览的编排配置不能因为字段错误或路径错误而失效。
 
-## Gate 8：Dockerfile 路径
+## Gate 9：Dockerfile 路径
 
 命令：
 
@@ -163,7 +183,7 @@ scripts/check-dockerfile-paths.mjs
 - 多阶段构建里的 `COPY --from=...` 不作为本地路径检查。
 - 重构目录时，镜像构建入口不会静默引用不存在的路径。
 
-## Gate 9：Go 格式
+## Gate 10：Go 格式
 
 命令：
 
@@ -183,7 +203,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 10：Go Vet
+## Gate 11：Go Vet
 
 命令：
 
@@ -202,7 +222,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 11：Go 测试
+## Gate 12：Go 测试
 
 命令：
 
