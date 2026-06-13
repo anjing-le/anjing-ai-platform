@@ -283,9 +283,10 @@ scripts/check-db-files.mjs
 
 - `infra/postgres/migrations` 和 `infra/postgres/seeds` 下的 SQL 文件必须使用连续三位编号和 snake_case 文件名。
 - seed 文件 `INSERT INTO` 的表必须由 migration 文件创建。
+- Go repository SQL 中 `from`、`insert into`、`update` 引用的表必须由 migration 文件创建。
 - Go 默认 migrations / seeds 目录、单镜像 compose 目录和 `db:seed` 脚本必须指向同一套 PostgreSQL 文件。
 
-## Gate 14：Go 格式
+## Gate 15：Go 格式
 
 命令：
 
@@ -305,7 +306,7 @@ scripts/check-gofmt.sh
 - 检查会跳过 `.git` 和 `node_modules`。
 - 失败时输出需要格式化的文件列表。
 
-## Gate 15：Go Vet
+## Gate 16：Go Vet
 
 命令：
 
@@ -324,7 +325,7 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 16：Go Command 构建
+## Gate 17：Go Command 构建
 
 命令：
 

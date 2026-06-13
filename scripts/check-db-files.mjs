@@ -11,6 +11,7 @@ const seeds = sqlFiles(seedsDir);
 checkSequence("migration", migrations);
 checkSequence("seed", seeds);
 checkSeedTables(migrations, seeds);
+checkRepositoryTables(migrations);
 checkMigrationDirConfig();
 
 if (errors.length > 0) {
@@ -49,12 +50,7 @@ function checkSequence(label, files) {
 }
 
 function checkSeedTables(migrationFiles, seedFiles) {
-  const createdTables = new Set();
-  for (const file of migrationFiles) {
-    for (const match of file.content.matchAll(/CREATE TABLE IF NOT EXISTS ([a-z_][a-z0-9_]*)/gi)) {
-      createdTables.add(match[1].toLowerCase());
-    }
-  }
+  const createdTables = collectCreatedTables(migrationFiles);
 
   for (const file of seedFiles) {
     for (const match of file.content.matchAll(/INSERT INTO ([a-z_][a-z0-9_]*)/gi)) {
@@ -64,6 +60,58 @@ function checkSeedTables(migrationFiles, seedFiles) {
       }
     }
   }
+}
+
+function checkRepositoryTables(migrationFiles) {
+  const createdTables = collectCreatedTables(migrationFiles);
+  const repositoryFiles = [
+    "internal/control/repository.go",
+    "internal/gateway/repository.go",
+    "internal/billing/repository.go",
+    "internal/ops/repository.go",
+  ];
+
+  for (const filePath of repositoryFiles) {
+    const source = readFileSync(filePath, "utf8");
+    for (const table of collectSQLTables(goSQLBlocks(source).join("\n"))) {
+      if (!createdTables.has(table)) {
+        errors.push(`${filePath} references table '${table}', but no migration creates that table.`);
+      }
+    }
+  }
+}
+
+function goSQLBlocks(source) {
+  return [...source.matchAll(/`([\s\S]*?)`/g)]
+    .map((match) => match[1])
+    .filter((block) => /\b(select|insert|update|delete)\b/i.test(block));
+}
+
+function collectCreatedTables(migrationFiles) {
+  const createdTables = new Set();
+  for (const file of migrationFiles) {
+    for (const match of file.content.matchAll(/CREATE TABLE IF NOT EXISTS ([a-z_][a-z0-9_]*)/gi)) {
+      createdTables.add(match[1].toLowerCase());
+    }
+  }
+  return createdTables;
+}
+
+function collectSQLTables(source) {
+  const tables = new Set();
+  const patterns = [
+    /\bfrom\s+([a-z_][a-z0-9_]*)/gi,
+    /\binsert\s+into\s+([a-z_][a-z0-9_]*)/gi,
+    /\bupdate\s+([a-z_][a-z0-9_]*)/gi,
+  ];
+
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) {
+      tables.add(match[1].toLowerCase());
+    }
+  }
+
+  return tables;
 }
 
 function checkMigrationDirConfig() {
