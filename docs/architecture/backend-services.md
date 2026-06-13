@@ -257,4 +257,6 @@ go run ./cmd/console-web      # :1818
 
 控制台进入后台后优先调用 `GET /api/ops/platform-snapshot`。这个接口一次性返回首页和模块入口需要的核心数据：运营指标、待办、健康、审计、用户、应用、角色、API Key、凭据、网关路由、模型路由、Skill、请求日志、套餐、用量和预算告警。
 
+聚合实现放在 `internal/platform/snapshot`，只依赖各模块暴露的 repository interface，不直接读取某个业务包内部状态。内存模式下会使用 seed store 的 repository；PostgreSQL 模式下，`cmd/platform-all` 和 `cmd/ops-api` 会把 control、gateway、billing、ops 的 Postgres repository 组装进同一个 snapshot repository。这样后台首页在 demo、单服务和数据库模式下使用同一条边界。
+
 细分接口仍然保留，用于模块页刷新、单项操作后的局部更新，以及未来按服务拆分时的边界。当前前端如果发现聚合接口不可用，会自动回退到细分接口，保证旧本地服务也能预览控制台。
