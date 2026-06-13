@@ -62,7 +62,27 @@ scripts/check-service-boundaries.mjs
 - 边界中列出的 API 分组必须存在于 OpenAPI `paths`，`/` 和 `/api/*` 作为帮助文档入口的虚拟分组保留。
 - 当前受保护的入口包括 `operations`、`access`、`gateway`、`billing` 和 `docs`。
 
-## Gate 4：Go 测试
+## Gate 4：文档本地引用
+
+命令：
+
+```bash
+pnpm verify:docs
+```
+
+脚本：
+
+```text
+scripts/check-doc-links.mjs
+```
+
+保护内容：
+
+- README 和 `docs/` 中明显指向仓库内的路径必须真实存在。
+- 当前检查 `apps/`、`cmd/`、`contracts/`、`docs/`、`frontend/`、`infra/`、`internal/`、`scripts/` 和常见根文件。
+- `/api/*`、URL、绝对本机路径和未启用的 `.github` workflow 路径不会作为本地文件检查。
+
+## Gate 5：Go 测试
 
 命令：
 
