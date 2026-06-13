@@ -363,24 +363,41 @@ a {
 }
 
 .api-state {
-  display: inline-flex;
-  min-height: 34px;
-  align-items: center;
-  justify-content: center;
-  padding: 7px 10px;
+  display: grid;
+  min-width: 150px;
+  min-height: 40px;
+  align-content: center;
+  gap: 2px;
+  padding: 7px 11px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
   color: var(--muted);
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.api-state strong {
   font-size: 0.74rem;
   font-weight: 900;
   text-transform: uppercase;
-  white-space: nowrap;
+}
+
+.api-state small {
+  overflow: hidden;
+  max-width: 190px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
 }
 
 .api-state--live {
   border-color: rgba(24, 121, 78, 0.22);
   background: rgba(24, 121, 78, 0.08);
+}
+
+.api-state--live strong {
   color: #18794e;
 }
 
@@ -391,6 +408,9 @@ a {
 .api-state--fallback {
   border-color: rgba(161, 92, 0, 0.24);
   background: rgba(161, 92, 0, 0.08);
+}
+
+.api-state--fallback strong {
   color: #8a4f00;
 }
 
@@ -848,8 +868,26 @@ tbody tr.is-selected td:first-child {
 }
 
 .empty-cell {
+  padding: 28px 16px;
   color: var(--muted);
   text-align: center;
+}
+
+.empty-cell div {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.empty-cell strong {
+  color: var(--ink);
+  font-size: 0.98rem;
+}
+
+.empty-cell p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.86rem;
 }
 
 .key-list {

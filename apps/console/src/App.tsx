@@ -677,9 +677,7 @@ function ConsoleShell({
             <h1>{activeItem.label}</h1>
           </div>
           <div className="topbar__actions">
-            <span className={`api-state api-state--${apiState}`} title={apiDetail}>
-              {apiState === "live" ? "Live API" : apiState === "loading" ? "Connecting" : "Mock fallback"}
-            </span>
+            <APIStateBadge detail={apiDetail} state={apiState} />
             <div className="role-switcher" aria-label="角色视角">
               {roles.map((item) => (
                 <button
@@ -698,6 +696,23 @@ function ConsoleShell({
         {children}
       </div>
     </div>
+  );
+}
+
+function APIStateBadge({ detail, state }: { detail: string; state: ApiState }) {
+  const label = state === "live" ? "Live API" : state === "loading" ? "Connecting" : "Mock fallback";
+  const note =
+    state === "live"
+      ? detail
+      : state === "loading"
+        ? "正在读取平台数据"
+        : `${detail} · 页面仍可预览`;
+
+  return (
+    <span className={`api-state api-state--${state}`} title={note}>
+      <strong>{label}</strong>
+      <small>{note}</small>
+    </span>
   );
 }
 
@@ -2559,7 +2574,10 @@ function DataTable({
           {rows.length === 0 ? (
             <tr>
               <td className="empty-cell" colSpan={columns.length}>
-                没有匹配记录
+                <div>
+                  <strong>没有匹配记录</strong>
+                  <p>调整搜索关键词或状态筛选后再查看。</p>
+                </div>
               </td>
             </tr>
           ) : null}
