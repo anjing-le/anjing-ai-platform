@@ -13,13 +13,13 @@
 
 这 5 个入口不是把能力做少，而是把后台导航先做少。`llm`、`skill`、`credential`、`audit` 先作为能力并入对应入口：
 
-| 后台入口 | 合并能力 | 后端归属 |
-| --- | --- | --- |
-| 运营总览 | observability / audit / ops | `ops-api` |
-| 用户与权限 | iam / api key / credential | `control-api` |
-| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` |
-| 计费与配额 | quota / billing / usage | `billing-service` |
-| 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API |
+| 后台入口 | 合并能力 | 后端归属 | API 分组 |
+| --- | --- | --- | --- |
+| 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events` |
+| 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
+| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/llm/invoke` |
+| 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/budget-alerts` |
+| 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
 ## V1：Go command 边界 + 简单部署
 
