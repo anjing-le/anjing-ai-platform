@@ -139,6 +139,15 @@ type UsageRecord struct {
 	UpdatedAt  string `json:"updatedAt"`
 }
 
+type LLMInvocationRecord struct {
+	ID          string
+	ModelAlias  string
+	Provider    string
+	Model       string
+	TotalTokens int
+	Status      string
+}
+
 type BudgetAlert struct {
 	ID        string `json:"id"`
 	Project   string `json:"project"`
@@ -615,6 +624,35 @@ func (s *Store) ListRequestLogs() []RequestLog {
 	return append([]RequestLog(nil), s.requestLogs...)
 }
 
+func (s *Store) RecordLLMInvocation(record LLMInvocationRecord) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := nowLabel()
+	status := record.Status
+	if status == "" {
+		status = "Success"
+	}
+	s.requestLogs = append([]RequestLog{{
+		ID:        "req_" + record.ID,
+		Request:   "POST /llm/invoke " + record.Model,
+		Consumer:  record.ModelAlias,
+		Latency:   "72ms",
+		Result:    "200",
+		Status:    status,
+		CreatedAt: now,
+	}}, s.requestLogs...)
+	s.usageRecords = append([]UsageRecord{{
+		ID:         "usage_" + record.ID,
+		Project:    record.ModelAlias,
+		Tokens:     fmt.Sprintf("%d", record.TotalTokens),
+		SkillCalls: "0",
+		Cost:       estimateMockCost(record.TotalTokens),
+		Status:     "Normal",
+		UpdatedAt:  now,
+	}}, s.usageRecords...)
+	s.addAuditLocked("网关与模型", "invoke llm", record.ModelAlias, status)
+}
+
 func (s *Store) ListPlans() []BillingPlan {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -737,6 +775,13 @@ func (s *Store) addAuditLocked(module, action, object, status string) {
 		Status:    status,
 		RequestID: nextID("req"),
 	}}, s.audit...)
+}
+
+func estimateMockCost(tokens int) string {
+	if tokens <= 0 {
+		return "$0.0000"
+	}
+	return fmt.Sprintf("$%.4f", float64(tokens)*0.000002)
 }
 
 func nowLabel() string {

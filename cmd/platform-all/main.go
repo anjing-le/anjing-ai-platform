@@ -43,6 +43,7 @@ func main() {
 		gatewayRepos.ModelRoutes = gateway.NewPostgresModelRouteRepository(pool)
 		gatewayRepos.Skills = gateway.NewPostgresSkillRepository(pool)
 		gatewayRepos.RequestLogs = gateway.NewPostgresRequestLogRepository(pool)
+		gatewayRepos.Invocations = gateway.NewPostgresInvocationRecorder(pool)
 		gatewayRegister = func(mux *http.ServeMux, st *store.Store) {
 			gateway.RegisterWithRepositories(mux, st, gatewayRepos)
 		}

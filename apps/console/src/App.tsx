@@ -499,6 +499,7 @@ function App() {
             onApplicationActivate={handleApplicationActivate}
             onApplicationKeyRotate={handleApplicationKeyRotate}
             onCredentialRotate={handleCredentialRotate}
+            onLLMInvoked={refreshSnapshot}
             onModelRouteCreate={handleModelRouteCreate}
             onModelRoutePublish={handleModelRoutePublish}
             onBudgetAlertResolve={handleBudgetAlertResolve}
@@ -802,6 +803,7 @@ function ModulePage({
   onApplicationKeyRotate,
   onBudgetAlertResolve,
   onCredentialRotate,
+  onLLMInvoked,
   onModelRouteCreate,
   onModelRoutePublish,
   onPlanActivate,
@@ -833,6 +835,7 @@ function ModulePage({
   onApplicationKeyRotate: (id: string) => Promise<void>;
   onBudgetAlertResolve: (id: string) => Promise<void>;
   onCredentialRotate: (id: string) => Promise<void>;
+  onLLMInvoked: () => Promise<unknown>;
   onModelRouteCreate: (input: CreateModelRouteInput) => Promise<void>;
   onModelRoutePublish: (id: string) => Promise<void>;
   onPlanActivate: (id: string) => Promise<void>;
@@ -1103,7 +1106,9 @@ function ModulePage({
               skill={selectedSkill}
             />
           ) : null}
-          {page.id === "gateway" ? <LLMInvokePanel modelRoutes={snapshot?.modelRoutes} role={role} /> : null}
+          {page.id === "gateway" ? (
+            <LLMInvokePanel modelRoutes={snapshot?.modelRoutes} onInvoked={onLLMInvoked} role={role} />
+          ) : null}
           {page.id === "quota" ? (
             <BillingPlanPanel
               activating={activatingPlanId === selectedPlan?.id}
@@ -1969,7 +1974,15 @@ function CredentialRefPanel({
   );
 }
 
-function LLMInvokePanel({ modelRoutes, role }: { modelRoutes?: ModelRoute[]; role: RoleId }) {
+function LLMInvokePanel({
+  modelRoutes,
+  onInvoked,
+  role,
+}: {
+  modelRoutes?: ModelRoute[];
+  onInvoked: () => Promise<unknown>;
+  role: RoleId;
+}) {
   const [modelAlias, setModelAlias] = useState("chat-default");
   const [input, setInput] = useState("帮我生成一段客服欢迎语");
   const [result, setResult] = useState<LLMInvokeResponse>();
@@ -1987,6 +2000,7 @@ function LLMInvokePanel({ modelRoutes, role }: { modelRoutes?: ModelRoute[]; rol
     try {
       const response = await invokeLLM({ modelAlias, input }, role);
       setResult(response);
+      await onInvoked();
     } catch (err) {
       setError(err instanceof Error ? err.message : "调用失败");
     } finally {

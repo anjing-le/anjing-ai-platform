@@ -66,6 +66,8 @@ func TestCreateRouteAddsRoute(t *testing.T) {
 
 func TestInvokeLLMUsesModelRoute(t *testing.T) {
 	st := store.NewSeedStore()
+	initialLogs := len(st.ListRequestLogs())
+	initialUsage := len(st.ListUsage())
 	mux := http.NewServeMux()
 	Register(mux, st)
 
@@ -102,6 +104,12 @@ func TestInvokeLLMUsesModelRoute(t *testing.T) {
 	}
 	if payload.Data.Usage.TotalTokens <= 0 {
 		t.Fatalf("expected token usage, got %+v", payload.Data.Usage)
+	}
+	if logs := st.ListRequestLogs(); len(logs) != initialLogs+1 || logs[0].Consumer != "chat-default" {
+		t.Fatalf("expected llm request log to be appended, got %+v", logs)
+	}
+	if usage := st.ListUsage(); len(usage) != initialUsage+1 || usage[0].Project != "chat-default" || usage[0].Tokens == "0" {
+		t.Fatalf("expected llm usage record to be appended, got %+v", usage)
 	}
 }
 

@@ -34,7 +34,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/gateway/skills", skillsHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skills/publish", publishSkillBindingHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/request-logs", requestLogsHandler(repos.RequestLogs))
-	mux.HandleFunc("/api/gateway/llm/invoke", llmInvokeHandler(repos.ModelRoutes))
+	mux.HandleFunc("/api/gateway/llm/invoke", llmInvokeHandler(repos.ModelRoutes, repos.Invocations))
 }
 
 func routesHandler(routes RouteRepository) http.HandlerFunc {
@@ -309,7 +309,7 @@ func requestLogsHandler(requestLogs RequestLogRepository) http.HandlerFunc {
 	}
 }
 
-func llmInvokeHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {
+func llmInvokeHandler(modelRoutes ModelRouteRepository, recorder InvocationRecorder) http.HandlerFunc {
 	type invokeRequest struct {
 		ModelAlias  string  `json:"modelAlias"`
 		Input       string  `json:"input"`
@@ -363,10 +363,25 @@ func llmInvokeHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {
 
 		inputTokens := estimateTokens(req.Input)
 		outputTokens := estimateTokens(route.Primary) + 12
+		totalTokens := inputTokens + outputTokens
+		id := "llm_" + time.Now().UTC().Format("20060102150405.000000000")
+		provider := providerForModel(route.Primary)
+		if err := recorder.RecordLLMInvocation(r.Context(), LLMInvocationInput{
+			ID:          id,
+			ModelAlias:  route.Alias,
+			Provider:    provider,
+			Model:       route.Primary,
+			TotalTokens: totalTokens,
+			Status:      "Success",
+		}); err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+
 		httpjson.OK(w, invokeResponse{
-			ID:           "llm_" + time.Now().UTC().Format("20060102150405.000000000"),
+			ID:           id,
 			ModelAlias:   route.Alias,
-			Provider:     providerForModel(route.Primary),
+			Provider:     provider,
 			Model:        route.Primary,
 			Fallback:     route.Fallback,
 			Content:      mockCompletion(route, req.Input),
@@ -374,7 +389,7 @@ func llmInvokeHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {
 			Usage: usage{
 				InputTokens:  inputTokens,
 				OutputTokens: outputTokens,
-				TotalTokens:  inputTokens + outputTokens,
+				TotalTokens:  totalTokens,
 			},
 		})
 	}

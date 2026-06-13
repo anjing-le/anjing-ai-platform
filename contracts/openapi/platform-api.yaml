@@ -689,9 +689,9 @@ paths:
       summary: Invoke an LLM through the gateway mock provider.
       description: >
         V1 starts with a deterministic mock provider. The endpoint already uses
-        model route aliases and returns token usage so the console, examples and
-        future SDKs can integrate against a stable boundary before real providers
-        are wired in.
+        model route aliases, records request logs and usage records, and returns
+        token usage so the console, examples and future SDKs can integrate
+        against a stable boundary before real providers are wired in.
       x-anjing-roles: [Administrator, User, Developer]
       requestBody:
         required: true

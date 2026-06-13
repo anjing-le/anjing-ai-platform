@@ -30,6 +30,15 @@ type CreateSkillBindingInput struct {
 	Timeout  string
 }
 
+type LLMInvocationInput struct {
+	ID          string
+	ModelAlias  string
+	Provider    string
+	Model       string
+	TotalTokens int
+	Status      string
+}
+
 type RouteRepository interface {
 	ListRoutes(ctx context.Context) ([]store.GatewayRoute, error)
 	CreateRoute(ctx context.Context, input CreateRouteInput) (store.GatewayRoute, error)
@@ -52,11 +61,16 @@ type RequestLogRepository interface {
 	ListRequestLogs(ctx context.Context) ([]store.RequestLog, error)
 }
 
+type InvocationRecorder interface {
+	RecordLLMInvocation(ctx context.Context, input LLMInvocationInput) error
+}
+
 type Repositories struct {
 	Routes      RouteRepository
 	ModelRoutes ModelRouteRepository
 	Skills      SkillRepository
 	RequestLogs RequestLogRepository
+	Invocations InvocationRecorder
 }
 
 func NewMemoryRepositories(st *store.Store) Repositories {
@@ -65,6 +79,7 @@ func NewMemoryRepositories(st *store.Store) Repositories {
 		ModelRoutes: NewMemoryModelRouteRepository(st),
 		Skills:      NewMemorySkillRepository(st),
 		RequestLogs: NewMemoryRequestLogRepository(st),
+		Invocations: NewMemoryInvocationRecorder(st),
 	}
 }
 
@@ -141,6 +156,26 @@ func NewMemoryRequestLogRepository(st *store.Store) MemoryRequestLogRepository {
 
 func (repo MemoryRequestLogRepository) ListRequestLogs(context.Context) ([]store.RequestLog, error) {
 	return repo.store.ListRequestLogs(), nil
+}
+
+type MemoryInvocationRecorder struct {
+	store *store.Store
+}
+
+func NewMemoryInvocationRecorder(st *store.Store) MemoryInvocationRecorder {
+	return MemoryInvocationRecorder{store: st}
+}
+
+func (repo MemoryInvocationRecorder) RecordLLMInvocation(_ context.Context, input LLMInvocationInput) error {
+	repo.store.RecordLLMInvocation(store.LLMInvocationRecord{
+		ID:          input.ID,
+		ModelAlias:  input.ModelAlias,
+		Provider:    input.Provider,
+		Model:       input.Model,
+		TotalTokens: input.TotalTokens,
+		Status:      input.Status,
+	})
+	return nil
 }
 
 type PostgresRouteRepository struct {
@@ -409,6 +444,54 @@ func (repo PostgresRequestLogRepository) ListRequestLogs(ctx context.Context) ([
 	return items, nil
 }
 
+type PostgresInvocationRecorder struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresInvocationRecorder(pool *pgxpool.Pool) PostgresInvocationRecorder {
+	return PostgresInvocationRecorder{pool: pool}
+}
+
+func (repo PostgresInvocationRecorder) RecordLLMInvocation(ctx context.Context, input LLMInvocationInput) error {
+	status := input.Status
+	if status == "" {
+		status = "Success"
+	}
+
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin llm invocation record: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, "req_"+input.ID, "POST /llm/invoke "+input.Model, input.ModelAlias, "72ms", "200", status); err != nil {
+		return fmt.Errorf("insert llm request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into usage_records(id, project, tokens, skill_calls, cost, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, "usage_"+input.ID, input.ModelAlias, fmt.Sprintf("%d", input.TotalTokens), "0", estimateMockCost(input.TotalTokens), "Normal"); err != nil {
+		return fmt.Errorf("insert llm usage record: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, "audit_"+input.ID, "网关与模型", "invoke llm", input.ModelAlias, status, "req_"+input.ID); err != nil {
+		return fmt.Errorf("insert llm audit event: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit llm invocation record: %w", err)
+	}
+
+	return nil
+}
+
 func scanRequestLog(row pgx.CollectableRow) (store.RequestLog, error) {
 	var item store.RequestLog
 	var createdAt time.Time
@@ -417,6 +500,13 @@ func scanRequestLog(row pgx.CollectableRow) (store.RequestLog, error) {
 	}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	return item, nil
+}
+
+func estimateMockCost(tokens int) string {
+	if tokens <= 0 {
+		return "$0.0000"
+	}
+	return fmt.Sprintf("$%.4f", float64(tokens)*0.000002)
 }
 
 func scanGatewayRoute(row pgx.CollectableRow) (store.GatewayRoute, error) {
