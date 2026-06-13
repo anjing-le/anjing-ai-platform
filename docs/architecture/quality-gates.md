@@ -283,7 +283,21 @@ scripts/check-govet.sh
 - 运行标准库 `go vet ./...`。
 - 提前发现格式检查和单元测试不一定覆盖的可疑实现问题。
 
-## Gate 15：Go 测试
+## Gate 15：Go Command 构建
+
+命令：
+
+```bash
+pnpm verify:go-build
+```
+
+保护内容：
+
+- `cmd/platform-all`、`cmd/migrate-db`、`cmd/seed-db` 和各单服务 command 必须可以完成 `go build`。
+- Dockerfile 中构建的交付入口必须先在本地门禁中被编译验证。
+- 新增 command 时，不能只通过包测试而遗漏真实可执行入口构建。
+
+## Gate 16：Go 测试
 
 命令：
 

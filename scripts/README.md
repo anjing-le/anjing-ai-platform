@@ -17,6 +17,7 @@
 | `scripts/check-db-files.mjs` | `pnpm verify:db-files` | 检查 PostgreSQL migration / seed 编号、表引用和迁移目录配置。 |
 | `scripts/check-gofmt.sh` | `pnpm verify:gofmt` | 检查 Go 源码是否已经通过 `gofmt` 格式化。 |
 | `scripts/check-govet.sh` | `pnpm verify:govet` | 运行 `go vet ./...`，检查 Go 代码中的可疑实现问题。 |
+| `go build ./cmd/...` | `pnpm verify:go-build` | 构建全部 Go command，确保本地和镜像交付入口可编译。 |
 
 新增脚本时，优先遵守这几个约定：
 
