@@ -1361,7 +1361,7 @@ function ModulePage({
   const tableView = useMemo<ModulePageDefinition["table"]>(() => {
     if (page.id === "overview" && activeTab === "服务健康") {
       return {
-        eyebrow: "Health",
+        eyebrow: "健康",
         title: "服务健康",
         columns: ["服务", "SLO", "P95", "状态"],
         rows: (snapshot?.dashboard?.health || []).map((service) => ({
@@ -1375,7 +1375,7 @@ function ModulePage({
 
     if (page.id === "overview" && activeTab === "调用与审计") {
       return {
-        eyebrow: "Audit",
+        eyebrow: "审计",
         title: "调用与审计",
         columns: ["时间", "模块", "动作", "对象", "状态"],
         rows: (snapshot?.dashboard?.audit || []).map((event) => ({
@@ -1389,7 +1389,7 @@ function ModulePage({
 
     if (page.id === "iam" && activeTab === "角色权限") {
       return {
-        eyebrow: "Roles",
+        eyebrow: "角色",
         title: "角色权限",
         columns: ["角色", "可见入口", "配置范围", "限制", "状态"],
         rows: (snapshot?.roles || []).map((policy) => ({
@@ -1403,7 +1403,7 @@ function ModulePage({
 
     if (page.id === "iam" && activeTab === "API Key") {
       return {
-        eyebrow: "API Keys",
+        eyebrow: "API Key",
         title: "密钥列表",
         columns: ["名称", "项目", "授权范围", "到期时间", "状态"],
         rows: (snapshot?.apiKeys || []).map((key) => ({
@@ -1417,7 +1417,7 @@ function ModulePage({
 
     if (page.id === "iam" && activeTab === "凭据") {
       return {
-        eyebrow: "Credentials",
+        eyebrow: "凭据",
         title: "凭据引用",
         columns: ["引用", "用途", "绑定范围", "到期时间", "状态"],
         rows: (snapshot?.credentials || []).map((credential) => ({
@@ -1467,7 +1467,7 @@ function ModulePage({
       return {
         eyebrow: "请求日志",
         title: "请求日志",
-        columns: ["Request", "Consumer", "Latency", "Result", "状态"],
+        columns: ["请求", "调用方", "延迟", "结果", "状态"],
         rows: (snapshot?.requestLogs || []).map((log) => ({
           id: log.id,
           cells: [log.request, log.consumer, log.latency, log.result, log.status],

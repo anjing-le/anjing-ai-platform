@@ -5,6 +5,7 @@ const appSource = readFileSync("apps/console/src/App.tsx", "utf8");
 const actionDialogSource = readFileSync("apps/console/src/components/ActionDialog.tsx", "utf8");
 const accessSource = readFileSync("apps/console/src/lib/access.ts", "utf8");
 const dataSource = readFileSync("apps/console/src/data/console.ts", "utf8");
+const hydrateSource = readFileSync("apps/console/src/lib/hydrate.ts", "utf8");
 const styleSource = readFileSync("apps/console/src/styles.css", "utf8");
 
 if (!appSource.includes("<code>pnpm dev:api</code>")) {
@@ -67,6 +68,30 @@ for (const staleDataCopy of [
 for (const localizedDataCopy of ["快速接入、API 参考", "负责人", "模型别名", "用量 / 审计", "按项目", "必须带标签", "网关端点", "客户端示例"]) {
   if (!dataSource.includes(localizedDataCopy) && !appSource.includes(localizedDataCopy)) {
     errors.push(`Console module data must keep localized enterprise labels: ${localizedDataCopy}`);
+  }
+}
+
+for (const staleSnapshotCopy of [
+  'eyebrow: "Health"',
+  'eyebrow: "Audit"',
+  'eyebrow: "Roles"',
+  'eyebrow: "API Keys"',
+  'eyebrow: "Credentials"',
+  'eyebrow: "Applications"',
+  '"Owner"',
+  '"Go API live"',
+  '"production"',
+  '"ready to call"',
+  '"issued keys"',
+]) {
+  if (appSource.includes(staleSnapshotCopy) || hydrateSource.includes(staleSnapshotCopy)) {
+    errors.push(`Console live snapshot copy must use localized enterprise labels instead of ${staleSnapshotCopy}.`);
+  }
+}
+
+for (const localizedSnapshotCopy of ["Go API 在线", "生产环境", "可发起调用", "已签发密钥", 'eyebrow: "接入应用"', 'columns: ["应用", "负责人"']) {
+  if (!appSource.includes(localizedSnapshotCopy) && !hydrateSource.includes(localizedSnapshotCopy)) {
+    errors.push(`Console live snapshot copy must keep localized labels: ${localizedSnapshotCopy}`);
   }
 }
 

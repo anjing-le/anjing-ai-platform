@@ -78,7 +78,7 @@ export function hydrateModulePages(
       return {
         ...page,
         metrics: [
-          metric("用户", `${snapshot.users.length}`, "Go API live"),
+          metric("用户", `${snapshot.users.length}`, "Go API 在线"),
           metric("角色", `${snapshot.roles?.length || 0}`, "admin / user / developer / operator"),
           metric("API Key", `${snapshot.apiKeys?.length || 0}`, "有效密钥", "good"),
           metric("凭据引用", `${snapshot.credentials?.length || 0}`, "credentialRef", "watch"),
@@ -99,7 +99,7 @@ export function hydrateModulePages(
       return {
         ...page,
         metrics: [
-          metric("API 路由", `${snapshot.routes.length}`, "Go API live"),
+          metric("API 路由", `${snapshot.routes.length}`, "Go API 在线"),
           metric("模型别名", `${snapshot.modelRoutes?.length || 0}`, "chat / embedding / rerank"),
           metric("Skill", `${snapshot.skills?.length || 0}`, "published / draft", "good"),
           metric("请求日志", `${snapshot.requestLogs?.length || 0}`, "latest events", "watch"),
@@ -121,7 +121,7 @@ export function hydrateModulePages(
       return {
         ...page,
         metrics: [
-          metric("套餐", `${snapshot.plans.length}`, "Go API live"),
+          metric("套餐", `${snapshot.plans.length}`, "Go API 在线"),
           metric("用量项目", `${snapshot.usage?.length || 0}`, "usage records"),
           metric("预算告警", `${warningCount}`, "near limit", warningCount > 0 ? "warn" : "good"),
           metric("预算规则", `${snapshot.budgetAlerts?.length || 0}`, "active budgets"),
@@ -144,16 +144,16 @@ export function hydrateModulePages(
       return {
         ...page,
         metrics: [
-          metric("接入应用", `${snapshot.applications.length}`, "Go API live"),
-          metric("生产应用", `${productionCount}`, "production"),
-          metric("Active", `${activeCount}`, "ready to call", activeCount > 0 ? "good" : "watch"),
-          metric("API Key", `${snapshot.apiKeys?.length || 0}`, "issued keys"),
+          metric("接入应用", `${snapshot.applications.length}`, "Go API 在线"),
+          metric("生产应用", `${productionCount}`, "生产环境"),
+          metric("运行中", `${activeCount}`, "可发起调用", activeCount > 0 ? "good" : "watch"),
+          metric("API Key", `${snapshot.apiKeys?.length || 0}`, "已签发密钥"),
         ],
         table: {
           ...page.table,
-          eyebrow: "Applications",
+          eyebrow: "接入应用",
           title: "接入应用",
-          columns: ["应用", "Owner", "环境", "默认路由", "套餐", "状态"],
+          columns: ["应用", "负责人", "环境", "默认路由", "套餐", "状态"],
           rows: snapshot.applications.map((app) => ({
             id: app.id,
             cells: [app.name, app.owner, app.environment, app.defaultRoute, app.plan, app.status],
