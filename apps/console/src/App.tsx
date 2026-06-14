@@ -1024,7 +1024,7 @@ function ConsoleHome({
               const moduleCard = (
                 <>
                   <div className="module-card__top">
-                    <item.icon size={21} />
+                    <item.icon aria-hidden="true" size={21} />
                     <span>{item.name}</span>
                   </div>
                   <div>
