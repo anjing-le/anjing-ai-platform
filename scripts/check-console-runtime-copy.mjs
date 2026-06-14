@@ -16,6 +16,10 @@ for (const placeholderCopy of ["待补充", "planned docs", "mock target", "后�
   }
 }
 
+if (dataSource.includes('cells: ["Enterprise", "private deployment", "custom", "custom", "Draft"]')) {
+  errors.push("Console fallback billing plans must not expose Enterprise as an unfinished draft.");
+}
+
 if (!appSource.includes("service-runtime__command") || !appSource.includes("handleRuntimeCommandCopy")) {
   errors.push("Console home runtime command must be copyable from the backend plan.");
 }

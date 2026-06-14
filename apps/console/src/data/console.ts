@@ -431,9 +431,9 @@ export const modulePages: ModulePageDefinition[] = [
         },
         {
           id: "enterprise",
-          cells: ["Enterprise", "private deployment", "custom", "custom", "Draft"],
-          status: "Draft",
-          tone: "neutral",
+          cells: ["Enterprise", "private deployment", "contract", "contract", "Guarded"],
+          status: "Guarded",
+          tone: "watch",
         },
       ],
     },

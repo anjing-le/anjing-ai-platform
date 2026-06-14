@@ -1585,6 +1585,7 @@ function ModulePage({
     return (
       snapshot.plans.find((plan) => plan.id === selectedPlanId) ||
       snapshot.plans.find((plan) => plan.id === selectedRowId) ||
+      snapshot.plans.find((plan) => plan.status === "Guarded") ||
       snapshot.plans.find((plan) => plan.status === "Draft") ||
       snapshot.plans[0]
     );
