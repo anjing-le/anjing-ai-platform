@@ -122,9 +122,12 @@ if (
   !appSource.includes('role="tab"') ||
   !appSource.includes('role="tabpanel"') ||
   !appSource.includes("aria-selected={tab === activeTab}") ||
-  !appSource.includes("aria-controls={`module-panel-${page.id}`}")
+  !appSource.includes("aria-controls={`module-panel-${page.id}`}") ||
+  !appSource.includes("handleModuleTabKeyDown") ||
+  !appSource.includes('event.key === "ArrowRight"') ||
+  !appSource.includes('event.key === "Home"')
 ) {
-  errors.push("Console module tabs must expose tablist, tab and tabpanel semantics with selected state.");
+  errors.push("Console module tabs must expose accessible semantics, selected state and keyboard navigation.");
 }
 
 if (!appSource.includes("filtersActive") || !appSource.includes("清空筛选")) {

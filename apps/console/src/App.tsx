@@ -7,7 +7,7 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ActionDialog, type ActionMode, type ActionValues } from "./components/ActionDialog";
 import { backendPlan, consoleServiceMap, modulePages, navItems, roles, todos } from "./data/console";
@@ -1249,6 +1249,33 @@ function ModulePage({
   const [activeTab, setActiveTab] = useState(page.tabs[0] || "");
   const activeTabIndex = Math.max(0, page.tabs.indexOf(activeTab));
 
+  function focusModuleTab(index: number) {
+    window.requestAnimationFrame(() => {
+      document.getElementById(`module-tab-${page.id}-${index}`)?.focus();
+    });
+  }
+
+  function handleModuleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const lastIndex = page.tabs.length - 1;
+    let nextIndex = index;
+
+    if (event.key === "ArrowRight") {
+      nextIndex = index === lastIndex ? 0 : index + 1;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex = index === 0 ? lastIndex : index - 1;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = lastIndex;
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    setActiveTab(page.tabs[nextIndex] || activeTab);
+    focusModuleTab(nextIndex);
+  }
+
   useEffect(() => {
     setActiveTab(page.tabs[0] || "");
     setQuery("");
@@ -1739,6 +1766,7 @@ function ModulePage({
             id={`module-tab-${page.id}-${index}`}
             key={tab}
             onClick={() => setActiveTab(tab)}
+            onKeyDown={(event) => handleModuleTabKeyDown(event, index)}
             role="tab"
             type="button"
           >
