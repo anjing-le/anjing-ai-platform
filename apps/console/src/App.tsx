@@ -2112,7 +2112,7 @@ function ApplicationJourneyPanel({
         </article>
       </div>
 
-      <QuickstartChecklist />
+      <QuickstartChecklist application={application} apiKey={apiKey} hasRequestLogs={logs.length > 0} />
 
       <QuickstartSnippet curl={quickstartCurl} />
 
@@ -2159,27 +2159,39 @@ function ApplicationJourneyPanel({
   );
 }
 
-function QuickstartChecklist() {
+function QuickstartChecklist({
+  apiKey,
+  application,
+  hasRequestLogs = false,
+}: {
+  apiKey?: APIKey;
+  application?: Application;
+  hasRequestLogs?: boolean;
+}) {
   const steps = [
     {
       label: "01",
       title: "创建接入应用",
       note: "确定 owner、环境、默认路由和套餐。",
+      status: application?.status || "Waiting",
     },
     {
       label: "02",
       title: "发放 API Key",
       note: "绑定最小 scope，用 credentialRef 管理供应商凭据。",
+      status: apiKey?.status || "Waiting",
     },
     {
       label: "03",
       title: "确认网关路由",
       note: "先走模型别名和 Skill 入口，再看 fallback 与限流。",
+      status: application?.defaultRoute ? "Ready" : "Waiting",
     },
     {
       label: "04",
       title: "发送最小调用",
       note: "复制 curl 后验证用量、请求日志和预算状态。",
+      status: hasRequestLogs ? "Ready" : "Waiting",
     },
   ];
 
@@ -2192,6 +2204,7 @@ function QuickstartChecklist() {
             <strong>{step.title}</strong>
             <p>{step.note}</p>
           </div>
+          <StatusBadge tone={toneForStatus(step.status)}>{step.status}</StatusBadge>
         </article>
       ))}
     </div>
