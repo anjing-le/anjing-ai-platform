@@ -48,6 +48,10 @@ if (!appSource.includes("lastSyncedAt") || !appSource.includes("最近同步") |
   errors.push("Console topbar must show platform data freshness after refresh attempts.");
 }
 
+if (!appSource.includes("聚合快照 · ops-api") || !appSource.includes("分组接口 ·") || !appSource.includes("本地演示数据 · console fallback")) {
+  errors.push("Console topbar must expose whether data comes from aggregate, granular or local demo mode.");
+}
+
 if (!appSource.includes("topbar__role-purpose") || !appSource.includes("activeRole.purpose")) {
   errors.push("Console topbar must show the active role purpose beside the role switcher.");
 }

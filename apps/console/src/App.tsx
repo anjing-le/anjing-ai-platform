@@ -203,10 +203,10 @@ function App() {
     if (result.ok) {
       setSnapshot(result.snapshot);
       setApiState("live");
-      setApiDetail(result.source === "aggregate" ? "聚合快照已连接" : `${result.loaded} 个接口已连接`);
+      setApiDetail(result.source === "aggregate" ? "聚合快照 · ops-api" : `分组接口 · ${result.loaded} connected`);
     } else {
       setApiState("fallback");
-      setApiDetail("未连接后端，使用页面默认数据");
+      setApiDetail("本地演示数据 · console fallback");
     }
 
     setLastSyncedAt(formatSyncTime(new Date()));
@@ -221,12 +221,12 @@ function App() {
 
     try {
       const result = await refreshSnapshot();
-      setNotice(result.ok ? "平台数据已刷新。" : "刷新未连接到后端，继续使用页面默认数据。");
+      setNotice(result.ok ? "平台数据已刷新。" : "后端未连接，已切换到本地演示数据。");
     } catch {
       setApiState("fallback");
-      setApiDetail("刷新失败，使用页面默认数据");
+      setApiDetail("刷新失败 · 本地演示数据");
       setLastSyncedAt(formatSyncTime(new Date()));
-      setNotice("刷新失败，继续使用页面默认数据。");
+      setNotice("刷新失败，已保留本地演示数据。");
     } finally {
       setRefreshingSnapshot(false);
     }
@@ -248,7 +248,7 @@ function App() {
           return;
         }
         setApiState("fallback");
-        setApiDetail("未连接后端，使用页面默认数据");
+        setApiDetail("本地演示数据 · console fallback");
       });
 
     return () => {
