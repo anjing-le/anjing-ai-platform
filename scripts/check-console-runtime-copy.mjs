@@ -53,6 +53,10 @@ if (
   errors.push("Console action dialog must link its description and expose submit errors as alerts.");
 }
 
+if (!actionDialogSource.includes("event.key === \"Escape\"") || !actionDialogSource.includes("disabled={busy}")) {
+  errors.push("Console action dialog must support Escape close while preventing busy-state dismissal.");
+}
+
 if (!appSource.includes("table-result-count") || !appSource.includes("tableView.rows.length")) {
   errors.push("Console data tables must show filtered row counts.");
 }

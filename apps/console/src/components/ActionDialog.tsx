@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import type { FormEvent } from "react";
+import { useEffect, type FormEvent } from "react";
 
 export type ActionMode = "iam" | "gateway" | "quota" | "docs";
 
@@ -171,6 +171,17 @@ const actionCopy: Record<
 export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDialogProps) {
   const copy = actionCopy[mode];
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [busy, onClose]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -198,7 +209,7 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
             <h2 id="action-dialog-title">{copy.title}</h2>
             <p id="action-dialog-description">{copy.description}</p>
           </div>
-          <button aria-label="关闭" className="icon-button" onClick={onClose} type="button">
+          <button aria-label="关闭" className="icon-button" disabled={busy} onClick={onClose} type="button">
             <X size={18} />
           </button>
         </header>
