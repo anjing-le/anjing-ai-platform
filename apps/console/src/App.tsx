@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleAlert,
+  Copy,
   RefreshCw,
   Search,
 } from "lucide-react";
@@ -1904,6 +1905,8 @@ function ApplicationJourneyPanel({
   rotating: boolean;
   snapshot?: PlatformSnapshot;
 }) {
+  const [snippetCopied, setSnippetCopied] = useState(false);
+
   if (!application) {
     return (
       <Panel eyebrow="Onboarding" title="应用接入详情">
@@ -1921,6 +1924,12 @@ function ApplicationJourneyPanel({
   const usage = snapshot?.usage?.find((item) => item.project === application.name);
   const budget = snapshot?.budgetAlerts?.find((item) => item.project === application.name);
   const logs = snapshot?.requestLogs?.filter((item) => item.consumer === application.name).slice(0, 3) || [];
+  const quickstartCurl = [
+    "curl -X POST http://localhost:8080/api/v1/llm/chat \\",
+    `  -H "Authorization: Bearer ${application.apiKey}" \\`,
+    '  -H "Content-Type: application/json" \\',
+    `  -d '{"appId":"${application.id}","route":"${application.defaultRoute}","message":"hello"}'`,
+  ].join("\n");
 
   const steps = [
     {
@@ -1948,6 +1957,12 @@ function ApplicationJourneyPanel({
       tone: budget?.status || "Ready",
     },
   ];
+
+  async function handleSnippetCopy() {
+    await navigator.clipboard.writeText(quickstartCurl);
+    setSnippetCopied(true);
+    window.setTimeout(() => setSnippetCopied(false), 1800);
+  }
 
   return (
     <Panel eyebrow="Onboarding" title="应用接入详情">
@@ -1985,6 +2000,20 @@ function ApplicationJourneyPanel({
           <strong>{usage?.skillCalls || "0"}</strong>
           <p>{usage?.cost || "$0"}</p>
         </article>
+      </div>
+
+      <div className="quickstart-snippet">
+        <div>
+          <span>Quickstart</span>
+          <strong>最小调用示例</strong>
+        </div>
+        <button className="text-command" onClick={() => void handleSnippetCopy()} type="button">
+          <Copy size={14} />
+          {snippetCopied ? "已复制" : "复制调用示例"}
+        </button>
+        <pre>
+          <code>{quickstartCurl}</code>
+        </pre>
       </div>
 
       <div className="mini-log-list">

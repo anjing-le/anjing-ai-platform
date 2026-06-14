@@ -1689,6 +1689,41 @@ tbody tr.is-selected td:first-child {
   font-size: 1.34rem;
 }
 
+.quickstart-snippet {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfbfb;
+}
+
+.quickstart-snippet > div {
+  display: grid;
+  gap: 4px;
+}
+
+.quickstart-snippet > button {
+  justify-self: start;
+}
+
+.quickstart-snippet pre {
+  max-width: 100%;
+  margin: 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #111111;
+  color: #f5f5f7;
+}
+
+.quickstart-snippet code {
+  display: block;
+  min-width: max-content;
+  padding: 12px;
+  font-size: 0.74rem;
+  line-height: 1.7;
+}
+
 .mini-log-list {
   display: grid;
 }

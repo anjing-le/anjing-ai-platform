@@ -36,6 +36,10 @@ if (!appSource.includes("filtersActive") || !appSource.includes("清空筛选"))
   errors.push("Console data tables must provide a clear filter action when filters are active.");
 }
 
+if (!appSource.includes("quickstart-snippet") || !appSource.includes("复制调用示例") || !appSource.includes("navigator.clipboard.writeText")) {
+  errors.push("Console Quickstart must provide a copyable minimal call snippet.");
+}
+
 for (const port of ["1820", "1821", "1822", "1823"]) {
   if (!dataSource.includes(`http://localhost:${port}/healthz`)) {
     errors.push(`Console backend plan must show http://localhost:${port}/healthz.`);
