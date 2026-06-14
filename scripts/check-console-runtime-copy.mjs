@@ -65,6 +65,17 @@ if (!actionDialogSource.includes("aria-busy={busy}") || !actionDialogSource.incl
   errors.push("Console action dialog must expose busy submit state to assistive technology.");
 }
 
+for (const formClass of ["model-route-form", "skill-binding-form", "invoke-form"]) {
+  const formPattern = new RegExp(`<form aria-busy=\\{busy\\} className="${formClass}"`);
+  if (!formPattern.test(appSource)) {
+    errors.push(`Console inline form ${formClass} must expose aria-busy while submitting.`);
+  }
+}
+
+if ((appSource.match(/role="alert"/g) || []).length < 3) {
+  errors.push("Console inline forms must expose submit errors as alerts.");
+}
+
 if (!appSource.includes("table-result-count") || !appSource.includes("tableView.rows.length")) {
   errors.push("Console data tables must show filtered row counts.");
 }

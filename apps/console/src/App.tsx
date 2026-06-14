@@ -2328,7 +2328,7 @@ function ModelRoutePanel({
         </div>
       )}
 
-      <form className="model-route-form" onSubmit={handleSubmit}>
+      <form aria-busy={busy} className="model-route-form" onSubmit={handleSubmit}>
         <label>
           <span>Alias</span>
           <input onChange={(event) => setAlias(event.target.value)} required value={alias} />
@@ -2345,8 +2345,13 @@ function ModelRoutePanel({
           <span>Fallback</span>
           <input onChange={(event) => setFallback(event.target.value)} required value={fallback} />
         </label>
-        {error ? <p className="form-error">{error}</p> : null}
+        {error ? (
+          <p aria-live="polite" className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
         <button
+          aria-live="polite"
           className="button button--primary"
           disabled={busy || role === "operator"}
           title={role === "operator" ? "运维人员只读模型路由创建配置" : undefined}
@@ -2444,7 +2449,7 @@ function SkillBindingPanel({
         </div>
       )}
 
-      <form className="skill-binding-form" onSubmit={handleSubmit}>
+      <form aria-busy={busy} className="skill-binding-form" onSubmit={handleSubmit}>
         <label>
           <span>Name</span>
           <input onChange={(event) => setName(event.target.value)} required value={name} />
@@ -2464,8 +2469,13 @@ function SkillBindingPanel({
           <span>Timeout</span>
           <input onChange={(event) => setTimeoutValue(event.target.value)} required value={timeout} />
         </label>
-        {error ? <p className="form-error">{error}</p> : null}
+        {error ? (
+          <p aria-live="polite" className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
         <button
+          aria-live="polite"
           className="button button--primary"
           disabled={busy || role === "operator"}
           title={role === "operator" ? "运维人员只读 Skill 创建配置" : undefined}
@@ -2855,7 +2865,7 @@ function LLMInvokePanel({
 
   return (
     <Panel eyebrow="LLM" title="调用测试">
-      <form className="invoke-form" onSubmit={handleSubmit}>
+      <form aria-busy={busy} className="invoke-form" onSubmit={handleSubmit}>
         <label>
           <span>Model Alias</span>
           <select onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
@@ -2870,8 +2880,12 @@ function LLMInvokePanel({
           <span>Input</span>
           <textarea onChange={(event) => setInput(event.target.value)} rows={4} value={input} />
         </label>
-        {error ? <p className="form-error">{error}</p> : null}
-        <button className="button button--primary" disabled={busy} type="submit">
+        {error ? (
+          <p aria-live="polite" className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <button aria-live="polite" className="button button--primary" disabled={busy} type="submit">
           {busy ? "调用中" : "发送调用"}
         </button>
       </form>
