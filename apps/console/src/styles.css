@@ -355,6 +355,15 @@ a {
   font-size: 1.08rem;
 }
 
+.topbar__role-purpose {
+  max-width: 520px;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .topbar__actions {
   display: flex;
   align-items: center;

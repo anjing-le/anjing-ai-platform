@@ -771,6 +771,7 @@ function ConsoleShell({
           <div>
             <p className="eyebrow">{activeRole.name} View</p>
             <h1>{activeItem.label}</h1>
+            <p className="topbar__role-purpose">{activeRole.purpose}</p>
           </div>
           <div className="topbar__actions">
             <APIStateBadge detail={apiDetail} lastSyncedAt={lastSyncedAt} state={apiState} />

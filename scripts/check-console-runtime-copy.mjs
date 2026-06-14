@@ -20,6 +20,10 @@ if (!appSource.includes("lastSyncedAt") || !appSource.includes("最近同步") |
   errors.push("Console topbar must show platform data freshness after refresh attempts.");
 }
 
+if (!appSource.includes("topbar__role-purpose") || !appSource.includes("activeRole.purpose")) {
+  errors.push("Console topbar must show the active role purpose beside the role switcher.");
+}
+
 if (!appSource.includes("window.setTimeout") || !appSource.includes("setNotice(\"\")")) {
   errors.push("Console notices must clear automatically after a short delay.");
 }
