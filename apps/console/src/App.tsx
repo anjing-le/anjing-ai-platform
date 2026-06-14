@@ -3188,9 +3188,11 @@ function ModuleWorkflow({ activeTab, steps }: { activeTab: string; steps: Workfl
     <section className="workflow-strip" aria-label="模块工作流">
       {steps.map((step, index) => {
         const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "next";
+        const stateLabel = state === "done" ? "已完成" : state === "active" ? "当前步骤" : "下一步";
 
         return (
           <article
+            aria-label={`${step.label}：${stateLabel}，${step.note}`}
             aria-current={state === "active" ? "step" : undefined}
             className={`workflow-step workflow-step--${state}`}
             key={step.label}

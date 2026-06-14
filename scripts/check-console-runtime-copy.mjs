@@ -258,8 +258,13 @@ if (
   errors.push("Console module tabs must expose accessible semantics, selected state and keyboard navigation.");
 }
 
-if (!appSource.includes('aria-current={state === "active" ? "step" : undefined}') || !appSource.includes('<span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>')) {
-  errors.push("Console module workflow must expose the active step and hide decorative step numbers.");
+if (
+  !appSource.includes('aria-current={state === "active" ? "step" : undefined}') ||
+  !appSource.includes('<span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>') ||
+  !appSource.includes('const stateLabel = state === "done" ? "已完成" : state === "active" ? "当前步骤" : "下一步"') ||
+  !appSource.includes("aria-label={`${step.label}：${stateLabel}，${step.note}`}")
+) {
+  errors.push("Console module workflow must expose step summaries and hide decorative step numbers.");
 }
 
 if (!styleSource.includes('.tab-row button:focus-visible') || !styleSource.includes('.tab-row button[aria-selected="true"]')) {
