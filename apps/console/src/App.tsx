@@ -114,7 +114,7 @@ const moduleWorkflows: Record<Exclude<ConsoleRoute, "home">, WorkflowStep[]> = {
     { label: "预算", note: "处理预算告警", tab: "预算告警" },
   ],
   docs: [
-    { label: "开始", note: "创建接入应用", tab: "Quickstart" },
+    { label: "开始", note: "创建接入应用", tab: "快速接入" },
     { label: "边界", note: "确认服务归属", tab: "服务边界" },
     { label: "参考", note: "查看 API 边界", tab: "API 文档" },
     { label: "帮助", note: "排查常见问题", tab: "FAQ" },
@@ -1755,10 +1755,10 @@ function ModulePage({
   if (page.id === "iam" && activeTab === "角色权限") {
     selectedTableRowId = selectedRowId;
   }
-  if (page.id === "docs" && activeTab === "Quickstart") {
+  if (page.id === "docs" && activeTab === "快速接入") {
     selectedTableRowId = selectedApplication?.id;
   }
-  if (page.id === "docs" && activeTab !== "Quickstart") {
+  if (page.id === "docs" && activeTab !== "快速接入") {
     selectedTableRowId = selectedRowId;
   }
   if (page.id === "gateway" && activeTab === "API 路由") {
@@ -1988,7 +1988,7 @@ function ModulePage({
           {page.id === "quota" && activeTab === "用量" ? (
             <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
           ) : null}
-          {page.id === "docs" && activeTab === "Quickstart" ? (
+          {page.id === "docs" && activeTab === "快速接入" ? (
             <ApplicationJourneyPanel
               activating={activatingApplicationId === selectedApplication?.id}
               application={selectedApplication}
@@ -1999,7 +1999,7 @@ function ModulePage({
               snapshot={snapshot}
             />
           ) : null}
-          {page.id === "docs" && activeTab !== "Quickstart" ? (
+          {page.id === "docs" && activeTab !== "快速接入" ? (
             <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
           ) : null}
           {page.id === "overview" ? <OperationsSignalPanel snapshot={snapshot} /> : null}
@@ -2335,7 +2335,7 @@ function QuickstartChecklist({
   ];
 
   return (
-    <div aria-label="Quickstart 最小接入清单" className="quickstart-checklist">
+    <div aria-label="快速接入最小清单" className="quickstart-checklist">
       {steps.map((step) => (
         <article aria-label={`${step.title}：${step.status}，${step.note}`} key={step.label}>
           <span aria-hidden="true">{step.label}</span>
@@ -2369,11 +2369,11 @@ function QuickstartSnippet({ curl }: { curl: string }) {
   return (
     <div className="quickstart-snippet">
       <div>
-        <span>Quickstart</span>
+        <span>快速接入</span>
         <strong>最小调用示例</strong>
       </div>
       <button
-        aria-label={`${copyLabel}：Quickstart curl 调用示例`}
+        aria-label={`${copyLabel}：快速接入 curl 调用示例`}
         className="text-command"
         onClick={() => void handleSnippetCopy()}
         type="button"
@@ -2388,7 +2388,7 @@ function QuickstartSnippet({ curl }: { curl: string }) {
           浏览器未允许剪贴板写入，请手动复制代码片段。
         </p>
       ) : null}
-      <pre aria-label="Quickstart curl 调用示例">
+      <pre aria-label="快速接入 curl 调用示例">
         <code>{curl}</code>
       </pre>
     </div>

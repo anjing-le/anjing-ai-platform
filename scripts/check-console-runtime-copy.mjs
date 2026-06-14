@@ -71,6 +71,10 @@ for (const localizedDataCopy of ["快速接入、API 参考", "负责人", "模�
   }
 }
 
+if (dataSource.includes('tabs: ["Quickstart"') || dataSource.includes('eyebrow: "Quickstart"')) {
+  errors.push("Console docs module must expose 快速接入 instead of Quickstart.");
+}
+
 for (const staleSnapshotCopy of [
   'eyebrow: "Health"',
   'eyebrow: "Audit"',
@@ -166,7 +170,7 @@ if (
 if (
   !appSource.includes("aria-label={`复制本地运行命令：pnpm dev:api，${runtimeCommandCopyLabel}`}") ||
   !appSource.includes("aria-label={`复制 ${item.label} 运行命令：${item.command}`}") ||
-  !appSource.includes("aria-label={`${copyLabel}：Quickstart curl 调用示例`}") ||
+  !appSource.includes("aria-label={`${copyLabel}：快速接入 curl 调用示例`}") ||
   (appSource.match(/<Copy aria-hidden="true" size=\{14\}/g) || []).length < 3
 ) {
   errors.push("Console copy buttons must expose explicit labels and hide decorative copy icons.");
@@ -367,6 +371,9 @@ for (const staleMicroCopy of [
   "<span>Input</span>",
   "Public open-source infrastructure for AI applications",
   "<span>Dev Runtime</span>",
+  "<span>Quickstart</span>",
+  'aria-label="Quickstart 最小接入清单"',
+  "Quickstart curl 调用示例",
 ]) {
   if (appSource.includes(staleMicroCopy)) {
     errors.push(`Console microcopy must use localized enterprise labels instead of ${staleMicroCopy}.`);
@@ -593,7 +600,7 @@ if (!appSource.includes("quickstart-snippet") || !appSource.includes("复制调�
 
 if (
   !appSource.includes("复制失败") ||
-  !appSource.includes("Quickstart curl 调用示例") ||
+  !appSource.includes("快速接入 curl 调用示例") ||
   !appSource.includes('className="quickstart-snippet__hint" role="status"')
 ) {
   errors.push("Console Quickstart copy action must expose success/error feedback and an accessible snippet label.");
@@ -608,7 +615,7 @@ if (
   !appSource.includes("发送最小调用") ||
   !appSource.includes("hasRequestLogs") ||
   !appSource.includes("StatusBadge tone={toneForStatus(step.status)}") ||
-  !appSource.includes('aria-label="Quickstart 最小接入清单"') ||
+  !appSource.includes('aria-label="快速接入最小清单"') ||
   !appSource.includes("aria-label={`${step.title}：${step.status}，${step.note}`}") ||
   !appSource.includes('<span aria-hidden="true">{step.label}</span>')
 ) {

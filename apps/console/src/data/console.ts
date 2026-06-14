@@ -464,7 +464,7 @@ export const modulePages: ModulePageDefinition[] = [
     title: "帮助文档",
     description: "给使用者和开发者一个轻量接入入口：快速接入、服务边界、API 文档和常见问题先跑通。",
     primaryAction: "创建接入应用",
-    tabs: ["Quickstart", "服务边界", "API 文档", "FAQ"],
+    tabs: ["快速接入", "服务边界", "API 文档", "FAQ"],
     metrics: [
       { label: "文档", value: "12", note: "快速接入 / API / FAQ", tone: "neutral" },
       { label: "示例", value: "3", note: "客服 / RAG / AIGC", tone: "neutral" },
@@ -472,7 +472,7 @@ export const modulePages: ModulePageDefinition[] = [
       { label: "Runbook", value: "4", note: "运维 / 计费 / 鉴权", tone: "neutral" },
     ],
     table: {
-      eyebrow: "Quickstart",
+      eyebrow: "快速接入",
       title: "接入步骤",
       columns: ["步骤", "说明", "产物", "负责人", "状态"],
       rows: [
