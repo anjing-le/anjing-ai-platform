@@ -11,8 +11,8 @@ if (!appSource.includes("<code>pnpm dev:api</code>")) {
   errors.push("Console home runtime command must show pnpm dev:api.");
 }
 
-if (!appSource.includes('<section aria-label={title} className={`panel ${className}`}>')) {
-  errors.push("Console panel sections must expose their title as an accessible region label.");
+if (!appSource.includes('<section aria-label={`${eyebrow}：${title}`} className={`panel ${className}`}>')) {
+  errors.push("Console panel sections must expose their eyebrow and title as accessible region labels.");
 }
 
 if (
