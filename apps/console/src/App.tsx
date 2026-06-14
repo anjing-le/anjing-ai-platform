@@ -3329,7 +3329,11 @@ function StatusDot({ tone }: { tone: StatusTone }) {
 }
 
 function ActionHint({ children }: { children: React.ReactNode }) {
-  return <p className="action-hint">{children}</p>;
+  return (
+    <p aria-label={`权限提示：${children}`} className="action-hint" role="note">
+      {children}
+    </p>
+  );
 }
 
 function toneForStatus(status = ""): StatusTone {

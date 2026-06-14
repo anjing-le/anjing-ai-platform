@@ -140,6 +140,10 @@ for (const actionLabel of [
   }
 }
 
+if (!appSource.includes("aria-label={`权限提示：${children}`}") || !appSource.includes('className="action-hint" role="note"')) {
+  errors.push("Console action hints must expose permission explanations as notes.");
+}
+
 if (
   !appSource.includes("aria-pressed={item.id === role}") ||
   !appSource.includes("aria-label={`${item.label}视角：${item.purpose}，${item.id === role ? \"当前选中\" : \"可切换\"}`}") ||
