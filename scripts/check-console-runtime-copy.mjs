@@ -24,8 +24,8 @@ if (
   errors.push("Console empty panels must reuse the accessible EmptyPanel status component.");
 }
 
-if (!appSource.includes("aria-label={`${metric.label}：${metric.value}，${metric.note}`")) {
-  errors.push("Console metric cards must expose readable metric summaries.");
+if (!appSource.includes("aria-label={`${metric.label}：${metric.value}，${metric.note}，状态 ${metric.tone || \"neutral\"}`")) {
+  errors.push("Console metric cards must expose readable metric summaries with status tone.");
 }
 
 for (const placeholderCopy of ["待补充", "planned docs", "mock target", "Mock fallback", "后续补充", "No usage yet", "waiting first usage"]) {
