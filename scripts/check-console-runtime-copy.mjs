@@ -40,6 +40,10 @@ if (!appSource.includes("quickstart-snippet") || !appSource.includes("复制调�
   errors.push("Console Quickstart must provide a copyable minimal call snippet.");
 }
 
+if (!appSource.includes("复制失败") || !appSource.includes("aria-live=\"polite\"") || !appSource.includes("Quickstart curl 调用示例")) {
+  errors.push("Console Quickstart copy action must expose success/error feedback and an accessible snippet label.");
+}
+
 if (!appSource.includes("ak_live_xxx") || !appSource.includes("QuickstartSnippet curl={placeholderCurl}")) {
   errors.push("Console Quickstart must show a placeholder call snippet before an application exists.");
 }

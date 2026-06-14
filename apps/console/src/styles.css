@@ -1710,6 +1710,13 @@ tbody tr.is-selected td:first-child {
   justify-self: start;
 }
 
+.quickstart-snippet__hint {
+  margin: 0;
+  color: #8a4f00;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .quickstart-snippet pre {
   max-width: 100%;
   margin: 0;

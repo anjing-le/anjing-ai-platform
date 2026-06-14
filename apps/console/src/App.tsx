@@ -2048,13 +2048,20 @@ function ApplicationJourneyPanel({
 }
 
 function QuickstartSnippet({ curl }: { curl: string }) {
-  const [snippetCopied, setSnippetCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "success" | "error">("idle");
 
   async function handleSnippetCopy() {
-    await navigator.clipboard.writeText(curl);
-    setSnippetCopied(true);
-    window.setTimeout(() => setSnippetCopied(false), 1800);
+    try {
+      await navigator.clipboard.writeText(curl);
+      setCopyState("success");
+    } catch {
+      setCopyState("error");
+    }
+    window.setTimeout(() => setCopyState("idle"), 1800);
   }
+
+  const copyLabel =
+    copyState === "success" ? "已复制" : copyState === "error" ? "复制失败" : "复制调用示例";
 
   return (
     <div className="quickstart-snippet">
@@ -2062,11 +2069,20 @@ function QuickstartSnippet({ curl }: { curl: string }) {
         <span>Quickstart</span>
         <strong>最小调用示例</strong>
       </div>
-      <button className="text-command" onClick={() => void handleSnippetCopy()} type="button">
+      <button
+        className="text-command"
+        onClick={() => void handleSnippetCopy()}
+        type="button"
+        aria-live="polite"
+        title={copyState === "error" ? "浏览器未允许剪贴板写入，请手动复制代码片段。" : undefined}
+      >
         <Copy size={14} />
-        {snippetCopied ? "已复制" : "复制调用示例"}
+        {copyLabel}
       </button>
-      <pre>
+      {copyState === "error" ? (
+        <p className="quickstart-snippet__hint">浏览器未允许剪贴板写入，请手动复制代码片段。</p>
+      ) : null}
+      <pre aria-label="Quickstart curl 调用示例">
         <code>{curl}</code>
       </pre>
     </div>
