@@ -15,6 +15,15 @@ if (!appSource.includes('<section aria-label={title} className={`panel ${classNa
   errors.push("Console panel sections must expose their title as an accessible region label.");
 }
 
+if (
+  !appSource.includes("function EmptyPanel") ||
+  !appSource.includes('className="empty-panel" role="status"') ||
+  !appSource.includes("aria-label={`${title}：${description}`}") ||
+  appSource.includes('<div className="empty-panel">')
+) {
+  errors.push("Console empty panels must reuse the accessible EmptyPanel status component.");
+}
+
 if (!appSource.includes("aria-label={`${metric.label}：${metric.value}，${metric.note}`")) {
   errors.push("Console metric cards must expose readable metric summaries.");
 }

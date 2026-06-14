@@ -2006,10 +2006,7 @@ function OperationsSignalPanel({ snapshot }: { snapshot?: PlatformSnapshot }) {
             ))}
           </div>
         ) : (
-          <div className="empty-panel">
-            <strong>暂无健康数据</strong>
-            <p>连接 ops-api 后，这里会展示核心服务的 SLO、P95 和状态。</p>
-          </div>
+          <EmptyPanel description="连接 ops-api 后，这里会展示核心服务的 SLO、P95 和状态。" title="暂无健康数据" />
         )}
       </Panel>
 
@@ -2026,10 +2023,7 @@ function OperationsSignalPanel({ snapshot }: { snapshot?: PlatformSnapshot }) {
             ))}
           </div>
         ) : (
-          <div className="empty-panel">
-            <strong>暂无审计事件</strong>
-            <p>配置变更、权限操作和运行期动作会写入这里。</p>
-          </div>
+          <EmptyPanel description="配置变更、权限操作和运行期动作会写入这里。" title="暂无审计事件" />
         )}
       </Panel>
     </>
@@ -2048,10 +2042,7 @@ function SelectedRowPanel({
   if (!row) {
     return (
       <Panel eyebrow="Selection" title="选中详情">
-        <div className="empty-panel">
-          <strong>暂无选中记录</strong>
-          <p>切换筛选条件或选择表格行后，这里会展示关键字段。</p>
-        </div>
+        <EmptyPanel description="切换筛选条件或选择表格行后，这里会展示关键字段。" title="暂无选中记录" />
       </Panel>
     );
   }
@@ -2123,10 +2114,7 @@ function ApplicationJourneyPanel({
 
     return (
       <Panel eyebrow="Onboarding" title="应用接入详情">
-        <div className="empty-panel">
-          <strong>暂无应用</strong>
-          <p>创建接入应用后，这里会展示 API Key、路由、用量和审计链路。</p>
-        </div>
+        <EmptyPanel description="创建接入应用后，这里会展示 API Key、路由、用量和审计链路。" title="暂无应用" />
         <QuickstartChecklist />
         <QuickstartSnippet curl={placeholderCurl} />
       </Panel>
@@ -2379,10 +2367,7 @@ function GatewayRoutePanel({
   if (!route) {
     return (
       <Panel eyebrow="Route" title="路由详情">
-        <div className="empty-panel">
-          <strong>暂无路由</strong>
-          <p>新增路由后，这里会展示鉴权、限流、发布状态和上线动作。</p>
-        </div>
+        <EmptyPanel description="新增路由后，这里会展示鉴权、限流、发布状态和上线动作。" title="暂无路由" />
       </Panel>
     );
   }
@@ -2534,10 +2519,7 @@ function ModelRoutePanel({
           </div>
         </>
       ) : (
-        <div className="empty-panel">
-          <strong>暂无模型路由</strong>
-          <p>创建模型别名后，LLM 调用会通过 alias 进入路由策略。</p>
-        </div>
+        <EmptyPanel description="创建模型别名后，LLM 调用会通过 alias 进入路由策略。" title="暂无模型路由" />
       )}
 
       <form aria-busy={busy} className="model-route-form" onSubmit={handleSubmit}>
@@ -2675,10 +2657,7 @@ function SkillBindingPanel({
           </div>
         </>
       ) : (
-        <div className="empty-panel">
-          <strong>暂无 Skill</strong>
-          <p>创建 Skill 绑定后，网关会把它纳入统一调用和治理入口。</p>
-        </div>
+        <EmptyPanel description="创建 Skill 绑定后，网关会把它纳入统一调用和治理入口。" title="暂无 Skill" />
       )}
 
       <form aria-busy={busy} className="skill-binding-form" onSubmit={handleSubmit}>
@@ -2738,10 +2717,7 @@ function BillingPlanPanel({
   if (!plan) {
     return (
       <Panel eyebrow="Plan" title="套餐详情">
-        <div className="empty-panel">
-          <strong>暂无套餐</strong>
-          <p>新增套餐后，这里会展示限流、Token 配额和启用状态。</p>
-        </div>
+        <EmptyPanel description="新增套餐后，这里会展示限流、Token 配额和启用状态。" title="暂无套餐" />
       </Panel>
     );
   }
@@ -2814,10 +2790,7 @@ function BudgetAlertPanel({
   if (!alert) {
     return (
       <Panel eyebrow="Budget" title="预算告警">
-        <div className="empty-panel">
-          <strong>暂无预算规则</strong>
-          <p>创建套餐或预算规则后，这里会展示水位和处理动作。</p>
-        </div>
+        <EmptyPanel description="创建套餐或预算规则后，这里会展示水位和处理动作。" title="暂无预算规则" />
       </Panel>
     );
   }
@@ -2890,10 +2863,7 @@ function UserAccessPanel({
   if (!user) {
     return (
       <Panel eyebrow="User" title="用户详情">
-        <div className="empty-panel">
-          <strong>暂无用户</strong>
-          <p>邀请用户后，这里会展示角色、MFA、状态和激活动作。</p>
-        </div>
+        <EmptyPanel description="邀请用户后，这里会展示角色、MFA、状态和激活动作。" title="暂无用户" />
       </Panel>
     );
   }
@@ -2966,10 +2936,7 @@ function APIKeyPanel({
   if (!apiKey) {
     return (
       <Panel eyebrow="API Key" title="密钥详情">
-        <div className="empty-panel">
-          <strong>暂无 API Key</strong>
-          <p>创建接入应用后，这里会展示 API Key、scope、项目归属和撤销动作。</p>
-        </div>
+        <EmptyPanel description="创建接入应用后，这里会展示 API Key、scope、项目归属和撤销动作。" title="暂无 API Key" />
       </Panel>
     );
   }
@@ -3042,10 +3009,7 @@ function CredentialRefPanel({
   if (!credential) {
     return (
       <Panel eyebrow="Credential" title="凭据详情">
-        <div className="empty-panel">
-          <strong>暂无凭据引用</strong>
-          <p>接入供应商 Key 后，这里会展示 credentialRef、scope、脱敏预览和轮换动作。</p>
-        </div>
+        <EmptyPanel description="接入供应商 Key 后，这里会展示 credentialRef、scope、脱敏预览和轮换动作。" title="暂无凭据引用" />
       </Panel>
     );
   }
@@ -3248,6 +3212,15 @@ function Panel({
       </div>
       {children}
     </section>
+  );
+}
+
+function EmptyPanel({ description, title }: { description: string; title: string }) {
+  return (
+    <div aria-label={`${title}：${description}`} className="empty-panel" role="status">
+      <strong>{title}</strong>
+      <p>{description}</p>
+    </div>
   );
 }
 
