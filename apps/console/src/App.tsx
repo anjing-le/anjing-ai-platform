@@ -884,6 +884,8 @@ function ConsoleHome({
         [item.name, item.label, item.summary, ...item.tags].join(" ").toLowerCase().includes(normalizedModuleQuery),
       )
     : moduleAccessItems;
+  const visibleModuleCount = moduleAccessItems.filter((item) => item.roles.includes(role)).length;
+  const lockedModuleCount = moduleAccessItems.length - visibleModuleCount;
   const roleLabel = roles.find((item) => item.id === role)?.label || "管理员";
   const liveTodos = hydrateTodos(snapshot) || todos;
   const canResolveTodo = role === "admin" || role === "operator";
@@ -919,7 +921,15 @@ function ConsoleHome({
                 value={moduleQuery}
               />
             </label>
-            <span>{filteredModuleItems.length} / {moduleAccessItems.length} modules</span>
+            {normalizedModuleQuery ? (
+              <button className="text-command" onClick={() => setModuleQuery("")} type="button">
+                清空搜索
+              </button>
+            ) : null}
+            <span className="module-access-count">
+              {filteredModuleItems.length} / {moduleAccessItems.length} modules · {visibleModuleCount} 可进入 ·{" "}
+              {lockedModuleCount} 受限
+            </span>
           </div>
           <div className="module-grid">
             {filteredModuleItems.map((item) => {

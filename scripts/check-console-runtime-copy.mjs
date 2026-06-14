@@ -36,6 +36,10 @@ if (!appSource.includes("filtersActive") || !appSource.includes("清空筛选"))
   errors.push("Console data tables must provide a clear filter action when filters are active.");
 }
 
+if (!appSource.includes("visibleModuleCount") || !appSource.includes("lockedModuleCount") || !appSource.includes("清空搜索")) {
+  errors.push("Console home module entry must show role access counts and a clear search action.");
+}
+
 if (!appSource.includes("quickstart-snippet") || !appSource.includes("复制调用示例") || !appSource.includes("navigator.clipboard.writeText")) {
   errors.push("Console Quickstart must provide a copyable minimal call snippet.");
 }
