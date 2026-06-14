@@ -301,6 +301,10 @@ if (!appSource.includes("table-result-count") || !appSource.includes("tableView.
   errors.push("Console data tables must show filtered row counts.");
 }
 
+if (appSource.includes("modules ·") || appSource.includes("{rows.length} / {tableView.rows.length} rows") || !appSource.includes("个模块") || !appSource.includes("条记录")) {
+  errors.push("Console count units must use localized module and table copy.");
+}
+
 if (!appSource.includes('<CheckCircle2 aria-hidden="true"') || !appSource.includes('<CircleAlert aria-hidden="true"')) {
   errors.push("Console decorative status icons must be hidden from assistive technology.");
 }

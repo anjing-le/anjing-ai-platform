@@ -1019,7 +1019,7 @@ function ConsoleHome({
               </button>
             ) : null}
             <span className="module-access-count">
-              {filteredModuleItems.length} / {moduleAccessItems.length} modules · {visibleModuleCount} 可进入 ·{" "}
+              {filteredModuleItems.length} / {moduleAccessItems.length} 个模块 · {visibleModuleCount} 可进入 ·{" "}
               {lockedModuleCount} 受限
             </span>
           </div>
@@ -1891,7 +1891,7 @@ function ModulePage({
               </button>
             ) : null}
             <span className="table-result-count">
-              {rows.length} / {tableView.rows.length} rows
+              {rows.length} / {tableView.rows.length} 条记录
             </span>
           </div>
           <DataTable
