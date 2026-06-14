@@ -100,6 +100,15 @@ if (!appSource.includes("topbar__role-purpose") || !appSource.includes("activeRo
 }
 
 if (
+  !appSource.includes("primaryAllowed") ||
+  !appSource.includes("${page.title}：${page.primaryAction}") ||
+  !appSource.includes("无法执行 ${page.primaryAction}，${primaryHint}") ||
+  !appSource.includes("<ChevronRight aria-hidden=\"true\" size={16} />")
+) {
+  errors.push("Console module primary actions must expose role-aware labels and hide decorative arrows.");
+}
+
+if (
   !appSource.includes("aria-pressed={item.id === role}") ||
   !appSource.includes("aria-label={`${item.label}视角：${item.purpose}`}") ||
   !styleSource.includes('.role-switcher button[aria-pressed="true"]')

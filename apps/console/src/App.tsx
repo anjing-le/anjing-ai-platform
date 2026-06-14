@@ -1776,6 +1776,11 @@ function ModulePage({
         </div>
         <div className="page-heading__action">
           <button
+            aria-label={
+              primaryAllowed
+                ? `${page.title}：${page.primaryAction}`
+                : `${page.title}：无法执行 ${page.primaryAction}，${primaryHint}`
+            }
             className="button button--primary"
             disabled={!primaryAllowed}
             onClick={() => void onPrimaryAction(page.id)}
@@ -1783,7 +1788,7 @@ function ModulePage({
             type="button"
           >
             {page.primaryAction}
-            <ChevronRight size={16} />
+            <ChevronRight aria-hidden="true" size={16} />
           </button>
           {!primaryAllowed ? <ActionHint>{primaryHint}</ActionHint> : null}
         </div>
