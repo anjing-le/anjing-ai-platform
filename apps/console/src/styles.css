@@ -1172,6 +1172,21 @@ a {
   font-weight: 800;
 }
 
+.text-command {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.text-command:hover {
+  border-color: #111111;
+}
+
 .table-result-count {
   margin-left: auto;
   color: var(--muted);

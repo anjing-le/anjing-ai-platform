@@ -1377,6 +1377,7 @@ function ModulePage({
     const matchesStatus = status === "全部状态" || row.status === status;
     return matchesQuery && matchesStatus;
   });
+  const filtersActive = query.trim() !== "" || status !== "全部状态";
 
   const selectedApplication = useMemo(() => {
     if (page.id !== "docs" || !snapshot?.applications?.length) {
@@ -1623,6 +1624,18 @@ function ModulePage({
                 <option key={item}>{item}</option>
               ))}
             </select>
+            {filtersActive ? (
+              <button
+                className="text-command"
+                onClick={() => {
+                  setQuery("");
+                  setStatus("全部状态");
+                }}
+                type="button"
+              >
+                清空筛选
+              </button>
+            ) : null}
             <span className="table-result-count">
               {rows.length} / {tableView.rows.length} rows
             </span>
