@@ -346,6 +346,15 @@ if (!appSource.includes("openTodos") || !appSource.includes("todo-summary") || !
 }
 
 if (
+  !appSource.includes("visibleOpenTodos") ||
+  !appSource.includes("hiddenOpenTodoCount") ||
+  !appSource.includes('className="todo-more"') ||
+  !appSource.includes("进入运营总览查看全部待办")
+) {
+  errors.push("Console home todo list must explain hidden overflow work and link to the full operations view.");
+}
+
+if (
   !appSource.includes("aria-label=\"没有找到模块：换一个关键词，例如 Gateway、Billing、API 或权限。\"") ||
   !appSource.includes("aria-label=\"今日待办已清空：新的告警、审批或接入校验会自动出现在这里。\"") ||
   !appSource.includes('className="todo-empty" role="status"')

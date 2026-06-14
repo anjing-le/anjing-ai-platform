@@ -936,6 +936,8 @@ function ConsoleHome({
   const roleLabel = roles.find((item) => item.id === role)?.label || "管理员";
   const liveTodos = hydrateTodos(snapshot) || todos;
   const openTodos = liveTodos.filter((todo) => todo.status !== "Resolved");
+  const visibleOpenTodos = openTodos.slice(0, 4);
+  const hiddenOpenTodoCount = openTodos.length - visibleOpenTodos.length;
   const resolvedTodoCount = liveTodos.length - openTodos.length;
   const canResolveTodo = role === "admin" || role === "operator";
   const [runtimeCommandCopyState, setRuntimeCommandCopyState] = useState<"idle" | "success" | "error">("idle");
@@ -1084,7 +1086,7 @@ function ConsoleHome({
             <span>{resolvedTodoCount} 个已处理</span>
           </div>
           <div className="todo-list">
-            {openTodos.slice(0, 4).map((todo) => (
+            {visibleOpenTodos.map((todo) => (
               <article className="todo-item" key={todo.id}>
                 <div>
                   <span>{todo.moduleLabel}</span>
@@ -1115,6 +1117,18 @@ function ConsoleHome({
                 </div>
               </article>
             ))}
+            {hiddenOpenTodoCount > 0 ? (
+              <div
+                aria-label={`还有 ${hiddenOpenTodoCount} 个待办未在首页展示，进入运营总览查看全部。`}
+                className="todo-more"
+                role="status"
+              >
+                <span>还有 {hiddenOpenTodoCount} 个待办</span>
+                <a aria-label="进入运营总览查看全部待办" href={routeHash.overview}>
+                  查看全部
+                </a>
+              </div>
+            ) : null}
             {!openTodos.length ? (
               <div aria-label="今日待办已清空：新的告警、审批或接入校验会自动出现在这里。" className="todo-empty" role="status">
                 <strong>今日待办已清空</strong>

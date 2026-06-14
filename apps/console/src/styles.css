@@ -855,6 +855,36 @@ a {
   opacity: 0.45;
 }
 
+.todo-more {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  border-top: 1px solid var(--line);
+  background: #fbfbfb;
+}
+
+.todo-more span {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.todo-more a {
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.todo-more a:hover,
+.todo-more a:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .todo-empty {
   display: grid;
   gap: 8px;
