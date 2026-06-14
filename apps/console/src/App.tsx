@@ -812,6 +812,7 @@ function ConsoleShell({
             <div className="role-switcher" aria-label="角色视角">
               {roles.map((item) => (
                 <button
+                  aria-pressed={item.id === role}
                   className={item.id === role ? "is-active" : ""}
                   key={item.id}
                   onClick={() => setRole(item.id)}

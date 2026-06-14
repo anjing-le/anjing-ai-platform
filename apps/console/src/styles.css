@@ -474,6 +474,7 @@ a {
 }
 
 .role-switcher button.is-active,
+.role-switcher button[aria-pressed="true"],
 .tab-row button.is-active {
   border-color: var(--ink);
   background: var(--ink);
