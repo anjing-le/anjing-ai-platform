@@ -50,7 +50,11 @@ if (!appSource.includes("service-command") || !appSource.includes("handleService
   errors.push("Console single-service commands must be copyable from the backend plan.");
 }
 
-if (!appSource.includes("failedServiceCommand") || !appSource.includes("请手动复制命令")) {
+if (
+  !appSource.includes("failedServiceCommand") ||
+  !appSource.includes("请手动复制命令") ||
+  !appSource.includes('className="service-command__hint" role="status"')
+) {
   errors.push("Console single-service command copy action must expose clipboard failure feedback.");
 }
 

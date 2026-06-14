@@ -1153,6 +1153,11 @@ function ConsoleHome({
                 {runtimeCommandCopyLabel}
               </button>
             </div>
+            {runtimeCommandCopyState === "error" ? (
+              <p aria-live="polite" className="service-command__hint" role="status">
+                浏览器未允许剪贴板写入，请手动复制命令。
+              </p>
+            ) : null}
           </div>
           <div className="service-plan">
             {backendPlan.map((item) => (
@@ -1181,6 +1186,11 @@ function ConsoleHome({
                           ? "复制失败"
                           : "复制"}
                     </button>
+                    {failedServiceCommand === item.command ? (
+                      <p aria-live="polite" className="service-command__hint" role="status">
+                        浏览器未允许剪贴板写入，请手动复制命令。
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
                 {"health" in item ? <small>{item.health}</small> : null}
