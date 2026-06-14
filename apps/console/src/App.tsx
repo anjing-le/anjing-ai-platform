@@ -980,7 +980,7 @@ function ConsoleHome({
         </div>
         <a className="button button--primary" href={routeHash.docs}>
           开始接入
-          <ChevronRight size={16} />
+          <ChevronRight aria-hidden="true" size={16} />
         </a>
       </section>
 
@@ -2428,7 +2428,7 @@ function GatewayRoutePanel({
           type="button"
         >
           {route.status === "Active" ? "已发布" : publishing ? "发布中" : "发布路由"}
-          <ChevronRight size={16} />
+          <ChevronRight aria-hidden="true" size={16} />
         </button>
       </div>
     </Panel>
@@ -2508,7 +2508,7 @@ function ModelRoutePanel({
               type="button"
             >
               {modelRoute.status === "Active" ? "已发布" : publishing ? "发布中" : "发布模型路由"}
-              <ChevronRight size={16} />
+              <ChevronRight aria-hidden="true" size={16} />
             </button>
             {role === "operator" ? <ActionHint>需要管理员或开发人员发布模型路由。</ActionHint> : null}
           </div>
@@ -2632,7 +2632,7 @@ function SkillBindingPanel({
               type="button"
             >
               {skill.status === "Published" ? "已发布" : publishing ? "发布中" : "发布 Skill"}
-              <ChevronRight size={16} />
+              <ChevronRight aria-hidden="true" size={16} />
             </button>
             {role === "operator" ? <ActionHint>需要管理员或开发人员发布 Skill。</ActionHint> : null}
           </div>
@@ -2746,7 +2746,7 @@ function BillingPlanPanel({
           type="button"
         >
           {plan.status === "Active" ? "已启用" : activating ? "启用中" : "启用套餐"}
-          <ChevronRight size={16} />
+          <ChevronRight aria-hidden="true" size={16} />
         </button>
         {!canActivate ? <ActionHint>需要管理员启用或变更套餐。</ActionHint> : null}
       </div>
@@ -2814,7 +2814,7 @@ function BudgetAlertPanel({
           type="button"
         >
           {resolved ? "已处理" : resolving ? "处理中" : "处理预算告警"}
-          <ChevronRight size={16} />
+          <ChevronRight aria-hidden="true" size={16} />
         </button>
         {!canResolve ? <ActionHint>需要管理员或运维人员处理预算告警。</ActionHint> : null}
       </div>
@@ -2882,7 +2882,7 @@ function UserAccessPanel({
           type="button"
         >
           {user.status === "Active" ? "已激活" : activating ? "激活中" : "激活用户"}
-          <ChevronRight size={16} />
+          <ChevronRight aria-hidden="true" size={16} />
         </button>
         {!canActivate ? <ActionHint>需要管理员激活用户邀请。</ActionHint> : null}
       </div>
@@ -2950,7 +2950,7 @@ function APIKeyPanel({
           type="button"
         >
           {apiKey.status === "Revoked" ? "已撤销" : revoking ? "撤销中" : "撤销 API Key"}
-          <ChevronRight size={16} />
+          <ChevronRight aria-hidden="true" size={16} />
         </button>
         {!canRevoke ? <ActionHint>需要管理员撤销 API Key。</ActionHint> : null}
       </div>
@@ -3018,7 +3018,7 @@ function CredentialRefPanel({
           type="button"
         >
           {credential.status === "Rotated" ? "已轮换" : rotating ? "轮换中" : "轮换凭据"}
-          <ChevronRight size={16} />
+          <ChevronRight aria-hidden="true" size={16} />
         </button>
         {!canRotate ? <ActionHint>需要管理员轮换供应商凭据。</ActionHint> : null}
       </div>

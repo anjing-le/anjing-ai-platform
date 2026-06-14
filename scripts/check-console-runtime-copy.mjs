@@ -108,6 +108,10 @@ if (
   errors.push("Console module primary actions must expose role-aware labels and hide decorative arrows.");
 }
 
+if (appSource.includes("<ChevronRight size={16} />")) {
+  errors.push("Console decorative chevron icons must be hidden from assistive technology.");
+}
+
 if (
   !appSource.includes("aria-pressed={item.id === role}") ||
   !appSource.includes("aria-label={`${item.label}视角：${item.purpose}`}") ||
