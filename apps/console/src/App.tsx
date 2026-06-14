@@ -3203,7 +3203,7 @@ function DataTable({
           {rows.length === 0 ? (
             <tr>
               <td className="empty-cell" colSpan={columns.length}>
-                <div>
+                <div aria-label={`${emptyTitle}：${emptyDescription}`} role="status">
                   <strong>{emptyTitle}</strong>
                   <p>{emptyDescription}</p>
                 </div>

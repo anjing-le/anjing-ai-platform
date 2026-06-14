@@ -197,7 +197,11 @@ if (!appSource.includes("aria-label={`${page.title} 状态筛选`")) {
   errors.push("Console status filters must expose accessible labels.");
 }
 
-if (!appSource.includes("emptyTitle={filtersActive ?") || !appSource.includes("当前筛选没有结果")) {
+if (
+  !appSource.includes("emptyTitle={filtersActive ?") ||
+  !appSource.includes("当前筛选没有结果") ||
+  !appSource.includes('aria-label={`${emptyTitle}：${emptyDescription}`} role="status"')
+) {
   errors.push("Console data tables must provide contextual empty states for active filters.");
 }
 
