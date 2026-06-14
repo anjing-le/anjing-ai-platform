@@ -62,7 +62,12 @@ if (!appSource.includes("刷新平台数据") || !appSource.includes("RefreshCw"
   errors.push("Console topbar must expose a manual platform data refresh action.");
 }
 
-if (!appSource.includes('aria-current={item.id === activeRoute ? "page" : undefined}') || !styleSource.includes('.sidebar__link[aria-current="page"]')) {
+if (
+  !appSource.includes('aria-current={item.id === activeRoute ? "page" : undefined}') ||
+  !appSource.includes("aria-label={`打开${item.label}`}") ||
+  !appSource.includes("<item.icon aria-hidden=\"true\" size={17} />") ||
+  !styleSource.includes('.sidebar__link[aria-current="page"]')
+) {
   errors.push("Console sidebar must expose and style the current navigation item.");
 }
 

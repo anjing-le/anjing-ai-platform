@@ -777,11 +777,12 @@ function ConsoleShell({
           {visibleItems.map((item) => (
             <a
               aria-current={item.id === activeRoute ? "page" : undefined}
+              aria-label={`打开${item.label}`}
               className={item.id === activeRoute ? "sidebar__link is-active" : "sidebar__link"}
               href={routeHash[item.id]}
               key={item.id}
             >
-              <item.icon size={17} />
+              <item.icon aria-hidden="true" size={17} />
               <span>
                 <small>{item.name}</small>
                 <strong>{item.label}</strong>
