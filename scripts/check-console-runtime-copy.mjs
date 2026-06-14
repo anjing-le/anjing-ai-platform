@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 const errors = [];
 const appSource = readFileSync("apps/console/src/App.tsx", "utf8");
+const actionDialogSource = readFileSync("apps/console/src/components/ActionDialog.tsx", "utf8");
 const dataSource = readFileSync("apps/console/src/data/console.ts", "utf8");
 
 if (!appSource.includes("<code>pnpm dev:api</code>")) {
@@ -42,6 +43,14 @@ if (!appSource.includes("topbar__role-purpose") || !appSource.includes("activeRo
 
 if (!appSource.includes("window.setTimeout") || !appSource.includes("setNotice(\"\")")) {
   errors.push("Console notices must clear automatically after a short delay.");
+}
+
+if (
+  !actionDialogSource.includes("aria-describedby=\"action-dialog-description\"") ||
+  !actionDialogSource.includes("id=\"action-dialog-description\"") ||
+  !actionDialogSource.includes("role=\"alert\"")
+) {
+  errors.push("Console action dialog must link its description and expose submit errors as alerts.");
 }
 
 if (!appSource.includes("table-result-count") || !appSource.includes("tableView.rows.length")) {

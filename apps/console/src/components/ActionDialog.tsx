@@ -185,12 +185,18 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section aria-labelledby="action-dialog-title" aria-modal="true" className="action-dialog" role="dialog">
+      <section
+        aria-describedby="action-dialog-description"
+        aria-labelledby="action-dialog-title"
+        aria-modal="true"
+        className="action-dialog"
+        role="dialog"
+      >
         <header>
           <div>
             <p className="eyebrow">Action</p>
             <h2 id="action-dialog-title">{copy.title}</h2>
-            <p>{copy.description}</p>
+            <p id="action-dialog-description">{copy.description}</p>
           </div>
           <button aria-label="关闭" className="icon-button" onClick={onClose} type="button">
             <X size={18} />
@@ -218,7 +224,11 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
             </label>
           ))}
 
-          {error ? <p className="form-error">{error}</p> : null}
+          {error ? (
+            <p aria-live="polite" className="form-error" role="alert">
+              {error}
+            </p>
+          ) : null}
 
           <footer>
             <button className="button" disabled={busy} onClick={onClose} type="button">
