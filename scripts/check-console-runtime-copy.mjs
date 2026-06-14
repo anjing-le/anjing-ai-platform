@@ -69,7 +69,11 @@ if (!appSource.includes("topbar__role-purpose") || !appSource.includes("activeRo
   errors.push("Console topbar must show the active role purpose beside the role switcher.");
 }
 
-if (!appSource.includes("aria-pressed={item.id === role}") || !styleSource.includes('.role-switcher button[aria-pressed="true"]')) {
+if (
+  !appSource.includes("aria-pressed={item.id === role}") ||
+  !appSource.includes("aria-label={`${item.label}视角：${item.purpose}`}") ||
+  !styleSource.includes('.role-switcher button[aria-pressed="true"]')
+) {
   errors.push("Console role switcher must expose and style the active role state.");
 }
 
