@@ -360,8 +360,26 @@ if (!appSource.includes('<CheckCircle2 aria-hidden="true"') || !appSource.includ
   errors.push("Console decorative status icons must be hidden from assistive technology.");
 }
 
-if (!appSource.includes("aria-label={`状态：${children}`}") || !appSource.includes("className={`status status--${tone}`}")) {
+if (!appSource.includes("aria-label={`状态：${label}`}") || !appSource.includes("className={`status status--${tone}`}")) {
   errors.push("Console status badges must expose readable status labels.");
+}
+
+if (
+  !appSource.includes("function displayStatus") ||
+  !appSource.includes('Active: "运行中"') ||
+  !appSource.includes('Warning: "预警"') ||
+  !appSource.includes('Pending: "待处理"') ||
+  !appSource.includes('Resolved: "已处理"')
+) {
+  errors.push("Console status values must use a localized display layer.");
+}
+
+if (!appSource.includes("const label = typeof children === \"string\" ? displayStatus(children) : children")) {
+  errors.push("Console status badges must render localized status labels.");
+}
+
+if (!appSource.includes('{item === "全部状态" ? item : displayStatus(item)}')) {
+  errors.push("Console status filters must show localized status labels while keeping raw enum values.");
 }
 
 if (
@@ -415,7 +433,7 @@ if (
   errors.push("Console data tables must provide contextual empty states for active filters.");
 }
 
-if (!appSource.includes("aria-label={`下一步：${nextStep}，当前状态 ${row.status}`}") || !appSource.includes("<span>下一步</span>")) {
+if (!appSource.includes("aria-label={`下一步：${nextStep}，当前状态 ${displayStatus(row.status)}`}") || !appSource.includes("<span>下一步</span>")) {
   errors.push("Console selected row details must expose localized next-step guidance.");
 }
 

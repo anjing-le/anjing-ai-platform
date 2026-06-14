@@ -1092,7 +1092,7 @@ function ConsoleHome({
                   <span>{todo.moduleLabel}</span>
                   <strong>{todo.title}</strong>
                   <p>
-                    {todo.status} · {todo.owner}
+                    {displayStatus(todo.status)} · {todo.owner}
                   </p>
                 </div>
                 <StatusBadge tone={todo.tone}>{todo.status}</StatusBadge>
@@ -1874,7 +1874,9 @@ function ModulePage({
             </label>
             <select aria-label={`${page.title} 状态筛选`} onChange={(event) => setStatus(event.target.value)} value={status}>
               {statuses.map((item) => (
-                <option key={item}>{item}</option>
+                <option key={item} value={item}>
+                  {item === "全部状态" ? item : displayStatus(item)}
+                </option>
               ))}
             </select>
             {filtersActive ? (
@@ -2083,7 +2085,7 @@ function SelectedRowPanel({
 
   const fields = columns.map((column, index) => ({
     label: column,
-    value: row.cells[index] || "-",
+    value: column === "状态" ? displayStatus(row.cells[index] || "-") : row.cells[index] || "-",
   }));
   const headline = row.cells[0] || title;
   const description = fields
@@ -2113,7 +2115,7 @@ function SelectedRowPanel({
         ))}
       </div>
 
-      <div aria-label={`下一步：${nextStep}，当前状态 ${row.status}`} className="selected-row-next">
+      <div aria-label={`下一步：${nextStep}，当前状态 ${displayStatus(row.status)}`} className="selected-row-next">
         <span>下一步</span>
         <strong>{nextStep}</strong>
         <p>先看状态，再进入对应模块处理配置、调用、预算或审计问题。</p>
@@ -3350,9 +3352,11 @@ function DataTable({
 }
 
 function StatusBadge({ children, tone }: { children: React.ReactNode; tone: StatusTone }) {
+  const label = typeof children === "string" ? displayStatus(children) : children;
+
   return (
-    <span aria-label={`状态：${children}`} className={`status status--${tone}`}>
-      {children}
+    <span aria-label={`状态：${label}`} className={`status status--${tone}`}>
+      {label}
     </span>
   );
 }
@@ -3389,6 +3393,37 @@ function toneForStatus(status = ""): StatusTone {
   }
 
   return "neutral";
+}
+
+function displayStatus(status = "") {
+  const labels: Record<string, string> = {
+    Active: "运行中",
+    Blocked: "已阻断",
+    Degraded: "降级中",
+    Draft: "草稿",
+    Enabled: "已启用",
+    Error: "异常",
+    Expiring: "即将过期",
+    Failed: "失败",
+    Guarded: "受保护",
+    Healthy: "健康",
+    Invited: "已邀请",
+    Normal: "正常",
+    Pending: "待处理",
+    Provisioning: "配置中",
+    Published: "已发布",
+    Ready: "已就绪",
+    Required: "需配置",
+    Resolved: "已处理",
+    Success: "成功",
+    Suspended: "已暂停",
+    Waiting: "等待中",
+    Warning: "预警",
+    Watching: "观察中",
+    "已就绪": "已就绪",
+  };
+
+  return labels[status] || status;
 }
 
 function nextStepForStatus(status = "") {
