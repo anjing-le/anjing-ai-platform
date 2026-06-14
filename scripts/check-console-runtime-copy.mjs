@@ -276,11 +276,32 @@ for (const submitLabel of [
 }
 
 if (
-  !appSource.includes("aria-label={`LLM 调用结果：${result.provider} ${result.model}，fallback ${result.fallback}，${result.usage.totalTokens} tokens`}") ||
+  !appSource.includes("aria-label={`LLM 调用结果：${result.provider} ${result.model}，兜底 ${result.fallback}，${result.usage.totalTokens} tokens`}") ||
   !appSource.includes('className="invoke-result"') ||
   !appSource.includes('role="status"')
 ) {
   errors.push("Console LLM invoke results must expose readable status summaries.");
+}
+
+for (const localizedPanelCopy of [
+  "Token 用量",
+  "Skill 调用",
+  "请求日志",
+  "等待调用",
+  "阈值",
+  "当前用量",
+  "模型别名",
+  "兜底 {result.fallback}",
+]) {
+  if (!appSource.includes(localizedPanelCopy)) {
+    errors.push(`Console key panels must use localized enterprise copy: ${localizedPanelCopy}`);
+  }
+}
+
+for (const stalePanelCopy of ["Request Log", ">Waiting<", "Model Alias", "Threshold", "Current", "fallback {result.fallback}"]) {
+  if (appSource.includes(stalePanelCopy)) {
+    errors.push(`Console key panels must not expose stale English copy: ${stalePanelCopy}`);
+  }
 }
 
 if (!appSource.includes("function useInitialFocus") || (appSource.match(/useInitialFocus</g) || []).length < 3) {

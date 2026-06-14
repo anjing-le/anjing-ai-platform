@@ -1465,7 +1465,7 @@ function ModulePage({
 
     if (page.id === "gateway" && activeTab === "请求日志") {
       return {
-        eyebrow: "Request Logs",
+        eyebrow: "请求日志",
         title: "请求日志",
         columns: ["Request", "Consumer", "Latency", "Result", "状态"],
         rows: (snapshot?.requestLogs || []).map((log) => ({
@@ -1481,7 +1481,7 @@ function ModulePage({
       return {
         eyebrow: "Usage",
         title: "项目用量",
-        columns: ["Project", "Tokens", "Skill Calls", "Cost", "状态"],
+        columns: ["项目", "Token 用量", "Skill 调用", "成本", "状态"],
         rows: (snapshot?.usage || []).map((usage) => ({
           id: usage.id,
           cells: [usage.project, usage.tokens, usage.skillCalls, usage.cost, usage.status],
@@ -1495,7 +1495,7 @@ function ModulePage({
       return {
         eyebrow: "Budgets",
         title: "预算告警",
-        columns: ["Project", "Budget", "Current", "Threshold", "状态"],
+        columns: ["项目", "预算", "当前用量", "阈值", "状态"],
         rows: (snapshot?.budgetAlerts || []).map((alert) => ({
           id: alert.id,
           cells: [alert.project, alert.budget, alert.current, alert.threshold, alert.status],
@@ -1514,7 +1514,7 @@ function ModulePage({
       }));
       const modelRows: TableRow[] = (snapshot?.modelRoutes || []).map((route) => ({
         id: `doc-model-${route.id}`,
-        cells: [route.alias, "Model Alias", route.primary, route.fallback, route.status],
+        cells: [route.alias, "模型别名", route.primary, route.fallback, route.status],
         status: route.status,
         tone: toneForStatus(route.status),
       }));
@@ -2224,12 +2224,12 @@ function ApplicationJourneyPanel({
 
       <div className="application-usage">
         <article>
-          <span>Tokens</span>
+          <span>Token 用量</span>
           <strong>{usage?.tokens || "0"}</strong>
           <p>{usage?.status || "等待首次用量"}</p>
         </article>
         <article>
-          <span>Skill Calls</span>
+          <span>Skill 调用</span>
           <strong>{usage?.skillCalls || "0"}</strong>
           <p>{usage?.cost || "$0"}</p>
         </article>
@@ -2252,8 +2252,8 @@ function ApplicationJourneyPanel({
           ))
         ) : (
           <article>
-            <span>Request Log</span>
-            <strong>Waiting</strong>
+            <span>请求日志</span>
+            <strong>等待调用</strong>
             <p>首次调用后这里会出现最近请求。</p>
           </article>
         )}
@@ -2855,13 +2855,13 @@ function BudgetAlertPanel({
 
       <div className="budget-alert-checks">
         <article>
-          <span>Threshold</span>
+          <span>阈值</span>
           <strong>{alert.threshold}</strong>
           <p>触发阈值</p>
           <StatusDot tone={alert.status === "Warning" ? "warn" : "neutral"} />
         </article>
         <article>
-          <span>Current</span>
+          <span>当前用量</span>
           <strong>{alert.current}</strong>
           <p>当前消耗</p>
           <StatusDot tone={alert.status === "Warning" ? "watch" : "good"} />
@@ -3148,7 +3148,7 @@ function LLMInvokePanel({
       <form aria-busy={busy} className="invoke-form" onSubmit={handleSubmit}>
         <fieldset disabled={busy}>
           <label>
-            <span>Model Alias</span>
+            <span>模型别名</span>
             <select ref={modelAliasSelectRef} onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
               {aliases.map((alias) => (
                 <option key={alias} value={alias}>
@@ -3174,7 +3174,7 @@ function LLMInvokePanel({
 
       {result ? (
         <div
-          aria-label={`LLM 调用结果：${result.provider} ${result.model}，fallback ${result.fallback}，${result.usage.totalTokens} tokens`}
+          aria-label={`LLM 调用结果：${result.provider} ${result.model}，兜底 ${result.fallback}，${result.usage.totalTokens} tokens`}
           className="invoke-result"
           role="status"
         >
@@ -3182,7 +3182,7 @@ function LLMInvokePanel({
           <strong>{result.model}</strong>
           <p>{result.content}</p>
           <small>
-            fallback {result.fallback} · {result.usage.totalTokens} tokens
+            兜底 {result.fallback} · {result.usage.totalTokens} tokens
           </small>
         </div>
       ) : null}
