@@ -214,7 +214,7 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
           </button>
         </header>
 
-        <form className="action-form" onSubmit={handleSubmit}>
+        <form aria-busy={busy} className="action-form" onSubmit={handleSubmit}>
           {copy.fields.map((field, index) => (
             <label key={field.name}>
               <span>{field.label}</span>
@@ -246,7 +246,7 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
             <button className="button" disabled={busy} onClick={onClose} type="button">
               取消
             </button>
-            <button className="button button--primary" disabled={busy} type="submit">
+            <button aria-live="polite" className="button button--primary" disabled={busy} type="submit">
               {busy ? "提交中" : copy.submit}
             </button>
           </footer>

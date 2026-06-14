@@ -61,6 +61,10 @@ if (!actionDialogSource.includes("autoFocus={index === 0}")) {
   errors.push("Console action dialog must autofocus the first form field when opened.");
 }
 
+if (!actionDialogSource.includes("aria-busy={busy}") || !actionDialogSource.includes("aria-live=\"polite\"")) {
+  errors.push("Console action dialog must expose busy submit state to assistive technology.");
+}
+
 if (!appSource.includes("table-result-count") || !appSource.includes("tableView.rows.length")) {
   errors.push("Console data tables must show filtered row counts.");
 }
