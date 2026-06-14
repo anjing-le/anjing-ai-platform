@@ -109,39 +109,30 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 	}
 }
 
-func TestUserAndDeveloperCanCreateApplications(t *testing.T) {
+func TestUserAndDeveloperCanManageApplications(t *testing.T) {
 	handler := Middleware(testConfig(), okHandler())
 
-	userReq := httptest.NewRequest(http.MethodPost, "/api/control/applications", nil)
-	userReq.Header.Set("Authorization", "Bearer user-test-token")
-	userRec := httptest.NewRecorder()
-	handler.ServeHTTP(userRec, userReq)
-	if userRec.Code != http.StatusOK {
-		t.Fatalf("expected user self-service application create to be allowed, got %d", userRec.Code)
+	applicationWrites := []struct {
+		name  string
+		token string
+		path  string
+	}{
+		{name: "user create", token: "user-test-token", path: "/api/control/applications"},
+		{name: "user activate", token: "user-test-token", path: "/api/control/applications/activate"},
+		{name: "user rotate key", token: "user-test-token", path: "/api/control/applications/rotate-key"},
+		{name: "developer create", token: "developer-test-token", path: "/api/control/applications"},
+		{name: "developer activate", token: "developer-test-token", path: "/api/control/applications/activate"},
+		{name: "developer rotate key", token: "developer-test-token", path: "/api/control/applications/rotate-key"},
 	}
 
-	developerReq := httptest.NewRequest(http.MethodPost, "/api/control/applications", nil)
-	developerReq.Header.Set("Authorization", "Bearer developer-test-token")
-	developerRec := httptest.NewRecorder()
-	handler.ServeHTTP(developerRec, developerReq)
-	if developerRec.Code != http.StatusOK {
-		t.Fatalf("expected developer application create to be allowed, got %d", developerRec.Code)
-	}
-
-	activateReq := httptest.NewRequest(http.MethodPost, "/api/control/applications/activate", nil)
-	activateReq.Header.Set("Authorization", "Bearer developer-test-token")
-	activateRec := httptest.NewRecorder()
-	handler.ServeHTTP(activateRec, activateReq)
-	if activateRec.Code != http.StatusOK {
-		t.Fatalf("expected developer application activation to be allowed, got %d", activateRec.Code)
-	}
-
-	rotateReq := httptest.NewRequest(http.MethodPost, "/api/control/applications/rotate-key", nil)
-	rotateReq.Header.Set("Authorization", "Bearer developer-test-token")
-	rotateRec := httptest.NewRecorder()
-	handler.ServeHTTP(rotateRec, rotateReq)
-	if rotateRec.Code != http.StatusOK {
-		t.Fatalf("expected developer application key rotation to be allowed, got %d", rotateRec.Code)
+	for _, item := range applicationWrites {
+		req := httptest.NewRequest(http.MethodPost, item.path, nil)
+		req.Header.Set("Authorization", "Bearer "+item.token)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected %s to be allowed, got %d", item.name, rec.Code)
+		}
 	}
 
 	credentialRotateDenied := httptest.NewRequest(http.MethodPost, "/api/control/credentials/rotate", nil)
