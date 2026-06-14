@@ -112,6 +112,21 @@ if (appSource.includes("<ChevronRight size={16} />")) {
   errors.push("Console decorative chevron icons must be hidden from assistive technology.");
 }
 
+for (const actionLabel of [
+  "发布路由 ${route.route}",
+  "无法发布模型路由 ${modelRoute.alias}，需要管理员或开发人员",
+  "发布 Skill ${skill.name}",
+  "无法启用套餐 ${plan.name}，需要管理员权限",
+  "处理 ${alert.project} 的预算告警",
+  "激活用户 ${user.email}",
+  "撤销 API Key ${apiKey.name}",
+  "轮换凭据 ${credential.ref}",
+]) {
+  if (!appSource.includes(actionLabel)) {
+    errors.push(`Console detail panel actions must expose object-aware labels: ${actionLabel}`);
+  }
+}
+
 if (
   !appSource.includes("aria-pressed={item.id === role}") ||
   !appSource.includes("aria-label={`${item.label}视角：${item.purpose}`}") ||

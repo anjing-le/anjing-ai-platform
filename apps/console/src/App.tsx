@@ -2397,6 +2397,8 @@ function GatewayRoutePanel({
     { label: "Limit", value: route.limit, note: "限流窗口", tone: "neutral" },
     { label: "Upstream", value: route.upstream, note: "服务入口", tone: "neutral" },
   ] as const;
+  const publishLabel =
+    route.status === "Active" ? `路由 ${route.route} 已发布` : publishing ? `正在发布路由 ${route.route}` : `发布路由 ${route.route}`;
 
   return (
     <Panel eyebrow="Route" title="路由详情">
@@ -2422,6 +2424,7 @@ function GatewayRoutePanel({
 
       <div className="application-actions">
         <button
+          aria-label={publishLabel}
           className="button button--primary"
           disabled={publishing || route.status === "Active"}
           onClick={() => void onPublish(route.id)}
@@ -2471,6 +2474,16 @@ function ModelRoutePanel({
     }
   }
 
+  const publishLabel = modelRoute
+    ? role === "operator"
+      ? `无法发布模型路由 ${modelRoute.alias}，需要管理员或开发人员`
+      : modelRoute.status === "Active"
+        ? `模型路由 ${modelRoute.alias} 已发布`
+        : publishing
+          ? `正在发布模型路由 ${modelRoute.alias}`
+          : `发布模型路由 ${modelRoute.alias}`
+    : undefined;
+
   return (
     <Panel eyebrow="Model Route" title="模型路由">
       {modelRoute ? (
@@ -2501,6 +2514,7 @@ function ModelRoutePanel({
 
           <div className="application-actions">
             <button
+              aria-label={publishLabel}
               className="button button--primary"
               disabled={publishing || modelRoute.status === "Active" || role === "operator"}
               onClick={() => void onPublish(modelRoute.id)}
@@ -2579,6 +2593,15 @@ function SkillBindingPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const nameInputRef = useInitialFocus<HTMLInputElement>(role !== "operator");
+  const publishLabel = skill
+    ? role === "operator"
+      ? `无法发布 Skill ${skill.name}，需要管理员或开发人员`
+      : skill.status === "Published"
+        ? `Skill ${skill.name} 已发布`
+        : publishing
+          ? `正在发布 Skill ${skill.name}`
+          : `发布 Skill ${skill.name}`
+    : undefined;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2625,6 +2648,7 @@ function SkillBindingPanel({
 
           <div className="application-actions">
             <button
+              aria-label={publishLabel}
               className="button button--primary"
               disabled={publishing || skill.status === "Published" || role === "operator"}
               onClick={() => void onPublish(skill.id)}
@@ -2714,6 +2738,13 @@ function BillingPlanPanel({
     { label: "RPS", value: plan.rps, note: "请求速率", tone: "neutral" },
     { label: "Token / day", value: plan.tokenPerDay, note: "每日额度", tone: "watch" },
   ] as const;
+  const activateLabel = !canActivate
+    ? `无法启用套餐 ${plan.name}，需要管理员权限`
+    : plan.status === "Active"
+      ? `套餐 ${plan.name} 已启用`
+      : activating
+        ? `正在启用套餐 ${plan.name}`
+        : `启用套餐 ${plan.name}`;
 
   return (
     <Panel eyebrow="Plan" title="套餐详情">
@@ -2739,6 +2770,7 @@ function BillingPlanPanel({
 
       <div className="application-actions">
         <button
+          aria-label={activateLabel}
           className="button button--primary"
           disabled={!canActivate || activating || plan.status === "Active"}
           onClick={() => void onActivate(plan.id)}
@@ -2778,6 +2810,13 @@ function BudgetAlertPanel({
 
   const canResolve = role === "admin" || role === "operator";
   const resolved = alert.status === "Resolved" || alert.status === "Normal";
+  const resolveLabel = !canResolve
+    ? `无法处理 ${alert.project} 的预算告警，需要管理员或运维人员`
+    : resolved
+      ? `${alert.project} 的预算告警已处理`
+      : resolving
+        ? `正在处理 ${alert.project} 的预算告警`
+        : `处理 ${alert.project} 的预算告警`;
 
   return (
     <Panel eyebrow="Budget" title="预算告警">
@@ -2807,6 +2846,7 @@ function BudgetAlertPanel({
 
       <div className="application-actions">
         <button
+          aria-label={resolveLabel}
           className="button button--primary"
           disabled={!canResolve || resolving || resolved}
           onClick={() => void onResolve(alert.id)}
@@ -2850,6 +2890,13 @@ function UserAccessPanel({
     { label: "Role", value: user.role, note: "访问边界", tone: "neutral" },
     { label: "MFA", value: user.mfa, note: "登录安全", tone: user.mfa === "Enabled" ? "good" : "watch" },
   ] as const;
+  const activateLabel = !canActivate
+    ? `无法激活用户 ${user.email}，需要管理员权限`
+    : user.status === "Active"
+      ? `用户 ${user.email} 已激活`
+      : activating
+        ? `正在激活用户 ${user.email}`
+        : `激活用户 ${user.email}`;
 
   return (
     <Panel eyebrow="User" title="用户详情">
@@ -2875,6 +2922,7 @@ function UserAccessPanel({
 
       <div className="application-actions">
         <button
+          aria-label={activateLabel}
           className="button button--primary"
           disabled={!canActivate || activating || user.status === "Active"}
           onClick={() => void onActivate(user.id)}
@@ -2918,6 +2966,13 @@ function APIKeyPanel({
     { label: "Scope", value: apiKey.scope, note: "授权范围", tone: "neutral" },
     { label: "Expires", value: apiKey.expiresAt || "No expiry", note: "到期时间", tone: "watch" },
   ] as const;
+  const revokeLabel = !canRevoke
+    ? `无法撤销 API Key ${apiKey.name}，需要管理员权限`
+    : apiKey.status === "Revoked"
+      ? `API Key ${apiKey.name} 已撤销`
+      : revoking
+        ? `正在撤销 API Key ${apiKey.name}`
+        : `撤销 API Key ${apiKey.name}`;
 
   return (
     <Panel eyebrow="API Key" title="密钥详情">
@@ -2943,6 +2998,7 @@ function APIKeyPanel({
 
       <div className="application-actions">
         <button
+          aria-label={revokeLabel}
           className="button button--primary"
           disabled={!canRevoke || revoking || apiKey.status === "Revoked"}
           onClick={() => void onRevoke(apiKey.id)}
@@ -2986,6 +3042,13 @@ function CredentialRefPanel({
     { label: "Scope", value: credential.scope, note: "绑定范围", tone: "neutral" },
     { label: "Preview", value: credential.maskedPreview, note: "脱敏展示", tone: "watch" },
   ] as const;
+  const rotateLabel = !canRotate
+    ? `无法轮换凭据 ${credential.ref}，需要管理员权限`
+    : credential.status === "Rotated"
+      ? `凭据 ${credential.ref} 已轮换`
+      : rotating
+        ? `正在轮换凭据 ${credential.ref}`
+        : `轮换凭据 ${credential.ref}`;
 
   return (
     <Panel eyebrow="Credential" title="凭据详情">
@@ -3011,6 +3074,7 @@ function CredentialRefPanel({
 
       <div className="application-actions">
         <button
+          aria-label={rotateLabel}
           className="button button--primary"
           disabled={!canRotate || rotating || credential.status === "Rotated"}
           onClick={() => void onRotate(credential.id)}
