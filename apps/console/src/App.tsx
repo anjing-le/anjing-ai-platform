@@ -869,25 +869,36 @@ function RoleAccessMatrix({ activeRole, modules }: { activeRole: RoleId; modules
           </span>
         ))}
       </div>
-      {modules.map((module) => (
-        <div className="role-access-matrix__row" key={module.id}>
-          <strong>{module.label}</strong>
-          {roles.map((item) => {
-            const allowed = module.roles.includes(item.id);
+      {modules.map((module) => {
+        const activeAllowed = module.roles.includes(activeRole);
+        const visibleRoleLabels = module.roles
+          .map((roleId) => roles.find((item) => item.id === roleId)?.label || roleId)
+          .join(" / ");
 
-            return (
-              <span
-                aria-label={`${item.label}${allowed ? "可见" : "不可见"}`}
-                className={`${allowed ? "is-allowed" : "is-denied"} ${item.id === activeRole ? "is-active" : ""}`}
-                key={item.id}
-                title={`${item.label}${allowed ? "可见" : "不可见"}`}
-              >
-                {allowed ? "●" : "—"}
-              </span>
-            );
-          })}
-        </div>
-      ))}
+        return (
+          <div
+            aria-label={`${module.label}：当前角色${activeAllowed ? "可见" : "不可见"}，可见角色 ${visibleRoleLabels}`}
+            className="role-access-matrix__row"
+            key={module.id}
+          >
+            <strong>{module.label}</strong>
+            {roles.map((item) => {
+              const allowed = module.roles.includes(item.id);
+
+              return (
+                <span
+                  aria-label={`${item.label}${allowed ? "可见" : "不可见"}`}
+                  className={`${allowed ? "is-allowed" : "is-denied"} ${item.id === activeRole ? "is-active" : ""}`}
+                  key={item.id}
+                  title={`${item.label}${allowed ? "可见" : "不可见"}`}
+                >
+                  {allowed ? "●" : "—"}
+                </span>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }

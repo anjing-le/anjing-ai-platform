@@ -99,6 +99,13 @@ if (
   errors.push("Console role switcher must expose and style the active role state.");
 }
 
+if (
+  !appSource.includes("activeAllowed = module.roles.includes(activeRole)") ||
+  !appSource.includes("aria-label={`${module.label}：当前角色${activeAllowed ? \"可见\" : \"不可见\"}，可见角色 ${visibleRoleLabels}`}")
+) {
+  errors.push("Console role access matrix rows must expose readable active-role summaries.");
+}
+
 if (!appSource.includes("window.setTimeout") || !appSource.includes("setNotice(\"\")")) {
   errors.push("Console notices must clear automatically after a short delay.");
 }
