@@ -28,9 +28,34 @@ if (!appSource.includes("aria-label={`${metric.label}：${metric.value}，${metr
   errors.push("Console metric cards must expose readable metric summaries with status tone.");
 }
 
-for (const placeholderCopy of ["待补充", "planned docs", "mock target", "Mock fallback", "后续补充", "No usage yet", "waiting first usage"]) {
+for (const placeholderCopy of [
+  "待补充",
+  "planned docs",
+  "mock target",
+  "Mock fallback",
+  "后续补充",
+  "No usage yet",
+  "waiting first usage",
+  "No expiry configured",
+]) {
   if (appSource.includes(placeholderCopy) || dataSource.includes(placeholderCopy)) {
     errors.push(`Console user-facing copy must not expose placeholder text: ${placeholderCopy}`);
+  }
+}
+
+for (const staleDetailLabel of [
+  "Selected App",
+  "Selected Route",
+  "Default Alias",
+  "Selected Skill",
+  "Selected Plan",
+  "Selected Alert",
+  "Selected User",
+  "Selected Key",
+  "Selected Credential",
+]) {
+  if (appSource.includes(staleDetailLabel)) {
+    errors.push(`Console detail summary labels must use localized copy instead of ${staleDetailLabel}.`);
   }
 }
 

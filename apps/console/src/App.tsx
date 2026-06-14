@@ -2201,7 +2201,7 @@ function ApplicationJourneyPanel({
     <Panel eyebrow="Onboarding" title="应用接入详情">
       <div className="application-summary">
         <div>
-          <span>Selected App</span>
+          <span>当前应用</span>
           <strong>{application.name}</strong>
           <p>{application.owner}</p>
         </div>
@@ -2426,7 +2426,7 @@ function GatewayRoutePanel({
     <Panel eyebrow="Route" title="路由详情">
       <div className="route-summary">
         <div>
-          <span>Selected Route</span>
+          <span>当前路由</span>
           <strong>{route.route}</strong>
           <p>Updated {route.updatedAt}</p>
         </div>
@@ -2518,7 +2518,7 @@ function ModelRoutePanel({
         <>
           <div className="model-summary">
             <div>
-              <span>Default Alias</span>
+              <span>默认别名</span>
               <strong>{modelRoute.alias}</strong>
               <p>{modelRoute.scenario}</p>
             </div>
@@ -2656,7 +2656,7 @@ function SkillBindingPanel({
         <>
           <div className="skill-summary">
             <div>
-              <span>Selected Skill</span>
+              <span>当前 Skill</span>
               <strong>{skill.name}</strong>
               <p>{skill.route}</p>
             </div>
@@ -2777,7 +2777,7 @@ function BillingPlanPanel({
     <Panel eyebrow="Plan" title="套餐详情">
       <div className="plan-summary">
         <div>
-          <span>Selected Plan</span>
+          <span>当前套餐</span>
           <strong>{plan.name}</strong>
           <p>{canActivate ? "管理员可启用套餐" : "当前角色只读计费配置"}</p>
         </div>
@@ -2846,7 +2846,7 @@ function BudgetAlertPanel({
     <Panel eyebrow="Budget" title="预算告警">
       <div className="budget-alert-summary">
         <div>
-          <span>Selected Alert</span>
+          <span>当前告警</span>
           <strong>{alert.project}</strong>
           <p>{alert.current} / {alert.budget}</p>
         </div>
@@ -2923,7 +2923,7 @@ function UserAccessPanel({
     <Panel eyebrow="User" title="用户详情">
       <div className="user-summary">
         <div>
-          <span>Selected User</span>
+          <span>当前用户</span>
           <strong>{user.email}</strong>
           <p>{canActivate ? "管理员可激活邀请用户" : "当前角色只读用户配置"}</p>
         </div>
@@ -2996,7 +2996,7 @@ function APIKeyPanel({
     <Panel eyebrow="API Key" title="密钥详情">
       <div className="api-key-summary">
         <div>
-          <span>Selected Key</span>
+          <span>当前密钥</span>
           <strong>{apiKey.name}</strong>
           <p>{canRevoke ? "管理员可撤销密钥" : "当前角色只读 API Key"}</p>
         </div>
@@ -3069,9 +3069,9 @@ function CredentialRefPanel({
     <Panel eyebrow="Credential" title="凭据详情">
       <div className="credential-summary">
         <div>
-          <span>Selected Credential</span>
+          <span>当前凭据</span>
           <strong>{credential.ref}</strong>
-          <p>{credential.expiresAt ? `Expires ${credential.expiresAt}` : "No expiry configured"}</p>
+          <p>{credential.expiresAt ? `到期时间 ${credential.expiresAt}` : "未配置到期时间"}</p>
         </div>
         <StatusBadge tone={toneForStatus(credential.status)}>{credential.status}</StatusBadge>
       </div>
