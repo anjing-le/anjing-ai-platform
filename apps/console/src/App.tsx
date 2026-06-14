@@ -892,20 +892,37 @@ function ConsoleHome({
   const openTodos = liveTodos.filter((todo) => todo.status !== "Resolved");
   const resolvedTodoCount = liveTodos.length - openTodos.length;
   const canResolveTodo = role === "admin" || role === "operator";
-  const [runtimeCommandCopied, setRuntimeCommandCopied] = useState(false);
+  const [runtimeCommandCopyState, setRuntimeCommandCopyState] = useState<"idle" | "success" | "error">("idle");
   const [copiedServiceCommand, setCopiedServiceCommand] = useState("");
+  const [failedServiceCommand, setFailedServiceCommand] = useState("");
 
   async function handleRuntimeCommandCopy() {
-    await navigator.clipboard.writeText("pnpm dev:api");
-    setRuntimeCommandCopied(true);
-    window.setTimeout(() => setRuntimeCommandCopied(false), 1800);
+    try {
+      await navigator.clipboard.writeText("pnpm dev:api");
+      setRuntimeCommandCopyState("success");
+    } catch {
+      setRuntimeCommandCopyState("error");
+    }
+    window.setTimeout(() => setRuntimeCommandCopyState("idle"), 1800);
   }
 
   async function handleServiceCommandCopy(command: string) {
-    await navigator.clipboard.writeText(command);
-    setCopiedServiceCommand(command);
-    window.setTimeout(() => setCopiedServiceCommand(""), 1800);
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopiedServiceCommand(command);
+      setFailedServiceCommand("");
+    } catch {
+      setCopiedServiceCommand("");
+      setFailedServiceCommand(command);
+    }
+    window.setTimeout(() => {
+      setCopiedServiceCommand("");
+      setFailedServiceCommand("");
+    }, 1800);
   }
+
+  const runtimeCommandCopyLabel =
+    runtimeCommandCopyState === "success" ? "已复制" : runtimeCommandCopyState === "error" ? "复制失败" : "复制";
 
   return (
     <main className="page">
@@ -1061,9 +1078,10 @@ function ConsoleHome({
                 className="text-command"
                 onClick={() => void handleRuntimeCommandCopy()}
                 type="button"
+                title={runtimeCommandCopyState === "error" ? "浏览器未允许剪贴板写入，请手动复制命令。" : undefined}
               >
                 <Copy size={14} />
-                {runtimeCommandCopied ? "已复制" : "复制"}
+                {runtimeCommandCopyLabel}
               </button>
             </div>
           </div>
@@ -1082,9 +1100,16 @@ function ConsoleHome({
                       className="text-command"
                       onClick={() => void handleServiceCommandCopy(item.command)}
                       type="button"
+                      title={
+                        failedServiceCommand === item.command ? "浏览器未允许剪贴板写入，请手动复制命令。" : undefined
+                      }
                     >
                       <Copy size={14} />
-                      {copiedServiceCommand === item.command ? "已复制" : "复制"}
+                      {copiedServiceCommand === item.command
+                        ? "已复制"
+                        : failedServiceCommand === item.command
+                          ? "复制失败"
+                          : "复制"}
                     </button>
                   </div>
                 ) : null}

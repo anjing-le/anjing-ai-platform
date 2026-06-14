@@ -12,8 +12,16 @@ if (!appSource.includes("service-runtime__command") || !appSource.includes("hand
   errors.push("Console home runtime command must be copyable from the backend plan.");
 }
 
+if (!appSource.includes("runtimeCommandCopyState") || !appSource.includes("runtimeCommandCopyLabel")) {
+  errors.push("Console home runtime command copy action must expose success and failure feedback.");
+}
+
 if (!appSource.includes("service-command") || !appSource.includes("handleServiceCommandCopy") || !appSource.includes("copiedServiceCommand")) {
   errors.push("Console single-service commands must be copyable from the backend plan.");
+}
+
+if (!appSource.includes("failedServiceCommand") || !appSource.includes("请手动复制命令")) {
+  errors.push("Console single-service command copy action must expose clipboard failure feedback.");
 }
 
 if (appSource.includes("<code>go run ./cmd/platform-all</code>")) {
