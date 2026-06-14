@@ -151,6 +151,13 @@ if (!appSource.includes("visibleModuleCount") || !appSource.includes("lockedModu
   errors.push("Console home module entry must show role access counts and a clear search action.");
 }
 
+if (
+  !appSource.includes("const accessLabel = allowed ?") ||
+  !appSource.includes("aria-label={`${item.label} 当前角色不可进入，需 ${allowedRoleLabels}`}")
+) {
+  errors.push("Console home locked module cards must explain which roles can enter.");
+}
+
 if (!appSource.includes("openTodos") || !appSource.includes("todo-summary") || !appSource.includes("今日待办已清空")) {
   errors.push("Console home todo list must focus unresolved work and show an all-done empty state.");
 }

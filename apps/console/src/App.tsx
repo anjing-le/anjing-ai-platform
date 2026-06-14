@@ -1001,6 +1001,7 @@ function ConsoleHome({
               const allowedRoleLabels = item.roles
                 .map((roleId) => roles.find((candidate) => candidate.id === roleId)?.label || roleId)
                 .join(" / ");
+              const accessLabel = allowed ? "可进入" : `需 ${allowedRoleLabels}`;
               const moduleCard = (
                 <>
                   <div className="module-card__top">
@@ -1012,9 +1013,7 @@ function ConsoleHome({
                     <p>{item.summary}</p>
                   </div>
                   <div className="module-card__meta">
-                    <StatusBadge tone={allowed ? "good" : "neutral"}>
-                      {allowed ? "可进入" : "当前角色不可见"}
-                    </StatusBadge>
+                    <StatusBadge tone={allowed ? "good" : "neutral"}>{accessLabel}</StatusBadge>
                     <small>{allowedRoleLabels}</small>
                   </div>
                   <div className="chip-row">
@@ -1027,7 +1026,12 @@ function ConsoleHome({
 
               if (!allowed) {
                 return (
-                  <article aria-disabled="true" className="module-card module-card--locked" key={item.id}>
+                  <article
+                    aria-disabled="true"
+                    aria-label={`${item.label} 当前角色不可进入，需 ${allowedRoleLabels}`}
+                    className="module-card module-card--locked"
+                    key={item.id}
+                  >
                     {moduleCard}
                   </article>
                 );
