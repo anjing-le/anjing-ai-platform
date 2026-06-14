@@ -1121,13 +1121,14 @@ function ConsoleHome({
             <div className="service-runtime__command">
               <code>pnpm dev:api</code>
               <button
+                aria-label={`复制本地运行命令：pnpm dev:api，${runtimeCommandCopyLabel}`}
                 aria-live="polite"
                 className="text-command"
                 onClick={() => void handleRuntimeCommandCopy()}
                 type="button"
                 title={runtimeCommandCopyState === "error" ? "浏览器未允许剪贴板写入，请手动复制命令。" : undefined}
               >
-                <Copy size={14} />
+                <Copy aria-hidden="true" size={14} />
                 {runtimeCommandCopyLabel}
               </button>
             </div>
@@ -1143,6 +1144,7 @@ function ConsoleHome({
                   <div className="service-command">
                     <code>{item.command}</code>
                     <button
+                      aria-label={`复制 ${item.label} 运行命令：${item.command}`}
                       aria-live="polite"
                       className="text-command"
                       onClick={() => void handleServiceCommandCopy(item.command)}
@@ -1151,7 +1153,7 @@ function ConsoleHome({
                         failedServiceCommand === item.command ? "浏览器未允许剪贴板写入，请手动复制命令。" : undefined
                       }
                     >
-                      <Copy size={14} />
+                      <Copy aria-hidden="true" size={14} />
                       {copiedServiceCommand === item.command
                         ? "已复制"
                         : failedServiceCommand === item.command
@@ -2314,13 +2316,14 @@ function QuickstartSnippet({ curl }: { curl: string }) {
         <strong>最小调用示例</strong>
       </div>
       <button
+        aria-label={`${copyLabel}：Quickstart curl 调用示例`}
         className="text-command"
         onClick={() => void handleSnippetCopy()}
         type="button"
         aria-live="polite"
         title={copyState === "error" ? "浏览器未允许剪贴板写入，请手动复制代码片段。" : undefined}
       >
-        <Copy size={14} />
+        <Copy aria-hidden="true" size={14} />
         {copyLabel}
       </button>
       {copyState === "error" ? (

@@ -41,6 +41,15 @@ if (!appSource.includes("failedServiceCommand") || !appSource.includes("请手�
   errors.push("Console single-service command copy action must expose clipboard failure feedback.");
 }
 
+if (
+  !appSource.includes("aria-label={`复制本地运行命令：pnpm dev:api，${runtimeCommandCopyLabel}`}") ||
+  !appSource.includes("aria-label={`复制 ${item.label} 运行命令：${item.command}`}") ||
+  !appSource.includes("aria-label={`${copyLabel}：Quickstart curl 调用示例`}") ||
+  (appSource.match(/<Copy aria-hidden="true" size=\{14\}/g) || []).length < 3
+) {
+  errors.push("Console copy buttons must expose explicit labels and hide decorative copy icons.");
+}
+
 if (appSource.includes("<code>go run ./cmd/platform-all</code>")) {
   errors.push("Console home must not show raw go run ./cmd/platform-all as the primary runtime command.");
 }
