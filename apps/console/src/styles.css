@@ -1018,10 +1018,14 @@ a {
   border-right: 0;
 }
 
-.service-plan code {
-  display: block;
-  overflow: hidden;
+.service-command {
+  display: grid;
+  gap: 7px;
   margin-top: 4px;
+}
+
+.service-plan code {
+  overflow: hidden;
   padding: 7px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1031,6 +1035,13 @@ a {
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.service-command .text-command {
+  min-height: 32px;
+  justify-self: start;
+  padding: 0 9px;
+  font-size: 0.74rem;
 }
 
 .service-plan small {

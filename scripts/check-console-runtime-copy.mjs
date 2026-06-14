@@ -12,6 +12,10 @@ if (!appSource.includes("service-runtime__command") || !appSource.includes("hand
   errors.push("Console home runtime command must be copyable from the backend plan.");
 }
 
+if (!appSource.includes("service-command") || !appSource.includes("handleServiceCommandCopy") || !appSource.includes("copiedServiceCommand")) {
+  errors.push("Console single-service commands must be copyable from the backend plan.");
+}
+
 if (appSource.includes("<code>go run ./cmd/platform-all</code>")) {
   errors.push("Console home must not show raw go run ./cmd/platform-all as the primary runtime command.");
 }

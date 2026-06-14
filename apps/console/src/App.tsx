@@ -893,11 +893,18 @@ function ConsoleHome({
   const resolvedTodoCount = liveTodos.length - openTodos.length;
   const canResolveTodo = role === "admin" || role === "operator";
   const [runtimeCommandCopied, setRuntimeCommandCopied] = useState(false);
+  const [copiedServiceCommand, setCopiedServiceCommand] = useState("");
 
   async function handleRuntimeCommandCopy() {
     await navigator.clipboard.writeText("pnpm dev:api");
     setRuntimeCommandCopied(true);
     window.setTimeout(() => setRuntimeCommandCopied(false), 1800);
+  }
+
+  async function handleServiceCommandCopy(command: string) {
+    await navigator.clipboard.writeText(command);
+    setCopiedServiceCommand(command);
+    window.setTimeout(() => setCopiedServiceCommand(""), 1800);
   }
 
   return (
@@ -1067,7 +1074,20 @@ function ConsoleHome({
                 <span>{item.label}</span>
                 <strong>{item.title}</strong>
                 <p>{item.note}</p>
-                {"command" in item ? <code>{item.command}</code> : null}
+                {"command" in item ? (
+                  <div className="service-command">
+                    <code>{item.command}</code>
+                    <button
+                      aria-live="polite"
+                      className="text-command"
+                      onClick={() => void handleServiceCommandCopy(item.command)}
+                      type="button"
+                    >
+                      <Copy size={14} />
+                      {copiedServiceCommand === item.command ? "已复制" : "复制"}
+                    </button>
+                  </div>
+                ) : null}
                 {"health" in item ? <small>{item.health}</small> : null}
               </article>
             ))}
