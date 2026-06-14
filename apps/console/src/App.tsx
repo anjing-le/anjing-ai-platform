@@ -697,9 +697,9 @@ function LandingPage() {
           <span>IAM</span>
           <span>LLM</span>
           <span>Skill</span>
-          <span>Audit</span>
+          <span>审计</span>
         </div>
-        <p className="eyebrow">Public open-source infrastructure for AI applications</p>
+        <p className="eyebrow">面向 AI 应用的开源基础设施</p>
         <h1 id="landing-title">Anjing AI Infra Platform</h1>
         <p>
           面向 AI 应用、Agent、内部工具和业务系统的基础设施底座。V1 采用
@@ -1080,7 +1080,7 @@ function ConsoleHome({
           </div>
         </Panel>
 
-        <Panel title="今日待办" eyebrow="Focus">
+        <Panel title="今日待办" eyebrow="重点">
           <div className="todo-summary">
             <strong>{openTodos.length} 个待处理</strong>
             <span>{resolvedTodoCount} 个已处理</span>
@@ -1140,7 +1140,7 @@ function ConsoleHome({
       </section>
 
       <section className="split-grid">
-        <Panel title="当前角色视角" eyebrow="Access">
+        <Panel title="当前角色视角" eyebrow="访问">
           <div className="role-summary">
             <strong>{roleLabel}</strong>
             <p>{roles.find((item) => item.id === role)?.purpose}</p>
@@ -1148,9 +1148,9 @@ function ConsoleHome({
           </div>
           <RoleAccessMatrix activeRole={role} modules={moduleAccessItems} />
         </Panel>
-        <Panel title="后端服务规划" eyebrow="Backend">
+        <Panel title="后端服务规划" eyebrow="后端">
           <div className="service-runtime">
-            <span>Dev Runtime</span>
+            <span>开发运行时</span>
             <strong>platform-all</strong>
             <p>本地一键启动完整控制台和 V1 API。</p>
             <div className="service-runtime__command">
@@ -2008,7 +2008,7 @@ function ModulePage({
                 {panel.items.map((item) => (
                   <article key={`${item.label}-${item.value}`}>
                     <span>{item.label}</span>
-                    <strong>{item.value}</strong>
+                    <strong>{displayStatus(item.value)}</strong>
                     <p>{item.note}</p>
                   </article>
                 ))}
@@ -2027,7 +2027,7 @@ function OperationsSignalPanel({ snapshot }: { snapshot?: PlatformSnapshot }) {
 
   return (
     <>
-      <Panel eyebrow="Health" title="服务健康">
+      <Panel eyebrow="健康" title="服务健康">
         {health.length ? (
           <div className="operations-signal-list">
             {health.map((item) => (
@@ -2046,7 +2046,7 @@ function OperationsSignalPanel({ snapshot }: { snapshot?: PlatformSnapshot }) {
         )}
       </Panel>
 
-      <Panel eyebrow="Audit" title="最近审计">
+      <Panel eyebrow="审计" title="最近审计">
         {audit.length ? (
           <div className="audit-event-list">
             {audit.map((item) => (
@@ -2077,7 +2077,7 @@ function SelectedRowPanel({
 }) {
   if (!row) {
     return (
-      <Panel eyebrow="Selection" title="选中详情">
+      <Panel eyebrow="选择" title="选中详情">
         <EmptyPanel description="切换筛选条件或选择表格行后，这里会展示关键字段。" title="暂无选中记录" />
       </Panel>
     );
@@ -2095,7 +2095,7 @@ function SelectedRowPanel({
   const nextStep = nextStepForStatus(row.status);
 
   return (
-    <Panel eyebrow="Selection" title="选中详情">
+    <Panel eyebrow="选择" title="选中详情">
       <div className="selected-row-summary">
         <div>
           <span>{title}</span>
@@ -2150,7 +2150,7 @@ function ApplicationJourneyPanel({
     ].join("\n");
 
     return (
-      <Panel eyebrow="Onboarding" title="应用接入详情">
+      <Panel eyebrow="接入" title="应用接入详情">
         <EmptyPanel description="创建接入应用后，这里会展示 API Key、路由、用量和审计链路。" title="暂无应用" />
         <QuickstartChecklist />
         <QuickstartSnippet curl={placeholderCurl} />
@@ -2200,7 +2200,7 @@ function ApplicationJourneyPanel({
   ];
 
   return (
-    <Panel eyebrow="Onboarding" title="应用接入详情">
+    <Panel eyebrow="接入" title="应用接入详情">
       <div className="application-summary">
         <div>
           <span>当前应用</span>
@@ -2828,7 +2828,7 @@ function BudgetAlertPanel({
 }) {
   if (!alert) {
     return (
-      <Panel eyebrow="Budget" title="预算告警">
+      <Panel eyebrow="预算" title="预算告警">
         <EmptyPanel description="创建套餐或预算规则后，这里会展示水位和处理动作。" title="暂无预算规则" />
       </Panel>
     );
@@ -2845,7 +2845,7 @@ function BudgetAlertPanel({
         : `处理 ${alert.project} 的预算告警`;
 
   return (
-    <Panel eyebrow="Budget" title="预算告警">
+    <Panel eyebrow="预算" title="预算告警">
       <div className="budget-alert-summary">
         <div>
           <span>当前告警</span>
@@ -3160,7 +3160,7 @@ function LLMInvokePanel({
             </select>
           </label>
           <label>
-            <span>Input</span>
+            <span>输入内容</span>
             <textarea onChange={(event) => setInput(event.target.value)} rows={4} value={input} />
           </label>
         </fieldset>

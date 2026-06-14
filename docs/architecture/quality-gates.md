@@ -44,6 +44,7 @@ pnpm build:console
 - 后台用户可见文案不能暴露 `待补充`、`planned docs`、`mock target`、`Mock fallback`、`后续补充`、`No usage yet`、`waiting first usage` 这类开发占位。
 - 后台模块数据不能暴露 `Owner`、`Project based`、`tags required`、`gateway endpoints`、`model alias`、`usage / audit` 这类演示态英文说明，技术名和协议名除外。
 - 后端快照合成的模块页标题、指标说明和表头必须使用同一套中文后台语境，不能把 `Health`、`Applications`、`Go API live` 这类开发说明直接展示出来。
+- 面板 eyebrow、空状态、表单标签和运行命令区等微文案必须保持中文后台语境，技术名仅在模块名、协议名、命令或 API 标识中保留。
 - fallback 计费套餐不能把 Enterprise 展示成未完成草稿，企业套餐必须以受治理状态呈现。
 
 ## Gate 3：前端数据映射测试

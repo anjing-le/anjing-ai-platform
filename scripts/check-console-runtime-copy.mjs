@@ -355,6 +355,40 @@ for (const stalePanelCopy of ["Request Log", ">Waiting<", "Model Alias", "Thresh
   }
 }
 
+for (const staleMicroCopy of [
+  'eyebrow="Focus"',
+  'eyebrow="Access"',
+  'eyebrow="Backend"',
+  'eyebrow="Health"',
+  'eyebrow="Audit"',
+  'eyebrow="Selection"',
+  'eyebrow="Onboarding"',
+  'eyebrow="Budget"',
+  "<span>Input</span>",
+  "Public open-source infrastructure for AI applications",
+  "<span>Dev Runtime</span>",
+]) {
+  if (appSource.includes(staleMicroCopy)) {
+    errors.push(`Console microcopy must use localized enterprise labels instead of ${staleMicroCopy}.`);
+  }
+}
+
+for (const localizedMicroCopy of [
+  'eyebrow="重点"',
+  'eyebrow="访问"',
+  'eyebrow="后端"',
+  'eyebrow="选择"',
+  'eyebrow="接入"',
+  'eyebrow="预算"',
+  "<span>输入内容</span>",
+  "面向 AI 应用的开源基础设施",
+  "<span>开发运行时</span>",
+]) {
+  if (!appSource.includes(localizedMicroCopy)) {
+    errors.push(`Console microcopy must keep localized labels: ${localizedMicroCopy}`);
+  }
+}
+
 if (!appSource.includes("function useInitialFocus") || (appSource.match(/useInitialFocus</g) || []).length < 3) {
   errors.push("Console inline forms must focus their first editable control after module mount.");
 }

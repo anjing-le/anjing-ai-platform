@@ -224,7 +224,7 @@ export const consoleServiceMap = [
 export const modulePages: ModulePageDefinition[] = [
   {
     id: "overview",
-    eyebrow: "Operations",
+    eyebrow: "运营",
     title: "运营总览",
     description: "进入后台后的工作台：只看平台是否健康、哪些事项需要处理、调用与审计是否正常。",
     primaryAction: "处理事项",
@@ -236,7 +236,7 @@ export const modulePages: ModulePageDefinition[] = [
       { label: "今日成本", value: "$842", note: "估算", tone: "neutral" },
     ],
     table: {
-      eyebrow: "Operations",
+      eyebrow: "运营",
       title: "今日运营事项",
       columns: ["事项", "来源", "负责人", "状态"],
       rows: [
@@ -262,7 +262,7 @@ export const modulePages: ModulePageDefinition[] = [
     },
     panels: [
       {
-        eyebrow: "Focus",
+        eyebrow: "重点",
         title: "今日重点",
         items: [
           { label: "先处理", value: "预算与权限审批", note: "影响接入和成本控制" },
@@ -275,7 +275,7 @@ export const modulePages: ModulePageDefinition[] = [
         title: "合并范围",
         items: [
           { label: "Observability", value: "已并入", note: "健康、日志、Trace、失败追踪" },
-          { label: "Audit", value: "已并入", note: "配置变更与权限操作审计" },
+          { label: "审计", value: "已并入", note: "配置变更与权限操作审计" },
           { label: "Ops Board", value: "保留", note: "后台默认首页后的工作台" },
         ],
       },
@@ -283,7 +283,7 @@ export const modulePages: ModulePageDefinition[] = [
   },
   {
     id: "iam",
-    eyebrow: "Access",
+    eyebrow: "访问",
     title: "用户与权限",
     description: "统一管理用户、角色权限、API Key 和 credentialRef，先把访问边界定义清楚。",
     primaryAction: "邀请用户",
@@ -295,7 +295,7 @@ export const modulePages: ModulePageDefinition[] = [
       { label: "凭据引用", value: "28", note: "credentialRef", tone: "watch" },
     ],
     table: {
-      eyebrow: "Users",
+      eyebrow: "用户",
       title: "用户列表",
       columns: ["用户", "组织", "角色", "MFA", "状态"],
       rows: [
@@ -321,7 +321,7 @@ export const modulePages: ModulePageDefinition[] = [
     },
     panels: [
       {
-        eyebrow: "Roles",
+        eyebrow: "角色",
         title: "角色边界",
         items: [
           { label: "管理员", value: "全部可见", note: "用户、网关、计费、文档" },
@@ -330,11 +330,11 @@ export const modulePages: ModulePageDefinition[] = [
         ],
       },
       {
-        eyebrow: "Secrets",
+        eyebrow: "凭据",
         title: "凭据策略",
         items: [
-          { label: "明文读取", value: "Blocked", note: "runtime only" },
-          { label: "脱敏展示", value: "Enabled", note: "last 4 only" },
+          { label: "明文读取", value: "Blocked", note: "仅运行时可用" },
+          { label: "脱敏展示", value: "Enabled", note: "只显示末 4 位" },
           { label: "轮换周期", value: "90d", note: "默认策略" },
         ],
       },
@@ -342,7 +342,7 @@ export const modulePages: ModulePageDefinition[] = [
   },
   {
     id: "gateway",
-    eyebrow: "Gateway",
+    eyebrow: "网关",
     title: "网关与模型",
     description: "把 API 网关、模型路由和 Skill 调用合到一个运行入口，减少后台导航复杂度。",
     primaryAction: "新增路由",
@@ -380,11 +380,11 @@ export const modulePages: ModulePageDefinition[] = [
     },
     panels: [
       {
-        eyebrow: "Runtime",
+        eyebrow: "运行",
         title: "运行策略",
         items: [
-          { label: "鉴权前置", value: "API Key + RBAC", note: "all routes" },
-          { label: "模型 fallback", value: "Enabled", note: "provider timeout" },
+          { label: "鉴权前置", value: "API Key + RBAC", note: "全部路由" },
+          { label: "模型 fallback", value: "Enabled", note: "供应商超时" },
           { label: "Skill timeout", value: "8s", note: "默认策略" },
         ],
       },
@@ -401,7 +401,7 @@ export const modulePages: ModulePageDefinition[] = [
   },
   {
     id: "quota",
-    eyebrow: "Billing",
+    eyebrow: "计费",
     title: "计费与配额",
     description: "把套餐、配额、用量和预算告警放在一个入口，后续再接真实账单与计费。",
     primaryAction: "新增套餐",
@@ -460,7 +460,7 @@ export const modulePages: ModulePageDefinition[] = [
   },
   {
     id: "docs",
-    eyebrow: "Docs",
+    eyebrow: "文档",
     title: "帮助文档",
     description: "给使用者和开发者一个轻量接入入口：快速接入、服务边界、API 文档和常见问题先跑通。",
     primaryAction: "创建接入应用",
