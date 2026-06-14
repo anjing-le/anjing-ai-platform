@@ -299,6 +299,10 @@ if (
   errors.push("Console data tables must provide contextual empty states for active filters.");
 }
 
+if (!appSource.includes("aria-label={`下一步：${nextStep}，当前状态 ${row.status}`}") || !appSource.includes("<span>下一步</span>")) {
+  errors.push("Console selected row details must expose localized next-step guidance.");
+}
+
 if (!appSource.includes("visibleModuleCount") || !appSource.includes("lockedModuleCount") || !appSource.includes("清空搜索")) {
   errors.push("Console home module entry must show role access counts and a clear search action.");
 }

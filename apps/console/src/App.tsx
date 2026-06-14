@@ -2090,6 +2090,7 @@ function SelectedRowPanel({
     .slice(1, 3)
     .map((field) => `${field.label}: ${field.value}`)
     .join(" · ");
+  const nextStep = nextStepForStatus(row.status);
 
   return (
     <Panel eyebrow="Selection" title="选中详情">
@@ -2112,9 +2113,9 @@ function SelectedRowPanel({
         ))}
       </div>
 
-      <div className="selected-row-next">
-        <span>Next</span>
-        <strong>{nextStepForStatus(row.status)}</strong>
+      <div aria-label={`下一步：${nextStep}，当前状态 ${row.status}`} className="selected-row-next">
+        <span>下一步</span>
+        <strong>{nextStep}</strong>
         <p>先看状态，再进入对应模块处理配置、调用、预算或审计问题。</p>
       </div>
     </Panel>
