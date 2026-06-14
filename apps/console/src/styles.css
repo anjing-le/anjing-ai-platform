@@ -365,7 +365,7 @@ a {
 .api-state {
   display: grid;
   min-width: 150px;
-  min-height: 40px;
+  min-height: 48px;
   align-content: center;
   gap: 2px;
   padding: 7px 11px;
@@ -390,6 +390,10 @@ a {
   font-size: 0.68rem;
   font-weight: 800;
   text-overflow: ellipsis;
+}
+
+.api-state__sync {
+  opacity: 0.72;
 }
 
 .api-state--live {

@@ -65,6 +65,15 @@ interface WorkflowStep {
   tab?: string;
 }
 
+function formatSyncTime(date: Date) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 const routeHash: Record<ConsoleRoute, string> = {
   home: "#/console/home",
   overview: "#/console/overview",
@@ -126,6 +135,7 @@ function App() {
   const [snapshot, setSnapshot] = useState<PlatformSnapshot>();
   const [apiState, setApiState] = useState<ApiState>("loading");
   const [apiDetail, setApiDetail] = useState("正在连接 Go API");
+  const [lastSyncedAt, setLastSyncedAt] = useState("");
   const [refreshingSnapshot, setRefreshingSnapshot] = useState(false);
   const [actionMode, setActionMode] = useState<ActionMode | null>(null);
   const [actionError, setActionError] = useState("");
@@ -174,6 +184,8 @@ function App() {
       setApiDetail("未连接后端，使用页面默认数据");
     }
 
+    setLastSyncedAt(formatSyncTime(new Date()));
+
     return result;
   }, [role]);
 
@@ -188,6 +200,7 @@ function App() {
     } catch {
       setApiState("fallback");
       setApiDetail("刷新失败，使用页面默认数据");
+      setLastSyncedAt(formatSyncTime(new Date()));
       setNotice("刷新失败，继续使用页面默认数据。");
     } finally {
       setRefreshingSnapshot(false);
@@ -566,6 +579,7 @@ function App() {
         apiDetail={apiDetail}
         apiState={apiState}
         activeRoute={activeRoute}
+        lastSyncedAt={lastSyncedAt}
         onRefresh={() => void handleManualRefresh()}
         refreshing={refreshingSnapshot}
         role={role}
@@ -704,6 +718,7 @@ interface ConsoleShellProps {
   apiDetail: string;
   apiState: ApiState;
   children: React.ReactNode;
+  lastSyncedAt: string;
   onRefresh: () => void;
   refreshing: boolean;
   role: RoleId;
@@ -716,6 +731,7 @@ function ConsoleShell({
   apiDetail,
   apiState,
   children,
+  lastSyncedAt,
   onRefresh,
   refreshing,
   role,
@@ -756,7 +772,7 @@ function ConsoleShell({
             <h1>{activeItem.label}</h1>
           </div>
           <div className="topbar__actions">
-            <APIStateBadge detail={apiDetail} state={apiState} />
+            <APIStateBadge detail={apiDetail} lastSyncedAt={lastSyncedAt} state={apiState} />
             <button
               className="icon-command"
               disabled={refreshing}
@@ -788,7 +804,7 @@ function ConsoleShell({
   );
 }
 
-function APIStateBadge({ detail, state }: { detail: string; state: ApiState }) {
+function APIStateBadge({ detail, lastSyncedAt, state }: { detail: string; lastSyncedAt: string; state: ApiState }) {
   const label = state === "live" ? "Live API" : state === "loading" ? "Connecting" : "Mock fallback";
   const note =
     state === "live"
@@ -796,11 +812,13 @@ function APIStateBadge({ detail, state }: { detail: string; state: ApiState }) {
       : state === "loading"
         ? "正在读取平台数据"
         : `${detail} · 页面仍可预览`;
+  const syncLabel = lastSyncedAt ? `最近同步 ${lastSyncedAt}` : "等待首次同步";
 
   return (
     <span className={`api-state api-state--${state}`} title={note}>
       <strong>{label}</strong>
       <small>{note}</small>
+      <small className="api-state__sync">{syncLabel}</small>
     </span>
   );
 }

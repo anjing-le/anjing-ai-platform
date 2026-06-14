@@ -16,6 +16,10 @@ if (!appSource.includes("刷新平台数据") || !appSource.includes("RefreshCw"
   errors.push("Console topbar must expose a manual platform data refresh action.");
 }
 
+if (!appSource.includes("lastSyncedAt") || !appSource.includes("最近同步") || !appSource.includes("等待首次同步")) {
+  errors.push("Console topbar must show platform data freshness after refresh attempts.");
+}
+
 if (!appSource.includes("window.setTimeout") || !appSource.includes("setNotice(\"\")")) {
   errors.push("Console notices must clear automatically after a short delay.");
 }
