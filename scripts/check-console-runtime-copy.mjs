@@ -11,6 +11,10 @@ if (!appSource.includes("<code>pnpm dev:api</code>")) {
   errors.push("Console home runtime command must show pnpm dev:api.");
 }
 
+if (!appSource.includes('<section aria-label={title} className={`panel ${className}`}>')) {
+  errors.push("Console panel sections must expose their title as an accessible region label.");
+}
+
 for (const placeholderCopy of ["待补充", "planned docs", "mock target", "Mock fallback", "后续补充", "No usage yet", "waiting first usage"]) {
   if (appSource.includes(placeholderCopy) || dataSource.includes(placeholderCopy)) {
     errors.push(`Console user-facing copy must not expose placeholder text: ${placeholderCopy}`);

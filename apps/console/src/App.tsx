@@ -3115,7 +3115,7 @@ function Panel({
   title: string;
 }) {
   return (
-    <section className={`panel ${className}`}>
+    <section aria-label={title} className={`panel ${className}`}>
       <div className="panel__heading">
         <span>{eyebrow}</span>
         <strong>{title}</strong>
