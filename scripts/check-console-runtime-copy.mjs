@@ -53,6 +53,10 @@ if (!appSource.includes('aria-current={item.id === activeRoute ? "page" : undefi
   errors.push("Console sidebar must expose and style the current navigation item.");
 }
 
+if (!appSource.includes('<a className="sidebar__brand" href={routeHash.home}>')) {
+  errors.push("Console sidebar brand must navigate back to the console home route.");
+}
+
 if (!appSource.includes("lastSyncedAt") || !appSource.includes("最近同步") || !appSource.includes("等待首次同步")) {
   errors.push("Console topbar must show platform data freshness after refresh attempts.");
 }

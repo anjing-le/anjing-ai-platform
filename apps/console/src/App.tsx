@@ -769,7 +769,7 @@ function ConsoleShell({
   return (
     <div className="console-shell">
       <aside className="sidebar">
-        <a className="sidebar__brand" href="#">
+        <a className="sidebar__brand" href={routeHash.home}>
           <span>Anjing</span>
           <strong>AI Platform</strong>
         </a>
