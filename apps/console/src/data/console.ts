@@ -464,9 +464,9 @@ export const modulePages: ModulePageDefinition[] = [
     title: "帮助文档",
     description: "给使用者和开发者一个轻量接入入口：快速接入、服务边界、API 文档和常见问题先跑通。",
     primaryAction: "创建接入应用",
-    tabs: ["快速接入", "服务边界", "API 文档", "FAQ"],
+    tabs: ["快速接入", "服务边界", "API 文档", "常见问题"],
     metrics: [
-      { label: "文档", value: "12", note: "快速接入 / API / FAQ", tone: "neutral" },
+      { label: "文档", value: "12", note: "快速接入 / API / 常见问题", tone: "neutral" },
       { label: "示例", value: "3", note: "客服 / RAG / AIGC", tone: "neutral" },
       { label: "SDK", value: "2", note: "TypeScript / Go", tone: "watch" },
       { label: "Runbook", value: "4", note: "运维 / 计费 / 鉴权", tone: "neutral" },

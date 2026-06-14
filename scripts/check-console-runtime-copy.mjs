@@ -75,6 +75,10 @@ if (dataSource.includes('tabs: ["Quickstart"') || dataSource.includes('eyebrow: 
   errors.push("Console docs module must expose 快速接入 instead of Quickstart.");
 }
 
+if (dataSource.includes('"FAQ"') || appSource.includes('activeTab === "FAQ"') || appSource.includes('eyebrow: "FAQ"')) {
+  errors.push("Console docs module must expose 常见问题 instead of FAQ.");
+}
+
 for (const staleSnapshotCopy of [
   'eyebrow: "Health"',
   'eyebrow: "Audit"',

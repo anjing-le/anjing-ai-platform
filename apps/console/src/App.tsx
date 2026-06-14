@@ -117,7 +117,7 @@ const moduleWorkflows: Record<Exclude<ConsoleRoute, "home">, WorkflowStep[]> = {
     { label: "开始", note: "创建接入应用", tab: "快速接入" },
     { label: "边界", note: "确认服务归属", tab: "服务边界" },
     { label: "参考", note: "查看 API 边界", tab: "API 文档" },
-    { label: "帮助", note: "排查常见问题", tab: "FAQ" },
+    { label: "帮助", note: "排查常见问题", tab: "常见问题" },
   ],
 };
 
@@ -1547,9 +1547,9 @@ function ModulePage({
       };
     }
 
-    if (page.id === "docs" && activeTab === "FAQ") {
+    if (page.id === "docs" && activeTab === "常见问题") {
       return {
-        eyebrow: "FAQ",
+        eyebrow: "常见问题",
         title: "常见问题",
         columns: ["问题", "处理建议", "模块", "状态"],
         rows: [
