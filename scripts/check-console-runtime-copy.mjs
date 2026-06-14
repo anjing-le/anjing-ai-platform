@@ -10,6 +10,12 @@ if (!appSource.includes("<code>pnpm dev:api</code>")) {
   errors.push("Console home runtime command must show pnpm dev:api.");
 }
 
+for (const placeholderCopy of ["待补充", "planned docs", "mock target", "后续补充"]) {
+  if (appSource.includes(placeholderCopy) || dataSource.includes(placeholderCopy)) {
+    errors.push(`Console user-facing copy must not expose placeholder text: ${placeholderCopy}`);
+  }
+}
+
 if (!appSource.includes("service-runtime__command") || !appSource.includes("handleRuntimeCommandCopy")) {
   errors.push("Console home runtime command must be copyable from the backend plan.");
 }

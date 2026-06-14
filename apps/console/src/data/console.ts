@@ -444,7 +444,7 @@ export const modulePages: ModulePageDefinition[] = [
         items: [
           { label: "当前周期", value: "$4.8K", note: "未出账" },
           { label: "成本分摊", value: "Project based", note: "tags required" },
-          { label: "计量延迟", value: "< 2s", note: "mock target" },
+          { label: "计量延迟", value: "< 2s", note: "usage pipeline" },
         ],
       },
       {
@@ -468,8 +468,8 @@ export const modulePages: ModulePageDefinition[] = [
     metrics: [
       { label: "文档", value: "12", note: "quickstart / api / faq", tone: "neutral" },
       { label: "示例", value: "3", note: "客服 / RAG / AIGC", tone: "neutral" },
-      { label: "SDK", value: "2", note: "TypeScript / Go planned", tone: "watch" },
-      { label: "待补充", value: "4", note: "planned docs", tone: "neutral" },
+      { label: "SDK", value: "2", note: "TypeScript / Go", tone: "watch" },
+      { label: "Runbook", value: "4", note: "ops / billing / auth", tone: "neutral" },
     ],
     table: {
       eyebrow: "Quickstart",

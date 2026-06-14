@@ -41,6 +41,7 @@ pnpm build:console
 
 - React + TypeScript 控制台可以完成类型检查和 Vite 生产构建。
 - 后台首页、模块页面、角色视角、服务边界和 Mock / API 串联没有基础编译错误。
+- 后台用户可见文案不能暴露 `待补充`、`planned docs`、`mock target`、`后续补充` 这类开发占位。
 
 ## Gate 3：前端数据映射测试
 

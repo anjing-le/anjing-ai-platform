@@ -1471,8 +1471,8 @@ function ModulePage({
           },
           {
             id: "faq-sdk",
-            cells: ["SDK 如何接入", "先按 OpenAPI 调用，SDK 后续补充", "帮助文档", "Draft"],
-            status: "Draft",
+            cells: ["SDK 如何接入", "先按 OpenAPI 调用，TypeScript / Go 示例保持同一认证边界", "帮助文档", "Ready"],
+            status: "Ready",
             tone: "watch",
           },
         ],
