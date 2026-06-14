@@ -44,6 +44,32 @@ for (const placeholderCopy of [
   }
 }
 
+for (const staleDataCopy of [
+  "Owner",
+  "Project based",
+  "tags required",
+  "gateway endpoints",
+  "client examples",
+  "common issues",
+  "model alias",
+  "usage / audit",
+  "trial users",
+  "production agents",
+  "private deployment",
+  "default policy",
+  "published 9",
+]) {
+  if (dataSource.includes(staleDataCopy)) {
+    errors.push(`Console module data must use localized enterprise labels instead of ${staleDataCopy}.`);
+  }
+}
+
+for (const localizedDataCopy of ["快速接入、API 参考", "负责人", "模型别名", "用量 / 审计", "按项目", "必须带标签", "网关端点", "客户端示例"]) {
+  if (!dataSource.includes(localizedDataCopy) && !appSource.includes(localizedDataCopy)) {
+    errors.push(`Console module data must keep localized enterprise labels: ${localizedDataCopy}`);
+  }
+}
+
 for (const staleDetailLabel of [
   "Selected App",
   "Selected Route",

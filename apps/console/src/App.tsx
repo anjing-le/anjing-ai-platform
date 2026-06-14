@@ -92,32 +92,32 @@ const routeHash: Record<ConsoleRoute, string> = {
 
 const moduleWorkflows: Record<Exclude<ConsoleRoute, "home">, WorkflowStep[]> = {
   overview: [
-    { label: "Observe", note: "看整体水位", tab: "运营总览" },
-    { label: "Triage", note: "定位服务健康", tab: "服务健康" },
-    { label: "Review", note: "追踪调用与审计", tab: "调用与审计" },
+    { label: "观察", note: "看整体水位", tab: "运营总览" },
+    { label: "分诊", note: "定位服务健康", tab: "服务健康" },
+    { label: "复盘", note: "追踪调用与审计", tab: "调用与审计" },
   ],
   iam: [
-    { label: "Invite", note: "创建用户主体", tab: "用户" },
-    { label: "Scope", note: "定义角色权限", tab: "角色权限" },
-    { label: "Issue", note: "发放 API Key", tab: "API Key" },
-    { label: "Secure", note: "管理凭据引用", tab: "凭据" },
+    { label: "邀请", note: "创建用户主体", tab: "用户" },
+    { label: "授权", note: "定义角色权限", tab: "角色权限" },
+    { label: "签发", note: "发放 API Key", tab: "API Key" },
+    { label: "加固", note: "管理凭据引用", tab: "凭据" },
   ],
   gateway: [
-    { label: "Route", note: "配置 API 入口", tab: "API 路由" },
-    { label: "Model", note: "设置模型策略", tab: "模型路由" },
+    { label: "路由", note: "配置 API 入口", tab: "API 路由" },
+    { label: "模型", note: "设置模型策略", tab: "模型路由" },
     { label: "Skill", note: "治理 Skill 调用", tab: "Skill 调用" },
-    { label: "Audit", note: "查看请求日志", tab: "请求日志" },
+    { label: "审计", note: "查看请求日志", tab: "请求日志" },
   ],
   quota: [
-    { label: "Plan", note: "定义套餐配额", tab: "套餐" },
-    { label: "Usage", note: "追踪项目用量", tab: "用量" },
-    { label: "Budget", note: "处理预算告警", tab: "预算告警" },
+    { label: "套餐", note: "定义套餐配额", tab: "套餐" },
+    { label: "用量", note: "追踪项目用量", tab: "用量" },
+    { label: "预算", note: "处理预算告警", tab: "预算告警" },
   ],
   docs: [
-    { label: "Start", note: "创建接入应用", tab: "Quickstart" },
-    { label: "Boundary", note: "确认服务归属", tab: "服务边界" },
-    { label: "Reference", note: "查看 API 边界", tab: "API 文档" },
-    { label: "Support", note: "排查常见问题", tab: "FAQ" },
+    { label: "开始", note: "创建接入应用", tab: "Quickstart" },
+    { label: "边界", note: "确认服务归属", tab: "服务边界" },
+    { label: "参考", note: "查看 API 边界", tab: "API 文档" },
+    { label: "帮助", note: "排查常见问题", tab: "FAQ" },
   ],
 };
 
@@ -1437,9 +1437,9 @@ function ModulePage({
 
     if (page.id === "gateway" && activeTab === "模型路由") {
       return {
-        eyebrow: "Model Routes",
+        eyebrow: "模型路由",
         title: "模型路由",
-        columns: ["Alias", "场景", "Primary", "Fallback", "状态"],
+        columns: ["别名", "场景", "主模型", "兜底模型", "状态"],
         rows: (snapshot?.modelRoutes || []).map((route) => ({
           id: route.id,
           cells: [route.alias, route.scenario, route.primary, route.fallback, route.status],
@@ -1451,9 +1451,9 @@ function ModulePage({
 
     if (page.id === "gateway" && activeTab === "Skill 调用") {
       return {
-        eyebrow: "Skills",
+        eyebrow: "Skill",
         title: "Skill 绑定",
-        columns: ["Name", "Protocol", "Route", "Timeout", "状态"],
+        columns: ["名称", "协议", "路由", "超时", "状态"],
         rows: (snapshot?.skills || []).map((skill) => ({
           id: skill.id,
           cells: [skill.name, skill.protocol, skill.route, skill.timeout, skill.status],
@@ -1479,7 +1479,7 @@ function ModulePage({
 
     if (page.id === "quota" && activeTab === "用量") {
       return {
-        eyebrow: "Usage",
+        eyebrow: "用量",
         title: "项目用量",
         columns: ["项目", "Token 用量", "Skill 调用", "成本", "状态"],
         rows: (snapshot?.usage || []).map((usage) => ({
@@ -1493,7 +1493,7 @@ function ModulePage({
 
     if (page.id === "quota" && activeTab === "预算告警") {
       return {
-        eyebrow: "Budgets",
+        eyebrow: "预算",
         title: "预算告警",
         columns: ["项目", "预算", "当前用量", "阈值", "状态"],
         rows: (snapshot?.budgetAlerts || []).map((alert) => ({
@@ -1526,7 +1526,7 @@ function ModulePage({
       }));
 
       return {
-        eyebrow: "API Reference",
+        eyebrow: "API 参考",
         title: "接口参考",
         columns: ["入口", "类型", "主配置", "治理", "状态"],
         rows: [...routeRows, ...modelRows, ...skillRows],
@@ -1535,13 +1535,13 @@ function ModulePage({
 
     if (page.id === "docs" && activeTab === "服务边界") {
       return {
-        eyebrow: "Service Boundary",
+        eyebrow: "服务边界",
         title: "服务边界",
-        columns: ["后台入口", "Owner", "API 分组", "职责范围", "状态"],
+        columns: ["后台入口", "归属服务", "API 分组", "职责范围", "状态"],
         rows: consoleServiceMap.map((item) => ({
           id: `service-${item.owner}`,
-          cells: [item.entry, item.owner, item.apis.join(" · "), item.scope, "Ready"],
-          status: "Ready",
+          cells: [item.entry, item.owner, item.apis.join(" · "), item.scope, "已就绪"],
+          status: "已就绪",
           tone: "good",
         })),
       };
@@ -1555,26 +1555,26 @@ function ModulePage({
         rows: [
           {
             id: "faq-auth",
-            cells: ["调用返回 401", "检查 API Key、scope 和 RBAC 角色", "用户与权限", "Ready"],
-            status: "Ready",
+            cells: ["调用返回 401", "检查 API Key、scope 和 RBAC 角色", "用户与权限", "已就绪"],
+            status: "已就绪",
             tone: "good",
           },
           {
             id: "faq-route",
-            cells: ["模型别名不可用", "确认模型路由已发布且 fallback 可用", "网关与模型", "Ready"],
-            status: "Ready",
+            cells: ["模型别名不可用", "确认模型路由已发布且 fallback 可用", "网关与模型", "已就绪"],
+            status: "已就绪",
             tone: "good",
           },
           {
             id: "faq-budget",
-            cells: ["预算接近阈值", "查看用量项目并处理预算告警", "计费与配额", "Ready"],
-            status: "Ready",
+            cells: ["预算接近阈值", "查看用量项目并处理预算告警", "计费与配额", "已就绪"],
+            status: "已就绪",
             tone: "good",
           },
           {
             id: "faq-sdk",
-            cells: ["SDK 如何接入", "先按 OpenAPI 调用，TypeScript / Go 示例保持同一认证边界", "帮助文档", "Ready"],
-            status: "Ready",
+            cells: ["SDK 如何接入", "先按 OpenAPI 调用，TypeScript / Go 示例保持同一认证边界", "帮助文档", "已就绪"],
+            status: "已就绪",
             tone: "watch",
           },
         ],
@@ -3376,7 +3376,7 @@ function ActionHint({ children }: { children: React.ReactNode }) {
 function toneForStatus(status = ""): StatusTone {
   const normalized = status.toLowerCase();
 
-  if (["active", "success", "normal", "ready", "published", "resolved"].includes(normalized)) {
+  if (["active", "success", "normal", "ready", "published", "resolved", "已就绪"].includes(normalized)) {
     return "good";
   }
 
@@ -3402,7 +3402,7 @@ function nextStepForStatus(status = "") {
     return "继续推进";
   }
 
-  if (["active", "success", "normal", "ready", "published", "resolved"].includes(normalized)) {
+  if (["active", "success", "normal", "ready", "published", "resolved", "已就绪"].includes(normalized)) {
     return "保持观察";
   }
 

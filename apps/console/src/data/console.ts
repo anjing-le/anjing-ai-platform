@@ -53,7 +53,7 @@ export const navItems: NavItem[] = [
     summary: "平台状态、模块边界、今日待办和推荐操作路径。",
     roles: ["admin", "user", "developer", "operator"],
     icon: Home,
-    tags: ["Overview", "Start"],
+    tags: ["总览", "开始"],
   },
   {
     id: "overview",
@@ -62,7 +62,7 @@ export const navItems: NavItem[] = [
     summary: "统一查看运营状态、服务健康、调用日志、审计事件和待办。",
     roles: ["admin", "user", "developer", "operator"],
     icon: Activity,
-    tags: ["Health", "Audit"],
+    tags: ["健康", "审计"],
   },
   {
     id: "iam",
@@ -95,10 +95,10 @@ export const navItems: NavItem[] = [
     id: "docs",
     name: "Docs",
     label: "帮助文档",
-    summary: "沉淀 Quickstart、API 文档、SDK、示例和常见问题。",
+    summary: "沉淀快速接入、API 文档、SDK、示例和常见问题。",
     roles: ["admin", "user", "developer"],
     icon: BookOpen,
-    tags: ["API", "FAQ"],
+    tags: ["API", "帮助"],
   },
 ];
 
@@ -216,7 +216,7 @@ export const consoleServiceMap = [
     id: "docs",
     entry: "帮助文档",
     owner: "console-web + APIs",
-    scope: "Quickstart、API Reference、示例入口、FAQ",
+    scope: "快速接入、API 参考、示例入口、常见问题",
     apis: ["/", "/api/*"],
   },
 ];
@@ -233,7 +233,7 @@ export const modulePages: ModulePageDefinition[] = [
       { label: "今日调用", value: "128.4K", note: "API / Model / Skill", tone: "neutral" },
       { label: "成功率", value: "99.21%", note: "近 24 小时", tone: "good" },
       { label: "待处理", value: "7", note: "告警 / 审批 / 预算", tone: "watch" },
-      { label: "今日成本", value: "$842", note: "estimated", tone: "neutral" },
+      { label: "今日成本", value: "$842", note: "估算", tone: "neutral" },
     ],
     table: {
       eyebrow: "Operations",
@@ -271,7 +271,7 @@ export const modulePages: ModulePageDefinition[] = [
         ],
       },
       {
-        eyebrow: "Scope",
+        eyebrow: "范围",
         title: "合并范围",
         items: [
           { label: "Observability", value: "已并入", note: "健康、日志、Trace、失败追踪" },
@@ -335,7 +335,7 @@ export const modulePages: ModulePageDefinition[] = [
         items: [
           { label: "明文读取", value: "Blocked", note: "runtime only" },
           { label: "脱敏展示", value: "Enabled", note: "last 4 only" },
-          { label: "轮换周期", value: "90d", note: "default policy" },
+          { label: "轮换周期", value: "90d", note: "默认策略" },
         ],
       },
     ],
@@ -350,13 +350,13 @@ export const modulePages: ModulePageDefinition[] = [
     metrics: [
       { label: "API 路由", value: "24", note: "生产入口", tone: "neutral" },
       { label: "模型别名", value: "8", note: "chat / embedding / rerank", tone: "neutral" },
-      { label: "Skill", value: "12", note: "published 9", tone: "good" },
+      { label: "Skill", value: "12", note: "已发布 9", tone: "good" },
       { label: "P95 延迟", value: "82ms", note: "近 1 小时", tone: "watch" },
     ],
     table: {
-      eyebrow: "Routes",
+      eyebrow: "路由",
       title: "API 路由",
-      columns: ["Route", "Upstream", "Auth", "Limit", "状态"],
+      columns: ["路由", "上游", "鉴权", "限流", "状态"],
       rows: [
         {
           id: "llm",
@@ -385,11 +385,11 @@ export const modulePages: ModulePageDefinition[] = [
         items: [
           { label: "鉴权前置", value: "API Key + RBAC", note: "all routes" },
           { label: "模型 fallback", value: "Enabled", note: "provider timeout" },
-          { label: "Skill timeout", value: "8s", note: "default policy" },
+          { label: "Skill timeout", value: "8s", note: "默认策略" },
         ],
       },
       {
-        eyebrow: "Scope",
+        eyebrow: "范围",
         title: "合并范围",
         items: [
           { label: "API Gateway", value: "主入口", note: "路由、限流、请求日志" },
@@ -407,31 +407,31 @@ export const modulePages: ModulePageDefinition[] = [
     primaryAction: "新增套餐",
     tabs: ["套餐", "用量", "预算告警"],
     metrics: [
-      { label: "本月成本", value: "$18.4K", note: "estimated", tone: "neutral" },
+      { label: "本月成本", value: "$18.4K", note: "估算", tone: "neutral" },
       { label: "今日 Token", value: "8.6M", note: "+14%", tone: "watch" },
-      { label: "预算告警", value: "3", note: "near limit", tone: "warn" },
-      { label: "超限拒绝", value: "27", note: "today", tone: "neutral" },
+      { label: "预算告警", value: "3", note: "接近阈值", tone: "warn" },
+      { label: "超限拒绝", value: "27", note: "今日", tone: "neutral" },
     ],
     table: {
-      eyebrow: "Plans",
+      eyebrow: "套餐",
       title: "套餐与配额",
       columns: ["套餐", "适用对象", "RPS", "Token / day", "状态"],
       rows: [
         {
           id: "free",
-          cells: ["Free", "trial users", "20", "50K", "Active"],
+          cells: ["Free", "试用用户", "20", "50K", "Active"],
           status: "Active",
           tone: "good",
         },
         {
           id: "business",
-          cells: ["Business", "production agents", "1200", "10M", "Active"],
+          cells: ["Business", "生产 Agent", "1200", "10M", "Active"],
           status: "Active",
           tone: "good",
         },
         {
           id: "enterprise",
-          cells: ["Enterprise", "private deployment", "contract", "contract", "Guarded"],
+          cells: ["Enterprise", "私有部署", "合同约定", "合同约定", "Guarded"],
           status: "Guarded",
           tone: "watch",
         },
@@ -439,21 +439,21 @@ export const modulePages: ModulePageDefinition[] = [
     },
     panels: [
       {
-        eyebrow: "Billing",
+        eyebrow: "账单",
         title: "账单状态",
         items: [
           { label: "当前周期", value: "$4.8K", note: "未出账" },
-          { label: "成本分摊", value: "Project based", note: "tags required" },
-          { label: "计量延迟", value: "< 2s", note: "usage pipeline" },
+          { label: "成本分摊", value: "按项目", note: "必须带标签" },
+          { label: "计量延迟", value: "< 2s", note: "用量流水线" },
         ],
       },
       {
-        eyebrow: "Controls",
+        eyebrow: "控制",
         title: "配额控制",
         items: [
-          { label: "硬限制", value: "Enabled", note: "block when exceeded" },
-          { label: "软告警", value: "70% / 85%", note: "console notice" },
-          { label: "重置窗口", value: "daily", note: "UTC+8 reset" },
+          { label: "硬限制", value: "Enabled", note: "超限后拒绝" },
+          { label: "软告警", value: "70% / 85%", note: "控制台提醒" },
+          { label: "重置窗口", value: "daily", note: "UTC+8 重置" },
         ],
       },
     ],
@@ -462,43 +462,43 @@ export const modulePages: ModulePageDefinition[] = [
     id: "docs",
     eyebrow: "Docs",
     title: "帮助文档",
-    description: "给使用者和开发者一个轻量接入入口：Quickstart、服务边界、API 文档和常见问题先跑通。",
+    description: "给使用者和开发者一个轻量接入入口：快速接入、服务边界、API 文档和常见问题先跑通。",
     primaryAction: "创建接入应用",
     tabs: ["Quickstart", "服务边界", "API 文档", "FAQ"],
     metrics: [
-      { label: "文档", value: "12", note: "quickstart / api / faq", tone: "neutral" },
+      { label: "文档", value: "12", note: "快速接入 / API / FAQ", tone: "neutral" },
       { label: "示例", value: "3", note: "客服 / RAG / AIGC", tone: "neutral" },
       { label: "SDK", value: "2", note: "TypeScript / Go", tone: "watch" },
-      { label: "Runbook", value: "4", note: "ops / billing / auth", tone: "neutral" },
+      { label: "Runbook", value: "4", note: "运维 / 计费 / 鉴权", tone: "neutral" },
     ],
     table: {
       eyebrow: "Quickstart",
       title: "接入步骤",
-      columns: ["步骤", "说明", "产物", "Owner", "状态"],
+      columns: ["步骤", "说明", "产物", "负责人", "状态"],
       rows: [
         {
           id: "app",
-          cells: ["1", "创建应用与 API Key", "appId / key scope", "使用用户", "Ready"],
-          status: "Ready",
+          cells: ["1", "创建应用与 API Key", "appId / key scope", "使用用户", "已就绪"],
+          status: "已就绪",
           tone: "good",
         },
         {
           id: "route",
-          cells: ["2", "选择模型路由", "model alias", "开发人员", "Ready"],
-          status: "Ready",
+          cells: ["2", "选择模型路由", "模型别名", "开发人员", "已就绪"],
+          status: "已就绪",
           tone: "good",
         },
         {
           id: "observe",
-          cells: ["3", "观察调用与预算", "usage / audit", "运维人员", "Ready"],
-          status: "Ready",
+          cells: ["3", "观察调用与预算", "用量 / 审计", "运维人员", "已就绪"],
+          status: "已就绪",
           tone: "good",
         },
       ],
     },
     panels: [
       {
-        eyebrow: "Start",
+        eyebrow: "开始",
         title: "推荐路径",
         items: [
           { label: "第一步", value: "创建应用", note: "生成 appId 和 owner" },
@@ -507,12 +507,12 @@ export const modulePages: ModulePageDefinition[] = [
         ],
       },
       {
-        eyebrow: "Support",
+        eyebrow: "帮助",
         title: "帮助状态",
         items: [
-          { label: "API Reference", value: "Ready", note: "gateway endpoints" },
-          { label: "SDK Guide", value: "Ready", note: "client examples" },
-          { label: "FAQ", value: "6", note: "common issues" },
+          { label: "API 参考", value: "已就绪", note: "网关端点" },
+          { label: "SDK 指南", value: "已就绪", note: "客户端示例" },
+          { label: "常见问题", value: "6", note: "高频问题" },
         ],
       },
     ],
