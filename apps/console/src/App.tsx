@@ -1045,7 +1045,7 @@ function ConsoleHome({
               }
 
               return (
-                <a className="module-card" href={routeHash[item.id]} key={item.id}>
+                <a aria-label={`进入${item.label}`} className="module-card" href={routeHash[item.id]} key={item.id}>
                   {moduleCard}
                 </a>
               );

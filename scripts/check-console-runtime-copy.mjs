@@ -200,6 +200,10 @@ if (!appSource.includes("visibleModuleCount") || !appSource.includes("lockedModu
   errors.push("Console home module entry must show role access counts and a clear search action.");
 }
 
+if (!appSource.includes("aria-label={`进入${item.label}`}")) {
+  errors.push("Console home module entry links must expose explicit destination labels.");
+}
+
 if (!appSource.includes('aria-label="搜索模块、能力或入口"') || !appSource.includes("aria-label={`${page.title} 表格搜索`")) {
   errors.push("Console search inputs must expose accessible labels without relying on placeholders.");
 }
