@@ -2483,6 +2483,12 @@ function ModelRoutePanel({
           ? `正在发布模型路由 ${modelRoute.alias}`
           : `发布模型路由 ${modelRoute.alias}`
     : undefined;
+  const createLabel =
+    role === "operator"
+      ? "无法创建模型路由，需要管理员或开发人员"
+      : busy
+        ? `正在创建模型路由 ${alias}`
+        : `创建模型路由 ${alias}`;
 
   return (
     <Panel eyebrow="Model Route" title="模型路由">
@@ -2559,6 +2565,7 @@ function ModelRoutePanel({
           </p>
         ) : null}
         <button
+          aria-label={createLabel}
           aria-live="polite"
           className="button button--primary"
           disabled={busy || role === "operator"}
@@ -2602,6 +2609,12 @@ function SkillBindingPanel({
           ? `正在发布 Skill ${skill.name}`
           : `发布 Skill ${skill.name}`
     : undefined;
+  const createLabel =
+    role === "operator"
+      ? "无法创建 Skill 绑定，需要管理员或开发人员"
+      : busy
+        ? `正在创建 Skill 绑定 ${name}`
+        : `创建 Skill 绑定 ${name}`;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2696,6 +2709,7 @@ function SkillBindingPanel({
           </p>
         ) : null}
         <button
+          aria-label={createLabel}
           aria-live="polite"
           className="button button--primary"
           disabled={busy || role === "operator"}
@@ -3110,6 +3124,7 @@ function LLMInvokePanel({
   const aliases = modelRoutes?.length
     ? modelRoutes.map((route) => route.alias)
     : ["chat-default", "embedding-default"];
+  const invokeLabel = busy ? `正在调用模型 ${modelAlias}` : `调用模型 ${modelAlias}`;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3151,7 +3166,7 @@ function LLMInvokePanel({
             {error}
           </p>
         ) : null}
-        <button aria-live="polite" className="button button--primary" disabled={busy} type="submit">
+        <button aria-label={invokeLabel} aria-live="polite" className="button button--primary" disabled={busy} type="submit">
           {busy ? "调用中" : "发送调用"}
         </button>
       </form>

@@ -177,6 +177,18 @@ for (const formClass of ["model-route-form", "skill-binding-form", "invoke-form"
   }
 }
 
+for (const submitLabel of [
+  "无法创建模型路由，需要管理员或开发人员",
+  "创建模型路由 ${alias}",
+  "无法创建 Skill 绑定，需要管理员或开发人员",
+  "创建 Skill 绑定 ${name}",
+  "调用模型 ${modelAlias}",
+]) {
+  if (!appSource.includes(submitLabel)) {
+    errors.push(`Console inline form submit actions must expose object-aware labels: ${submitLabel}`);
+  }
+}
+
 if (!appSource.includes("function useInitialFocus") || (appSource.match(/useInitialFocus</g) || []).length < 3) {
   errors.push("Console inline forms must focus their first editable control after module mount.");
 }
