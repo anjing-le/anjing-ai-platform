@@ -70,7 +70,10 @@ if (
 if (
   !appSource.includes("aria-label={`${item.label}：${item.title}，${item.note}`}") ||
   !appSource.includes("<item.icon aria-hidden=\"true\" size={18} />") ||
-  !appSource.includes("aria-label={`${item.entry} 由 ${item.owner} 负责，范围：${item.scope}`}")
+  !appSource.includes("aria-label={`${item.entry} 由 ${item.owner} 负责，范围：${item.scope}`}") ||
+  !appSource.includes("<span>入口</span>") ||
+  !appSource.includes("<span>归属服务</span>") ||
+  !appSource.includes("<span>职责范围</span>")
 ) {
   errors.push("Console backend plan cards and service map rows must expose readable summaries.");
 }
@@ -106,6 +109,10 @@ if (!appSource.includes("lastSyncedAt") || !appSource.includes("最近同步") |
 
 if (!appSource.includes("aria-label={`数据来源：${label}") || !appSource.includes("aria-live=\"polite\"")) {
   errors.push("Console topbar data source badge must expose live accessible state changes.");
+}
+
+if (!appSource.includes('state === "live" ? "实时 API"') || !appSource.includes('"连接中"') || !appSource.includes('"本地演示"')) {
+  errors.push("Console topbar API source labels must use localized user-facing copy.");
 }
 
 if (!appSource.includes("聚合快照 · ops-api") || !appSource.includes("分组接口 ·") || !appSource.includes("本地演示数据 · console fallback")) {

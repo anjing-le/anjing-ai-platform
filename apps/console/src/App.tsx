@@ -837,7 +837,7 @@ function ConsoleShell({
 }
 
 function APIStateBadge({ detail, lastSyncedAt, state }: { detail: string; lastSyncedAt: string; state: ApiState }) {
-  const label = state === "live" ? "Live API" : state === "loading" ? "Connecting" : "Local demo";
+  const label = state === "live" ? "实时 API" : state === "loading" ? "连接中" : "本地演示";
   const note =
     state === "live"
       ? detail
@@ -1213,9 +1213,9 @@ function ConsoleHome({
           </div>
           <div aria-label="后台入口到服务归属" className="service-map">
             <div className="service-map__head">
-              <span>Entry</span>
-              <span>Owner</span>
-              <span>Scope</span>
+              <span>入口</span>
+              <span>归属服务</span>
+              <span>职责范围</span>
               <span>API</span>
             </div>
             {consoleServiceMap.map((item) => (
