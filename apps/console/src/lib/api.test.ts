@@ -69,4 +69,16 @@ describe("console API client", () => {
     expect(result.snapshot.dashboard?.metrics[0].label).toBe("成功率");
     expect(fetchMock.mock.calls.map((call) => call[0])).toContain("/api/control/users");
   });
+
+  it("reports none when aggregate and granular endpoints are unavailable", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ success: false, error: { code: "offline", message: "offline" } }, 503),
+    );
+
+    const result = await loadPlatformSnapshot("operator");
+
+    expect(result).toMatchObject({ ok: false, loaded: 0, failed: 13, source: "none" });
+    expect(result.snapshot).toEqual({});
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/ops/platform-snapshot");
+  });
 });
