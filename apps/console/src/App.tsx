@@ -1405,10 +1405,10 @@ function ModulePage({
       return {
         eyebrow: "API Keys",
         title: "密钥列表",
-        columns: ["Name", "Project", "Scope", "Expires", "状态"],
+        columns: ["名称", "项目", "授权范围", "到期时间", "状态"],
         rows: (snapshot?.apiKeys || []).map((key) => ({
           id: key.id,
-          cells: [key.name, key.project, key.scope, key.expiresAt || "No expiry", key.status],
+          cells: [key.name, key.project, key.scope, key.expiresAt || "未设置", key.status],
           status: key.status,
           tone: toneForStatus(key.status),
         })),
@@ -1419,14 +1419,14 @@ function ModulePage({
       return {
         eyebrow: "Credentials",
         title: "凭据引用",
-        columns: ["Ref", "用途", "Scope", "Expires", "状态"],
+        columns: ["引用", "用途", "绑定范围", "到期时间", "状态"],
         rows: (snapshot?.credentials || []).map((credential) => ({
           id: credential.id,
           cells: [
             credential.ref,
             credential.purpose,
             credential.scope,
-            credential.expiresAt || "No expiry",
+            credential.expiresAt || "未设置",
             credential.status,
           ],
           status: credential.status,
@@ -2980,9 +2980,9 @@ function APIKeyPanel({
 
   const canRevoke = role === "admin";
   const checks = [
-    { label: "Project", value: apiKey.project, note: "项目归属", tone: "neutral" },
-    { label: "Scope", value: apiKey.scope, note: "授权范围", tone: "neutral" },
-    { label: "Expires", value: apiKey.expiresAt || "No expiry", note: "到期时间", tone: "watch" },
+    { label: "项目", value: apiKey.project, note: "项目归属", tone: "neutral" },
+    { label: "授权范围", value: apiKey.scope, note: "API Key scope", tone: "neutral" },
+    { label: "到期时间", value: apiKey.expiresAt || "未设置", note: "密钥有效期", tone: "watch" },
   ] as const;
   const revokeLabel = !canRevoke
     ? `无法撤销 API Key ${apiKey.name}，需要管理员权限`
@@ -3053,9 +3053,9 @@ function CredentialRefPanel({
 
   const canRotate = role === "admin";
   const checks = [
-    { label: "Purpose", value: credential.purpose, note: "用途", tone: "neutral" },
-    { label: "Scope", value: credential.scope, note: "绑定范围", tone: "neutral" },
-    { label: "Preview", value: credential.maskedPreview, note: "脱敏展示", tone: "watch" },
+    { label: "用途", value: credential.purpose, note: "凭据用途", tone: "neutral" },
+    { label: "绑定范围", value: credential.scope, note: "credential scope", tone: "neutral" },
+    { label: "脱敏预览", value: credential.maskedPreview, note: "脱敏展示", tone: "watch" },
   ] as const;
   const rotateLabel = !canRotate
     ? `无法轮换凭据 ${credential.ref}，需要管理员权限`

@@ -37,6 +37,7 @@ for (const placeholderCopy of [
   "No usage yet",
   "waiting first usage",
   "No expiry configured",
+  "No expiry",
 ]) {
   if (appSource.includes(placeholderCopy) || dataSource.includes(placeholderCopy)) {
     errors.push(`Console user-facing copy must not expose placeholder text: ${placeholderCopy}`);
@@ -71,6 +72,19 @@ for (const localizedFormLabel of [
 ]) {
   if (!appSource.includes(localizedFormLabel)) {
     errors.push(`Console model and skill forms must keep localized labels: ${localizedFormLabel}`);
+  }
+}
+
+for (const localizedDetailFieldLabel of [
+  'label: "项目"',
+  'label: "授权范围"',
+  'label: "到期时间"',
+  'label: "用途"',
+  'label: "绑定范围"',
+  'label: "脱敏预览"',
+]) {
+  if (!appSource.includes(localizedDetailFieldLabel)) {
+    errors.push(`Console API Key and credential detail fields must keep localized labels: ${localizedDetailFieldLabel}`);
   }
 }
 
