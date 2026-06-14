@@ -3196,10 +3196,10 @@ function StatusBadge({ children, tone }: { children: React.ReactNode; tone: Stat
 
 function StatusDot({ tone }: { tone: StatusTone }) {
   if (tone === "good") {
-    return <CheckCircle2 className={`status-dot status-dot--${tone}`} size={16} />;
+    return <CheckCircle2 aria-hidden="true" className={`status-dot status-dot--${tone}`} size={16} />;
   }
 
-  return <CircleAlert className={`status-dot status-dot--${tone}`} size={16} />;
+  return <CircleAlert aria-hidden="true" className={`status-dot status-dot--${tone}`} size={16} />;
 }
 
 function ActionHint({ children }: { children: React.ReactNode }) {

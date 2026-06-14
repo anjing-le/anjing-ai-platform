@@ -122,6 +122,10 @@ if (!appSource.includes("table-result-count") || !appSource.includes("tableView.
   errors.push("Console data tables must show filtered row counts.");
 }
 
+if (!appSource.includes('<CheckCircle2 aria-hidden="true"') || !appSource.includes('<CircleAlert aria-hidden="true"')) {
+  errors.push("Console decorative status icons must be hidden from assistive technology.");
+}
+
 if (!appSource.includes("ariaLabel={`${page.title} - ${tableView.title}`}") || !appSource.includes("aria-selected")) {
   errors.push("Console data tables must keep accessible table labels and selected row state.");
 }
