@@ -72,6 +72,10 @@ for (const formClass of ["model-route-form", "skill-binding-form", "invoke-form"
   }
 }
 
+if ((appSource.match(/autoFocus/g) || []).length < 3) {
+  errors.push("Console inline forms must autofocus their first editable control.");
+}
+
 if ((appSource.match(/role="alert"/g) || []).length < 3) {
   errors.push("Console inline forms must expose submit errors as alerts.");
 }

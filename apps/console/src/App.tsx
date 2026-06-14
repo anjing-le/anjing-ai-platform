@@ -2331,7 +2331,7 @@ function ModelRoutePanel({
       <form aria-busy={busy} className="model-route-form" onSubmit={handleSubmit}>
         <label>
           <span>Alias</span>
-          <input onChange={(event) => setAlias(event.target.value)} required value={alias} />
+          <input autoFocus onChange={(event) => setAlias(event.target.value)} required value={alias} />
         </label>
         <label>
           <span>Scenario</span>
@@ -2452,7 +2452,7 @@ function SkillBindingPanel({
       <form aria-busy={busy} className="skill-binding-form" onSubmit={handleSubmit}>
         <label>
           <span>Name</span>
-          <input onChange={(event) => setName(event.target.value)} required value={name} />
+          <input autoFocus onChange={(event) => setName(event.target.value)} required value={name} />
         </label>
         <label>
           <span>Protocol</span>
@@ -2868,7 +2868,7 @@ function LLMInvokePanel({
       <form aria-busy={busy} className="invoke-form" onSubmit={handleSubmit}>
         <label>
           <span>Model Alias</span>
-          <select onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
+          <select autoFocus onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
             {aliases.map((alias) => (
               <option key={alias} value={alias}>
                 {alias}
