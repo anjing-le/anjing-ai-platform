@@ -802,13 +802,15 @@ function ConsoleShell({
           <div className="topbar__actions">
             <APIStateBadge detail={apiDetail} lastSyncedAt={lastSyncedAt} state={apiState} />
             <button
+              aria-label={refreshing ? "正在刷新平台数据" : "刷新平台数据"}
+              aria-live="polite"
               className="icon-command"
               disabled={refreshing}
               onClick={onRefresh}
               title="刷新平台数据"
               type="button"
             >
-              <RefreshCw size={16} />
+              <RefreshCw aria-hidden="true" size={16} />
               <span>{refreshing ? "刷新中" : "刷新"}</span>
             </button>
             <div className="role-switcher" aria-label="角色视角">

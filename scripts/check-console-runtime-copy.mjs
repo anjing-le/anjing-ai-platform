@@ -75,8 +75,12 @@ if (appSource.includes("<code>go run ./cmd/platform-all</code>")) {
   errors.push("Console home must not show raw go run ./cmd/platform-all as the primary runtime command.");
 }
 
-if (!appSource.includes("刷新平台数据") || !appSource.includes("RefreshCw")) {
-  errors.push("Console topbar must expose a manual platform data refresh action.");
+if (
+  !appSource.includes('aria-label={refreshing ? "正在刷新平台数据" : "刷新平台数据"}') ||
+  !appSource.includes('<RefreshCw aria-hidden="true" size={16} />') ||
+  !appSource.includes('<span>{refreshing ? "刷新中" : "刷新"}</span>')
+) {
+  errors.push("Console topbar refresh action must expose busy labels and hide its decorative icon.");
 }
 
 if (
