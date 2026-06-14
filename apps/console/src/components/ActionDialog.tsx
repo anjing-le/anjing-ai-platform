@@ -215,18 +215,19 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
         </header>
 
         <form className="action-form" onSubmit={handleSubmit}>
-          {copy.fields.map((field) => (
+          {copy.fields.map((field, index) => (
             <label key={field.name}>
               <span>{field.label}</span>
               {field.kind === "input" ? (
                 <input
+                  autoFocus={index === 0}
                   name={field.name}
                   placeholder={field.placeholder}
                   required={field.required}
                   type={field.type || "text"}
                 />
               ) : (
-                <select name={field.name} required={field.required}>
+                <select autoFocus={index === 0} name={field.name} required={field.required}>
                   {field.options.map((option) => (
                     <option key={option}>{option}</option>
                   ))}

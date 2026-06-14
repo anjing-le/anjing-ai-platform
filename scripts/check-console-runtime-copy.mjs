@@ -57,6 +57,10 @@ if (!actionDialogSource.includes("event.key === \"Escape\"") || !actionDialogSou
   errors.push("Console action dialog must support Escape close while preventing busy-state dismissal.");
 }
 
+if (!actionDialogSource.includes("autoFocus={index === 0}")) {
+  errors.push("Console action dialog must autofocus the first form field when opened.");
+}
+
 if (!appSource.includes("table-result-count") || !appSource.includes("tableView.rows.length")) {
   errors.push("Console data tables must show filtered row counts.");
 }
