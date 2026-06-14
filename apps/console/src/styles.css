@@ -969,6 +969,13 @@ a {
   line-height: 1.45;
 }
 
+.service-runtime__command {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
 .service-runtime code {
   overflow: hidden;
   padding: 8px 9px;
@@ -980,6 +987,15 @@ a {
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.service-runtime__command code {
+  flex: 1;
+}
+
+.service-runtime__command .text-command {
+  min-height: 34px;
+  padding: 0 10px;
 }
 
 .service-plan {

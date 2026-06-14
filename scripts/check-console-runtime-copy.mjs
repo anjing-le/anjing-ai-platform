@@ -8,6 +8,10 @@ if (!appSource.includes("<code>pnpm dev:api</code>")) {
   errors.push("Console home runtime command must show pnpm dev:api.");
 }
 
+if (!appSource.includes("service-runtime__command") || !appSource.includes("handleRuntimeCommandCopy")) {
+  errors.push("Console home runtime command must be copyable from the backend plan.");
+}
+
 if (appSource.includes("<code>go run ./cmd/platform-all</code>")) {
   errors.push("Console home must not show raw go run ./cmd/platform-all as the primary runtime command.");
 }

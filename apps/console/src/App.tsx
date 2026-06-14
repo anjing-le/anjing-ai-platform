@@ -892,6 +892,13 @@ function ConsoleHome({
   const openTodos = liveTodos.filter((todo) => todo.status !== "Resolved");
   const resolvedTodoCount = liveTodos.length - openTodos.length;
   const canResolveTodo = role === "admin" || role === "operator";
+  const [runtimeCommandCopied, setRuntimeCommandCopied] = useState(false);
+
+  async function handleRuntimeCommandCopy() {
+    await navigator.clipboard.writeText("pnpm dev:api");
+    setRuntimeCommandCopied(true);
+    window.setTimeout(() => setRuntimeCommandCopied(false), 1800);
+  }
 
   return (
     <main className="page">
@@ -1040,7 +1047,18 @@ function ConsoleHome({
             <span>Dev Runtime</span>
             <strong>platform-all</strong>
             <p>本地一键启动完整控制台和 V1 API。</p>
-            <code>pnpm dev:api</code>
+            <div className="service-runtime__command">
+              <code>pnpm dev:api</code>
+              <button
+                aria-live="polite"
+                className="text-command"
+                onClick={() => void handleRuntimeCommandCopy()}
+                type="button"
+              >
+                <Copy size={14} />
+                {runtimeCommandCopied ? "已复制" : "复制"}
+              </button>
+            </div>
           </div>
           <div className="service-plan">
             {backendPlan.map((item) => (
