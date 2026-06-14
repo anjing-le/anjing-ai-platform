@@ -33,9 +33,12 @@ describe("console role access", () => {
 
   it("keeps primary actions stricter than read visibility", () => {
     expect(canRunPrimaryAction("user", "quota")).toBe(false);
+    expect(canRunPrimaryAction("user", "docs")).toBe(true);
     expect(canRunPrimaryAction("operator", "overview")).toBe(true);
+    expect(canRunPrimaryAction("operator", "docs")).toBe(false);
     expect(canRunPrimaryAction("developer", "gateway")).toBe(true);
     expect(canRunPrimaryAction("developer", "iam")).toBe(false);
+    expect(primaryActionHint("operator", "docs")).toContain("接入应用");
     expect(primaryActionHint("user", "quota")).toContain("管理员");
   });
 });
