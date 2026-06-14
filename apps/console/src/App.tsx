@@ -1605,7 +1605,8 @@ function ModulePage({
   );
 
   const rows = tableView.rows.filter((row) => {
-    const matchesQuery = row.cells.join(" ").toLowerCase().includes(query.toLowerCase());
+    const searchableText = [...row.cells, displayStatus(row.status), nextStepForStatus(row.status)].join(" ").toLowerCase();
+    const matchesQuery = searchableText.includes(query.toLowerCase());
     const matchesStatus = status === "全部状态" || row.status === status;
     return matchesQuery && matchesStatus;
   });
