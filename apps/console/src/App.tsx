@@ -1251,9 +1251,9 @@ function ModulePage({
   const activeTabIndex = Math.max(0, page.tabs.indexOf(activeTab));
 
   function focusModuleTab(index: number) {
-    window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
       document.getElementById(`module-tab-${page.id}-${index}`)?.focus();
-    });
+    }, 50);
   }
 
   function handleModuleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
