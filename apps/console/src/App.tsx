@@ -776,6 +776,7 @@ function ConsoleShell({
         <nav className="sidebar__nav" aria-label="后台模块">
           {visibleItems.map((item) => (
             <a
+              aria-current={item.id === activeRoute ? "page" : undefined}
               className={item.id === activeRoute ? "sidebar__link is-active" : "sidebar__link"}
               href={routeHash[item.id]}
               key={item.id}

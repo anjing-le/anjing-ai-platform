@@ -45,6 +45,10 @@ if (!appSource.includes("刷新平台数据") || !appSource.includes("RefreshCw"
   errors.push("Console topbar must expose a manual platform data refresh action.");
 }
 
+if (!appSource.includes('aria-current={item.id === activeRoute ? "page" : undefined}') || !styleSource.includes('.sidebar__link[aria-current="page"]')) {
+  errors.push("Console sidebar must expose and style the current navigation item.");
+}
+
 if (!appSource.includes("lastSyncedAt") || !appSource.includes("最近同步") || !appSource.includes("等待首次同步")) {
   errors.push("Console topbar must show platform data freshness after refresh attempts.");
 }
