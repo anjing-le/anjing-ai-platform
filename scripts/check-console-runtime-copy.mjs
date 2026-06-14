@@ -231,7 +231,8 @@ if (!appSource.includes('<CheckCircle2 aria-hidden="true"') || !appSource.includ
 if (
   !appSource.includes("ariaLabel={`${page.title} - ${tableView.title}`}") ||
   !appSource.includes("aria-selected") ||
-  !appSource.includes("aria-label={onRowSelect ? `选择 ${row.cells[0]}` : undefined}")
+  !appSource.includes("aria-label={onRowSelect ? `选择 ${row.cells[0]}${selected ? \"，当前选中\" : \"\"}` : undefined}") ||
+  !appSource.includes("const selected = row.id === selectedRowId")
 ) {
   errors.push("Console data tables must keep accessible table labels and selectable row state.");
 }

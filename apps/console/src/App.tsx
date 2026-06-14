@@ -3262,36 +3262,40 @@ function DataTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr
-              aria-label={onRowSelect ? `选择 ${row.cells[0]}` : undefined}
-              aria-selected={onRowSelect ? row.id === selectedRowId : undefined}
-              className={row.id === selectedRowId ? "is-selected" : ""}
-              key={row.id}
-              onClick={onRowSelect ? () => onRowSelect(row.id) : undefined}
-              onKeyDown={
-                onRowSelect
-                  ? (event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onRowSelect(row.id);
+          {rows.map((row) => {
+            const selected = row.id === selectedRowId;
+
+            return (
+              <tr
+                aria-label={onRowSelect ? `选择 ${row.cells[0]}${selected ? "，当前选中" : ""}` : undefined}
+                aria-selected={onRowSelect ? selected : undefined}
+                className={selected ? "is-selected" : ""}
+                key={row.id}
+                onClick={onRowSelect ? () => onRowSelect(row.id) : undefined}
+                onKeyDown={
+                  onRowSelect
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onRowSelect(row.id);
+                        }
                       }
-                    }
-                  : undefined
-              }
-              tabIndex={onRowSelect ? 0 : undefined}
-            >
-              {row.cells.map((cell, index) => (
-                <td key={`${row.id}-${cell}`}>
-                  {index === row.cells.length - 1 ? (
-                    <StatusBadge tone={row.tone}>{cell}</StatusBadge>
-                  ) : (
-                    cell
-                  )}
-                </td>
-              ))}
-            </tr>
-          ))}
+                    : undefined
+                }
+                tabIndex={onRowSelect ? 0 : undefined}
+              >
+                {row.cells.map((cell, index) => (
+                  <td key={`${row.id}-${cell}`}>
+                    {index === row.cells.length - 1 ? (
+                      <StatusBadge tone={row.tone}>{cell}</StatusBadge>
+                    ) : (
+                      cell
+                    )}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
           {rows.length === 0 ? (
             <tr>
               <td className="empty-cell" colSpan={columns.length}>
