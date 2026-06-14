@@ -76,6 +76,12 @@ if ((appSource.match(/autoFocus/g) || []).length < 3) {
   errors.push("Console inline forms must autofocus their first editable control.");
 }
 
+for (const fieldsetRule of ['disabled={busy || role === "operator"}', "disabled={busy}"]) {
+  if (!appSource.includes(fieldsetRule)) {
+    errors.push("Console inline forms must disable their editable controls while busy or read-only.");
+  }
+}
+
 if ((appSource.match(/role="alert"/g) || []).length < 3) {
   errors.push("Console inline forms must expose submit errors as alerts.");
 }

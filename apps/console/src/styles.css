@@ -1436,6 +1436,17 @@ tbody tr.is-selected td:first-child {
   border-bottom: 1px solid var(--line);
 }
 
+.invoke-form fieldset,
+.model-route-form fieldset,
+.skill-binding-form fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 .invoke-form label,
 .model-route-form label,
 .skill-binding-form label {
@@ -1488,6 +1499,16 @@ tbody tr.is-selected td:first-child {
 .skill-binding-form select:focus {
   border-color: var(--ink);
   outline: none;
+}
+
+.invoke-form select:disabled,
+.invoke-form textarea:disabled,
+.model-route-form input:disabled,
+.skill-binding-form input:disabled,
+.skill-binding-form select:disabled {
+  background: #f7f7f7;
+  color: var(--muted);
+  cursor: not-allowed;
 }
 
 .invoke-form .button,

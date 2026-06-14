@@ -2329,22 +2329,24 @@ function ModelRoutePanel({
       )}
 
       <form aria-busy={busy} className="model-route-form" onSubmit={handleSubmit}>
-        <label>
-          <span>Alias</span>
-          <input autoFocus onChange={(event) => setAlias(event.target.value)} required value={alias} />
-        </label>
-        <label>
-          <span>Scenario</span>
-          <input onChange={(event) => setScenario(event.target.value)} required value={scenario} />
-        </label>
-        <label>
-          <span>Primary</span>
-          <input onChange={(event) => setPrimary(event.target.value)} required value={primary} />
-        </label>
-        <label>
-          <span>Fallback</span>
-          <input onChange={(event) => setFallback(event.target.value)} required value={fallback} />
-        </label>
+        <fieldset disabled={busy || role === "operator"}>
+          <label>
+            <span>Alias</span>
+            <input autoFocus onChange={(event) => setAlias(event.target.value)} required value={alias} />
+          </label>
+          <label>
+            <span>Scenario</span>
+            <input onChange={(event) => setScenario(event.target.value)} required value={scenario} />
+          </label>
+          <label>
+            <span>Primary</span>
+            <input onChange={(event) => setPrimary(event.target.value)} required value={primary} />
+          </label>
+          <label>
+            <span>Fallback</span>
+            <input onChange={(event) => setFallback(event.target.value)} required value={fallback} />
+          </label>
+        </fieldset>
         {error ? (
           <p aria-live="polite" className="form-error" role="alert">
             {error}
@@ -2450,25 +2452,27 @@ function SkillBindingPanel({
       )}
 
       <form aria-busy={busy} className="skill-binding-form" onSubmit={handleSubmit}>
-        <label>
-          <span>Name</span>
-          <input autoFocus onChange={(event) => setName(event.target.value)} required value={name} />
-        </label>
-        <label>
-          <span>Protocol</span>
-          <select onChange={(event) => setProtocol(event.target.value)} value={protocol}>
-            <option value="HTTP">HTTP</option>
-            <option value="MCP">MCP</option>
-          </select>
-        </label>
-        <label>
-          <span>Route</span>
-          <input onChange={(event) => setRoute(event.target.value)} required value={route} />
-        </label>
-        <label>
-          <span>Timeout</span>
-          <input onChange={(event) => setTimeoutValue(event.target.value)} required value={timeout} />
-        </label>
+        <fieldset disabled={busy || role === "operator"}>
+          <label>
+            <span>Name</span>
+            <input autoFocus onChange={(event) => setName(event.target.value)} required value={name} />
+          </label>
+          <label>
+            <span>Protocol</span>
+            <select onChange={(event) => setProtocol(event.target.value)} value={protocol}>
+              <option value="HTTP">HTTP</option>
+              <option value="MCP">MCP</option>
+            </select>
+          </label>
+          <label>
+            <span>Route</span>
+            <input onChange={(event) => setRoute(event.target.value)} required value={route} />
+          </label>
+          <label>
+            <span>Timeout</span>
+            <input onChange={(event) => setTimeoutValue(event.target.value)} required value={timeout} />
+          </label>
+        </fieldset>
         {error ? (
           <p aria-live="polite" className="form-error" role="alert">
             {error}
@@ -2866,20 +2870,22 @@ function LLMInvokePanel({
   return (
     <Panel eyebrow="LLM" title="调用测试">
       <form aria-busy={busy} className="invoke-form" onSubmit={handleSubmit}>
-        <label>
-          <span>Model Alias</span>
-          <select autoFocus onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
-            {aliases.map((alias) => (
-              <option key={alias} value={alias}>
-                {alias}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span>Input</span>
-          <textarea onChange={(event) => setInput(event.target.value)} rows={4} value={input} />
-        </label>
+        <fieldset disabled={busy}>
+          <label>
+            <span>Model Alias</span>
+            <select autoFocus onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
+              {aliases.map((alias) => (
+                <option key={alias} value={alias}>
+                  {alias}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Input</span>
+            <textarea onChange={(event) => setInput(event.target.value)} rows={4} value={input} />
+          </label>
+        </fieldset>
         {error ? (
           <p aria-live="polite" className="form-error" role="alert">
             {error}
