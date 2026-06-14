@@ -267,7 +267,10 @@ if (
   !appSource.includes("function QuickstartChecklist") ||
   !appSource.includes("发送最小调用") ||
   !appSource.includes("hasRequestLogs") ||
-  !appSource.includes("StatusBadge tone={toneForStatus(step.status)}")
+  !appSource.includes("StatusBadge tone={toneForStatus(step.status)}") ||
+  !appSource.includes('aria-label="Quickstart 最小接入清单"') ||
+  !appSource.includes("aria-label={`${step.title}：${step.status}，${step.note}`}") ||
+  !appSource.includes('<span aria-hidden="true">{step.label}</span>')
 ) {
   errors.push("Console Quickstart must show the minimal onboarding checklist with live statuses.");
 }

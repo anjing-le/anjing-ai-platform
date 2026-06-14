@@ -2294,10 +2294,10 @@ function QuickstartChecklist({
   ];
 
   return (
-    <div className="quickstart-checklist">
+    <div aria-label="Quickstart 最小接入清单" className="quickstart-checklist">
       {steps.map((step) => (
-        <article key={step.label}>
-          <span>{step.label}</span>
+        <article aria-label={`${step.title}：${step.status}，${step.note}`} key={step.label}>
+          <span aria-hidden="true">{step.label}</span>
           <div>
             <strong>{step.title}</strong>
             <p>{step.note}</p>
