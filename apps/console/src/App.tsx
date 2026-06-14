@@ -978,7 +978,7 @@ function ConsoleHome({
             用这页先看清平台是否正常、当前角色能做什么、哪些模块需要进入，以及后端服务下一步怎么拆。
           </p>
         </div>
-        <a className="button button--primary" href={routeHash.docs}>
+        <a aria-label="进入帮助文档开始接入" className="button button--primary" href={routeHash.docs}>
           开始接入
           <ChevronRight aria-hidden="true" size={16} />
         </a>
@@ -1005,7 +1005,12 @@ function ConsoleHome({
               />
             </label>
             {normalizedModuleQuery ? (
-              <button className="text-command" onClick={() => setModuleQuery("")} type="button">
+              <button
+                aria-label={`清空模块搜索：${moduleQuery}`}
+                className="text-command"
+                onClick={() => setModuleQuery("")}
+                type="button"
+              >
                 清空搜索
               </button>
             ) : null}
@@ -1063,7 +1068,7 @@ function ConsoleHome({
               );
             })}
             {!filteredModuleItems.length ? (
-              <div className="module-empty">
+              <div aria-label="没有找到模块：换一个关键词，例如 Gateway、Billing、API 或权限。" className="module-empty" role="status">
                 <strong>没有找到模块</strong>
                 <p>换一个关键词，例如 Gateway、Billing、API 或权限。</p>
               </div>
@@ -1088,7 +1093,9 @@ function ConsoleHome({
                 </div>
                 <StatusBadge tone={todo.tone}>{todo.status}</StatusBadge>
                 <div className="todo-item__actions">
-                  <a href={routeHash[todo.moduleId]}>查看</a>
+                  <a aria-label={`查看待办所属模块：${todo.title}`} href={routeHash[todo.moduleId]}>
+                    查看
+                  </a>
                   <button
                     aria-label={
                       canResolveTodo
@@ -1107,7 +1114,7 @@ function ConsoleHome({
               </article>
             ))}
             {!openTodos.length ? (
-              <div className="todo-empty">
+              <div aria-label="今日待办已清空：新的告警、审批或接入校验会自动出现在这里。" className="todo-empty" role="status">
                 <strong>今日待办已清空</strong>
                 <p>新的告警、审批或接入校验会自动出现在这里。</p>
               </div>
@@ -1846,6 +1853,7 @@ function ModulePage({
             </select>
             {filtersActive ? (
               <button
+                aria-label={`清空${page.title}表格筛选`}
                 className="text-command"
                 onClick={() => {
                   setQuery("");

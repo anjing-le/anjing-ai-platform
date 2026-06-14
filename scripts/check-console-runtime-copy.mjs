@@ -273,6 +273,14 @@ if (!appSource.includes("visibleModuleCount") || !appSource.includes("lockedModu
   errors.push("Console home module entry must show role access counts and a clear search action.");
 }
 
+if (
+  !appSource.includes('aria-label="进入帮助文档开始接入"') ||
+  !appSource.includes("aria-label={`清空模块搜索：${moduleQuery}`}") ||
+  !appSource.includes("aria-label={`清空${page.title}表格筛选`}")
+) {
+  errors.push("Console primary entry and clear-filter actions must expose explicit accessible labels.");
+}
+
 if (!appSource.includes("aria-label={`进入${item.label}`}")) {
   errors.push("Console home module entry links must expose explicit destination labels.");
 }
@@ -298,6 +306,18 @@ if (
 
 if (!appSource.includes("openTodos") || !appSource.includes("todo-summary") || !appSource.includes("今日待办已清空")) {
   errors.push("Console home todo list must focus unresolved work and show an all-done empty state.");
+}
+
+if (
+  !appSource.includes("aria-label=\"没有找到模块：换一个关键词，例如 Gateway、Billing、API 或权限。\"") ||
+  !appSource.includes("aria-label=\"今日待办已清空：新的告警、审批或接入校验会自动出现在这里。\"") ||
+  !appSource.includes('className="todo-empty" role="status"')
+) {
+  errors.push("Console home empty states must expose readable status summaries.");
+}
+
+if (!appSource.includes("aria-label={`查看待办所属模块：${todo.title}`}")) {
+  errors.push("Console home todo view links must expose their target context.");
 }
 
 if (!appSource.includes("处理待办：${todo.title}") || !appSource.includes("无法处理待办：${todo.title}，需要管理员或运维人员")) {
