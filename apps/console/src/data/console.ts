@@ -490,9 +490,9 @@ export const modulePages: ModulePageDefinition[] = [
         },
         {
           id: "observe",
-          cells: ["3", "观察调用与预算", "usage / audit", "运维人员", "Draft"],
-          status: "Draft",
-          tone: "neutral",
+          cells: ["3", "观察调用与预算", "usage / audit", "运维人员", "Ready"],
+          status: "Ready",
+          tone: "good",
         },
       ],
     },
@@ -511,7 +511,7 @@ export const modulePages: ModulePageDefinition[] = [
         title: "帮助状态",
         items: [
           { label: "API Reference", value: "Ready", note: "gateway endpoints" },
-          { label: "SDK Guide", value: "Draft", note: "client examples" },
+          { label: "SDK Guide", value: "Ready", note: "client examples" },
           { label: "FAQ", value: "6", note: "common issues" },
         ],
       },

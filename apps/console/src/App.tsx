@@ -2079,7 +2079,7 @@ function ApplicationJourneyPanel({
     {
       label: "Quota",
       value: application.plan,
-      note: budget ? `${budget.current} / ${budget.budget}` : "waiting first usage",
+      note: budget ? `${budget.current} / ${budget.budget}` : "等待首次用量",
       tone: budget?.status || "Ready",
     },
   ];
@@ -2113,7 +2113,7 @@ function ApplicationJourneyPanel({
         <article>
           <span>Tokens</span>
           <strong>{usage?.tokens || "0"}</strong>
-          <p>{usage?.status || "No usage yet"}</p>
+          <p>{usage?.status || "等待首次用量"}</p>
         </article>
         <article>
           <span>Skill Calls</span>
