@@ -1651,6 +1651,7 @@ tbody tr.is-selected td:first-child {
 .selected-row-next p,
 .journey-list p,
 .application-usage p,
+.quickstart-checklist p,
 .mini-log-list p,
 .route-checks p,
 .user-checks p,
@@ -1796,6 +1797,41 @@ tbody tr.is-selected td:first-child {
 
 .application-usage strong {
   font-size: 1.34rem;
+}
+
+.quickstart-checklist {
+  display: grid;
+  border-bottom: 1px solid var(--line);
+}
+
+.quickstart-checklist article {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 13px 16px;
+  border-top: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.quickstart-checklist article:first-child {
+  border-top: 0;
+}
+
+.quickstart-checklist span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.quickstart-checklist div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.quickstart-checklist strong {
+  font-size: 0.92rem;
 }
 
 .quickstart-snippet {

@@ -2028,6 +2028,7 @@ function ApplicationJourneyPanel({
           <strong>暂无应用</strong>
           <p>创建接入应用后，这里会展示 API Key、路由、用量和审计链路。</p>
         </div>
+        <QuickstartChecklist />
         <QuickstartSnippet curl={placeholderCurl} />
       </Panel>
     );
@@ -2111,6 +2112,8 @@ function ApplicationJourneyPanel({
         </article>
       </div>
 
+      <QuickstartChecklist />
+
       <QuickstartSnippet curl={quickstartCurl} />
 
       <div className="mini-log-list">
@@ -2153,6 +2156,45 @@ function ApplicationJourneyPanel({
         </button>
       </div>
     </Panel>
+  );
+}
+
+function QuickstartChecklist() {
+  const steps = [
+    {
+      label: "01",
+      title: "创建接入应用",
+      note: "确定 owner、环境、默认路由和套餐。",
+    },
+    {
+      label: "02",
+      title: "发放 API Key",
+      note: "绑定最小 scope，用 credentialRef 管理供应商凭据。",
+    },
+    {
+      label: "03",
+      title: "确认网关路由",
+      note: "先走模型别名和 Skill 入口，再看 fallback 与限流。",
+    },
+    {
+      label: "04",
+      title: "发送最小调用",
+      note: "复制 curl 后验证用量、请求日志和预算状态。",
+    },
+  ];
+
+  return (
+    <div className="quickstart-checklist">
+      {steps.map((step) => (
+        <article key={step.label}>
+          <span>{step.label}</span>
+          <div>
+            <strong>{step.title}</strong>
+            <p>{step.note}</p>
+          </div>
+        </article>
+      ))}
+    </div>
   );
 }
 

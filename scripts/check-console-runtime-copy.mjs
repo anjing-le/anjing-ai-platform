@@ -126,6 +126,10 @@ if (!appSource.includes("ak_live_xxx") || !appSource.includes("QuickstartSnippet
   errors.push("Console Quickstart must show a placeholder call snippet before an application exists.");
 }
 
+if (!appSource.includes("function QuickstartChecklist") || !appSource.includes("发送最小调用")) {
+  errors.push("Console Quickstart must show the minimal onboarding checklist.");
+}
+
 if (!appSource.includes("http://localhost:18080/api/v1/llm/chat") || appSource.includes("http://localhost:8080/api/v1/llm/chat")) {
   errors.push("Console Quickstart snippet must target the default platform-all API port 18080.");
 }
