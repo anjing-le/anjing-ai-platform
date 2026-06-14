@@ -117,6 +117,16 @@ if (!appSource.includes("ariaLabel={`${page.title} - ${tableView.title}`}") || !
   errors.push("Console data tables must keep accessible table labels and selected row state.");
 }
 
+if (
+  !appSource.includes('role="tablist"') ||
+  !appSource.includes('role="tab"') ||
+  !appSource.includes('role="tabpanel"') ||
+  !appSource.includes("aria-selected={tab === activeTab}") ||
+  !appSource.includes("aria-controls={`module-panel-${page.id}`}")
+) {
+  errors.push("Console module tabs must expose tablist, tab and tabpanel semantics with selected state.");
+}
+
 if (!appSource.includes("filtersActive") || !appSource.includes("清空筛选")) {
   errors.push("Console data tables must provide a clear filter action when filters are active.");
 }

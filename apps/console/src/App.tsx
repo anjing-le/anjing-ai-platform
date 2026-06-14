@@ -1247,6 +1247,7 @@ function ModulePage({
   const [status, setStatus] = useState("全部状态");
   const [selectedRowId, setSelectedRowId] = useState("");
   const [activeTab, setActiveTab] = useState(page.tabs[0] || "");
+  const activeTabIndex = Math.max(0, page.tabs.indexOf(activeTab));
 
   useEffect(() => {
     setActiveTab(page.tabs[0] || "");
@@ -1729,12 +1730,16 @@ function ModulePage({
 
       <ModuleWorkflow activeTab={activeTab} steps={moduleWorkflows[page.id]} />
 
-      <div className="tab-row" aria-label={`${page.title} 页面视图`}>
-        {page.tabs.map((tab) => (
+      <div className="tab-row" aria-label={`${page.title} 页面视图`} role="tablist">
+        {page.tabs.map((tab, index) => (
           <button
+            aria-controls={`module-panel-${page.id}`}
+            aria-selected={tab === activeTab}
             className={tab === activeTab ? "is-active" : ""}
+            id={`module-tab-${page.id}-${index}`}
             key={tab}
             onClick={() => setActiveTab(tab)}
+            role="tab"
             type="button"
           >
             {tab}
@@ -1744,7 +1749,12 @@ function ModulePage({
 
       <MetricGrid metrics={page.metrics} />
 
-      <section className="content-grid">
+      <section
+        aria-labelledby={`module-tab-${page.id}-${activeTabIndex}`}
+        className="content-grid"
+        id={`module-panel-${page.id}`}
+        role="tabpanel"
+      >
         <Panel className="content-grid__main" eyebrow={tableView.eyebrow} title={tableView.title}>
           <div className="table-toolbar">
             <label className="search-field">
