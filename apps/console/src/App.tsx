@@ -831,13 +831,13 @@ function ConsoleShell({
 }
 
 function APIStateBadge({ detail, lastSyncedAt, state }: { detail: string; lastSyncedAt: string; state: ApiState }) {
-  const label = state === "live" ? "Live API" : state === "loading" ? "Connecting" : "Mock fallback";
+  const label = state === "live" ? "Live API" : state === "loading" ? "Connecting" : "Local demo";
   const note =
     state === "live"
       ? detail
       : state === "loading"
         ? "正在读取平台数据"
-        : `${detail} · 页面仍可预览`;
+        : `${detail} · 使用本地演示数据`;
   const syncLabel = lastSyncedAt ? `最近同步 ${lastSyncedAt}` : "等待首次同步";
 
   return (
