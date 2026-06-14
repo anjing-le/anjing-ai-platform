@@ -171,6 +171,10 @@ if (!appSource.includes('aria-label="搜索模块、能力或入口"') || !appSo
   errors.push("Console search inputs must expose accessible labels without relying on placeholders.");
 }
 
+if ((appSource.match(/<Search aria-hidden="true" size=\{16\}/g) || []).length < 2) {
+  errors.push("Console decorative search icons must be hidden from assistive technology.");
+}
+
 if (
   !appSource.includes("const accessLabel = allowed ?") ||
   !appSource.includes("aria-label={`${item.label} 当前角色不可进入，需 ${allowedRoleLabels}`}")

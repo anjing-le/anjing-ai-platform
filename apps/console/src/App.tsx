@@ -979,7 +979,7 @@ function ConsoleHome({
         <Panel title="模块入口" eyebrow="Modules" className="home-grid__main">
           <div className="module-search">
             <label className="search-field">
-              <Search size={16} />
+              <Search aria-hidden="true" size={16} />
               <input
                 aria-label="搜索模块、能力或入口"
                 onChange={(event) => setModuleQuery(event.target.value)}
@@ -1799,7 +1799,7 @@ function ModulePage({
         <Panel className="content-grid__main" eyebrow={tableView.eyebrow} title={tableView.title}>
           <div className="table-toolbar">
             <label className="search-field">
-              <Search size={16} />
+              <Search aria-hidden="true" size={16} />
               <input
                 aria-label={`${page.title} 表格搜索`}
                 onChange={(event) => setQuery(event.target.value)}
