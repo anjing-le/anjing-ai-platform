@@ -1147,8 +1147,8 @@ function ConsoleHome({
           </div>
           <div className="service-plan">
             {backendPlan.map((item) => (
-              <article key={item.label}>
-                <item.icon size={18} />
+              <article aria-label={`${item.label}：${item.title}，${item.note}`} key={item.label}>
+                <item.icon aria-hidden="true" size={18} />
                 <span>{item.label}</span>
                 <strong>{item.title}</strong>
                 <p>{item.note}</p>
@@ -1186,7 +1186,11 @@ function ConsoleHome({
               <span>API</span>
             </div>
             {consoleServiceMap.map((item) => (
-              <div className="service-map__row" key={item.entry}>
+              <div
+                aria-label={`${item.entry} 由 ${item.owner} 负责，范围：${item.scope}`}
+                className="service-map__row"
+                key={item.entry}
+              >
                 <strong>{item.entry}</strong>
                 <span>{item.owner}</span>
                 <p>{item.scope}</p>

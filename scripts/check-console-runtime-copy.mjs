@@ -54,6 +54,14 @@ if (
   errors.push("Console copy buttons must expose explicit labels and hide decorative copy icons.");
 }
 
+if (
+  !appSource.includes("aria-label={`${item.label}：${item.title}，${item.note}`}") ||
+  !appSource.includes("<item.icon aria-hidden=\"true\" size={18} />") ||
+  !appSource.includes("aria-label={`${item.entry} 由 ${item.owner} 负责，范围：${item.scope}`}")
+) {
+  errors.push("Console backend plan cards and service map rows must expose readable summaries.");
+}
+
 if (appSource.includes("<code>go run ./cmd/platform-all</code>")) {
   errors.push("Console home must not show raw go run ./cmd/platform-all as the primary runtime command.");
 }
