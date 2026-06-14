@@ -40,6 +40,10 @@ if (!appSource.includes("quickstart-snippet") || !appSource.includes("复制调�
   errors.push("Console Quickstart must provide a copyable minimal call snippet.");
 }
 
+if (!appSource.includes("ak_live_xxx") || !appSource.includes("QuickstartSnippet curl={placeholderCurl}")) {
+  errors.push("Console Quickstart must show a placeholder call snippet before an application exists.");
+}
+
 if (!appSource.includes("http://localhost:18080/api/v1/llm/chat") || appSource.includes("http://localhost:8080/api/v1/llm/chat")) {
   errors.push("Console Quickstart snippet must target the default platform-all API port 18080.");
 }

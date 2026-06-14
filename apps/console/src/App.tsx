@@ -1905,15 +1905,21 @@ function ApplicationJourneyPanel({
   rotating: boolean;
   snapshot?: PlatformSnapshot;
 }) {
-  const [snippetCopied, setSnippetCopied] = useState(false);
-
   if (!application) {
+    const placeholderCurl = [
+      "curl -X POST http://localhost:18080/api/v1/llm/chat \\",
+      '  -H "Authorization: Bearer ak_live_xxx" \\',
+      '  -H "Content-Type: application/json" \\',
+      '  -d \'{"appId":"app_demo","route":"/api/v1/llm/chat","message":"hello"}\'',
+    ].join("\n");
+
     return (
       <Panel eyebrow="Onboarding" title="应用接入详情">
         <div className="empty-panel">
           <strong>暂无应用</strong>
           <p>创建接入应用后，这里会展示 API Key、路由、用量和审计链路。</p>
         </div>
+        <QuickstartSnippet curl={placeholderCurl} />
       </Panel>
     );
   }
@@ -1958,12 +1964,6 @@ function ApplicationJourneyPanel({
     },
   ];
 
-  async function handleSnippetCopy() {
-    await navigator.clipboard.writeText(quickstartCurl);
-    setSnippetCopied(true);
-    window.setTimeout(() => setSnippetCopied(false), 1800);
-  }
-
   return (
     <Panel eyebrow="Onboarding" title="应用接入详情">
       <div className="application-summary">
@@ -2002,19 +2002,7 @@ function ApplicationJourneyPanel({
         </article>
       </div>
 
-      <div className="quickstart-snippet">
-        <div>
-          <span>Quickstart</span>
-          <strong>最小调用示例</strong>
-        </div>
-        <button className="text-command" onClick={() => void handleSnippetCopy()} type="button">
-          <Copy size={14} />
-          {snippetCopied ? "已复制" : "复制调用示例"}
-        </button>
-        <pre>
-          <code>{quickstartCurl}</code>
-        </pre>
-      </div>
+      <QuickstartSnippet curl={quickstartCurl} />
 
       <div className="mini-log-list">
         {logs.length ? (
@@ -2056,6 +2044,32 @@ function ApplicationJourneyPanel({
         </button>
       </div>
     </Panel>
+  );
+}
+
+function QuickstartSnippet({ curl }: { curl: string }) {
+  const [snippetCopied, setSnippetCopied] = useState(false);
+
+  async function handleSnippetCopy() {
+    await navigator.clipboard.writeText(curl);
+    setSnippetCopied(true);
+    window.setTimeout(() => setSnippetCopied(false), 1800);
+  }
+
+  return (
+    <div className="quickstart-snippet">
+      <div>
+        <span>Quickstart</span>
+        <strong>最小调用示例</strong>
+      </div>
+      <button className="text-command" onClick={() => void handleSnippetCopy()} type="button">
+        <Copy size={14} />
+        {snippetCopied ? "已复制" : "复制调用示例"}
+      </button>
+      <pre>
+        <code>{curl}</code>
+      </pre>
+    </div>
   );
 }
 
