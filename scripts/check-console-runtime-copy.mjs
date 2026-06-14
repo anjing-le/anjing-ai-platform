@@ -142,7 +142,7 @@ for (const actionLabel of [
 
 if (
   !appSource.includes("aria-pressed={item.id === role}") ||
-  !appSource.includes("aria-label={`${item.label}视角：${item.purpose}`}") ||
+  !appSource.includes("aria-label={`${item.label}视角：${item.purpose}，${item.id === role ? \"当前选中\" : \"可切换\"}`}") ||
   !styleSource.includes('.role-switcher button[aria-pressed="true"]')
 ) {
   errors.push("Console role switcher must expose and style the active role state.");
