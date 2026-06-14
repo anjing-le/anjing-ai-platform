@@ -318,7 +318,7 @@ if (!appSource.includes("aria-label={`状态：${children}`}") || !appSource.inc
 }
 
 if (
-  !appSource.includes("ariaLabel={`${page.title} - ${tableView.title}`}") ||
+  !appSource.includes("ariaLabel={`${page.title}：${tableView.title}`}") ||
   !appSource.includes("aria-selected") ||
   !appSource.includes("aria-label={onRowSelect ? `选择 ${row.cells[0]}${selected ? \"，当前选中\" : \"\"}` : undefined}") ||
   !appSource.includes("const selected = row.id === selectedRowId")

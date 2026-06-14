@@ -1895,7 +1895,7 @@ function ModulePage({
             </span>
           </div>
           <DataTable
-            ariaLabel={`${page.title} - ${tableView.title}`}
+            ariaLabel={`${page.title}：${tableView.title}`}
             columns={tableView.columns}
             emptyDescription={
               filtersActive ? "清空搜索或状态筛选后，可以回到完整列表。" : "连接后端数据源后，这里会展示当前模块的关键记录。"
