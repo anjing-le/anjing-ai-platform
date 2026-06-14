@@ -3079,7 +3079,7 @@ function MetricGrid({ metrics }: { metrics: MetricItem[] }) {
   return (
     <section className="metric-grid" aria-label="关键指标">
       {metrics.map((metric) => (
-        <article className="metric-card" key={metric.label}>
+        <article aria-label={`${metric.label}：${metric.value}，${metric.note}`} className="metric-card" key={metric.label}>
           <span>{metric.label}</span>
           <strong>{metric.value}</strong>
           <p>{metric.note}</p>

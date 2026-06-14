@@ -15,6 +15,10 @@ if (!appSource.includes('<section aria-label={title} className={`panel ${classNa
   errors.push("Console panel sections must expose their title as an accessible region label.");
 }
 
+if (!appSource.includes("aria-label={`${metric.label}：${metric.value}，${metric.note}`")) {
+  errors.push("Console metric cards must expose readable metric summaries.");
+}
+
 for (const placeholderCopy of ["待补充", "planned docs", "mock target", "Mock fallback", "后续补充", "No usage yet", "waiting first usage"]) {
   if (appSource.includes(placeholderCopy) || dataSource.includes(placeholderCopy)) {
     errors.push(`Console user-facing copy must not expose placeholder text: ${placeholderCopy}`);
