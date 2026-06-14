@@ -76,6 +76,10 @@ if (!appSource.includes("function useInitialFocus") || (appSource.match(/useInit
   errors.push("Console inline forms must focus their first editable control after module mount.");
 }
 
+if (!appSource.includes("autoFocus = false") || !appSource.includes("useInitialFocus<HTMLSelectElement>(autoFocus)")) {
+  errors.push("Console secondary inline forms must opt in before taking initial focus.");
+}
+
 for (const fieldsetRule of ['disabled={busy || role === "operator"}', "disabled={busy}"]) {
   if (!appSource.includes(fieldsetRule)) {
     errors.push("Console inline forms must disable their editable controls while busy or read-only.");
