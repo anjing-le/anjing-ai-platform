@@ -3148,7 +3148,11 @@ function LLMInvokePanel({
       </form>
 
       {result ? (
-        <div className="invoke-result">
+        <div
+          aria-label={`LLM 调用结果：${result.provider} ${result.model}，fallback ${result.fallback}，${result.usage.totalTokens} tokens`}
+          className="invoke-result"
+          role="status"
+        >
           <span>{result.provider}</span>
           <strong>{result.model}</strong>
           <p>{result.content}</p>

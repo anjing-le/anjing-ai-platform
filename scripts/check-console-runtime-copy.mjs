@@ -206,6 +206,14 @@ for (const submitLabel of [
   }
 }
 
+if (
+  !appSource.includes("aria-label={`LLM 调用结果：${result.provider} ${result.model}，fallback ${result.fallback}，${result.usage.totalTokens} tokens`}") ||
+  !appSource.includes('className="invoke-result"') ||
+  !appSource.includes('role="status"')
+) {
+  errors.push("Console LLM invoke results must expose readable status summaries.");
+}
+
 if (!appSource.includes("function useInitialFocus") || (appSource.match(/useInitialFocus</g) || []).length < 3) {
   errors.push("Console inline forms must focus their first editable control after module mount.");
 }
