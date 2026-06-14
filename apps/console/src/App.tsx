@@ -841,7 +841,12 @@ function APIStateBadge({ detail, lastSyncedAt, state }: { detail: string; lastSy
   const syncLabel = lastSyncedAt ? `最近同步 ${lastSyncedAt}` : "等待首次同步";
 
   return (
-    <span className={`api-state api-state--${state}`} title={note}>
+    <span
+      aria-label={`数据来源：${label}，${note}，${syncLabel}`}
+      aria-live="polite"
+      className={`api-state api-state--${state}`}
+      title={note}
+    >
       <strong>{label}</strong>
       <small>{note}</small>
       <small className="api-state__sync">{syncLabel}</small>
