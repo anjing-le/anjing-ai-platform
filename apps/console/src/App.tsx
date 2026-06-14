@@ -1659,6 +1659,7 @@ function ModulePage({
             </span>
           </div>
           <DataTable
+            ariaLabel={`${page.title} - ${tableView.title}`}
             columns={tableView.columns}
             onRowSelect={selectableTable ? setSelectedRowId : undefined}
             rows={rows}
@@ -2806,11 +2807,13 @@ function Panel({
 }
 
 function DataTable({
+  ariaLabel,
   columns,
   onRowSelect,
   rows,
   selectedRowId,
 }: {
+  ariaLabel: string;
   columns: string[];
   onRowSelect?: (id: string) => void;
   rows: TableRow[];
@@ -2818,7 +2821,7 @@ function DataTable({
 }) {
   return (
     <div className="table-wrap">
-      <table>
+      <table aria-label={ariaLabel}>
         <thead>
           <tr>
             {columns.map((column) => (
@@ -2829,6 +2832,7 @@ function DataTable({
         <tbody>
           {rows.map((row) => (
             <tr
+              aria-selected={onRowSelect ? row.id === selectedRowId : undefined}
               className={row.id === selectedRowId ? "is-selected" : ""}
               key={row.id}
               onClick={onRowSelect ? () => onRowSelect(row.id) : undefined}

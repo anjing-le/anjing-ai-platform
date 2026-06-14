@@ -28,6 +28,10 @@ if (!appSource.includes("table-result-count") || !appSource.includes("tableView.
   errors.push("Console data tables must show filtered row counts.");
 }
 
+if (!appSource.includes("ariaLabel={`${page.title} - ${tableView.title}`}") || !appSource.includes("aria-selected")) {
+  errors.push("Console data tables must keep accessible table labels and selected row state.");
+}
+
 if (!appSource.includes("filtersActive") || !appSource.includes("清空筛选")) {
   errors.push("Console data tables must provide a clear filter action when filters are active.");
 }
