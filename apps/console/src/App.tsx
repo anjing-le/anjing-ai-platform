@@ -2356,7 +2356,9 @@ function QuickstartSnippet({ curl }: { curl: string }) {
         {copyLabel}
       </button>
       {copyState === "error" ? (
-        <p className="quickstart-snippet__hint">浏览器未允许剪贴板写入，请手动复制代码片段。</p>
+        <p aria-live="polite" className="quickstart-snippet__hint" role="status">
+          浏览器未允许剪贴板写入，请手动复制代码片段。
+        </p>
       ) : null}
       <pre aria-label="Quickstart curl 调用示例">
         <code>{curl}</code>

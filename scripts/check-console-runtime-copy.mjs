@@ -353,7 +353,11 @@ if (!appSource.includes("quickstart-snippet") || !appSource.includes("复制调�
   errors.push("Console Quickstart must provide a copyable minimal call snippet.");
 }
 
-if (!appSource.includes("复制失败") || !appSource.includes("aria-live=\"polite\"") || !appSource.includes("Quickstart curl 调用示例")) {
+if (
+  !appSource.includes("复制失败") ||
+  !appSource.includes("Quickstart curl 调用示例") ||
+  !appSource.includes('className="quickstart-snippet__hint" role="status"')
+) {
   errors.push("Console Quickstart copy action must expose success/error feedback and an accessible snippet label.");
 }
 
