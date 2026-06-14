@@ -1749,6 +1749,10 @@ function ModulePage({
           <DataTable
             ariaLabel={`${page.title} - ${tableView.title}`}
             columns={tableView.columns}
+            emptyDescription={
+              filtersActive ? "清空搜索或状态筛选后，可以回到完整列表。" : "连接后端数据源后，这里会展示当前模块的关键记录。"
+            }
+            emptyTitle={filtersActive ? "当前筛选没有结果" : "暂无模块记录"}
             onRowSelect={selectableTable ? setSelectedRowId : undefined}
             rows={rows}
             selectedRowId={selectedTableRowId}
@@ -2975,12 +2979,16 @@ function Panel({
 function DataTable({
   ariaLabel,
   columns,
+  emptyDescription,
+  emptyTitle,
   onRowSelect,
   rows,
   selectedRowId,
 }: {
   ariaLabel: string;
   columns: string[];
+  emptyDescription: string;
+  emptyTitle: string;
   onRowSelect?: (id: string) => void;
   rows: TableRow[];
   selectedRowId?: string;
@@ -3029,8 +3037,8 @@ function DataTable({
             <tr>
               <td className="empty-cell" colSpan={columns.length}>
                 <div>
-                  <strong>没有匹配记录</strong>
-                  <p>调整搜索关键词或状态筛选后再查看。</p>
+                  <strong>{emptyTitle}</strong>
+                  <p>{emptyDescription}</p>
                 </div>
               </td>
             </tr>

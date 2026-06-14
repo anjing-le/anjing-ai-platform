@@ -98,6 +98,10 @@ if (!appSource.includes("filtersActive") || !appSource.includes("清空筛选"))
   errors.push("Console data tables must provide a clear filter action when filters are active.");
 }
 
+if (!appSource.includes("emptyTitle={filtersActive ?") || !appSource.includes("当前筛选没有结果")) {
+  errors.push("Console data tables must provide contextual empty states for active filters.");
+}
+
 if (!appSource.includes("visibleModuleCount") || !appSource.includes("lockedModuleCount") || !appSource.includes("清空搜索")) {
   errors.push("Console home module entry must show role access counts and a clear search action.");
 }
