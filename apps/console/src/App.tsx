@@ -3313,7 +3313,11 @@ function DataTable({
 }
 
 function StatusBadge({ children, tone }: { children: React.ReactNode; tone: StatusTone }) {
-  return <span className={`status status--${tone}`}>{children}</span>;
+  return (
+    <span aria-label={`状态：${children}`} className={`status status--${tone}`}>
+      {children}
+    </span>
+  );
 }
 
 function StatusDot({ tone }: { tone: StatusTone }) {

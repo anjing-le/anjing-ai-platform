@@ -228,6 +228,10 @@ if (!appSource.includes('<CheckCircle2 aria-hidden="true"') || !appSource.includ
   errors.push("Console decorative status icons must be hidden from assistive technology.");
 }
 
+if (!appSource.includes("aria-label={`状态：${children}`}") || !appSource.includes("className={`status status--${tone}`}")) {
+  errors.push("Console status badges must expose readable status labels.");
+}
+
 if (
   !appSource.includes("ariaLabel={`${page.title} - ${tableView.title}`}") ||
   !appSource.includes("aria-selected") ||
