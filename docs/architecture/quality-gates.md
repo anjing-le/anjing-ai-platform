@@ -207,7 +207,7 @@ scripts/check-console-runtime-copy.mjs
 - Quickstart 复制动作必须提供成功/失败反馈，并给代码片段保留可访问标签。
 - Quickstart 在暂无应用时也必须展示占位调用示例，避免 Mock / 首次接入状态下断链。
 - Quickstart 必须展示带可读摘要的最小接入清单和当前状态，让使用用户知道应用、Key、路由和调用验证的顺序。
-- Quickstart 接入应用动作必须复用共享角色边界，只允许管理员、使用用户和开发人员执行。
+- Quickstart 接入应用动作必须复用共享角色边界，只允许管理员、使用用户和开发人员执行，并暴露带权限原因的可访问标签。
 - Quickstart 调用示例必须指向默认 `platform-all` API 地址 `http://localhost:18080`。
 - 单服务规划中的健康检查地址必须展示真实的 `http://localhost:182x/healthz`。
 - 不能把不存在的 `/api/*/healthz` 当成服务健康地址展示。

@@ -278,7 +278,10 @@ if (
 if (
   !accessSource.includes("canManageApplicationOnboarding") ||
   !appSource.includes("canManageApplicationOnboarding(role)") ||
-  !appSource.includes("需要管理员、使用用户或开发人员处理接入应用")
+  !appSource.includes("需要管理员、使用用户或开发人员处理接入应用") ||
+  !appSource.includes("轮换 ${application.name} 的 API Key") ||
+  !appSource.includes("无法完成 ${application.name} 的接入校验，当前角色不能处理接入应用") ||
+  !appSource.includes("<ChevronRight aria-hidden=\"true\" size={16} />")
 ) {
   errors.push("Console Quickstart application actions must use the shared onboarding role boundary.");
 }

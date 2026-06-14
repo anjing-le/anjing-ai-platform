@@ -2233,6 +2233,11 @@ function ApplicationJourneyPanel({
 
       <div className="application-actions">
         <button
+          aria-label={
+            canManage
+              ? `轮换 ${application.name} 的 API Key`
+              : `无法轮换 ${application.name} 的 API Key，当前角色不能处理接入应用`
+          }
           className="button"
           disabled={!canManage || rotating}
           onClick={() => void onRotateKey(application.id)}
@@ -2242,6 +2247,11 @@ function ApplicationJourneyPanel({
           {rotating ? "轮换中" : "轮换 API Key"}
         </button>
         <button
+          aria-label={
+            canManage
+              ? `${application.status === "Active" ? "已完成" : "完成"} ${application.name} 的接入校验`
+              : `无法完成 ${application.name} 的接入校验，当前角色不能处理接入应用`
+          }
           className="button button--primary"
           disabled={!canManage || activating || application.status === "Active"}
           onClick={() => void onActivate(application.id)}
@@ -2249,7 +2259,7 @@ function ApplicationJourneyPanel({
           type="button"
         >
           {application.status === "Active" ? "已完成校验" : activating ? "校验中" : "完成接入校验"}
-          <ChevronRight size={16} />
+          <ChevronRight aria-hidden="true" size={16} />
         </button>
         {!canManage ? <ActionHint>需要管理员、使用用户或开发人员处理接入应用。</ActionHint> : null}
       </div>
