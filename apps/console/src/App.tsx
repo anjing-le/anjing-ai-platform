@@ -7,7 +7,7 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ActionDialog, type ActionMode, type ActionValues } from "./components/ActionDialog";
 import { backendPlan, consoleServiceMap, modulePages, navItems, roles, todos } from "./data/console";
@@ -128,6 +128,24 @@ function parseRoute(): ConsoleRoute | "landing" {
   }
 
   return "home";
+}
+
+function useInitialFocus<T extends HTMLElement>(enabled = true) {
+  const ref = useRef<T>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      ref.current?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [enabled]);
+
+  return ref;
 }
 
 function App() {
@@ -2267,6 +2285,7 @@ function ModelRoutePanel({
   const [fallback, setFallback] = useState("local-fallback");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const aliasInputRef = useInitialFocus<HTMLInputElement>(role !== "operator");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2336,7 +2355,7 @@ function ModelRoutePanel({
         <fieldset disabled={busy || role === "operator"}>
           <label>
             <span>Alias</span>
-            <input autoFocus onChange={(event) => setAlias(event.target.value)} required value={alias} />
+            <input ref={aliasInputRef} onChange={(event) => setAlias(event.target.value)} required value={alias} />
           </label>
           <label>
             <span>Scenario</span>
@@ -2390,6 +2409,7 @@ function SkillBindingPanel({
   const [timeout, setTimeoutValue] = useState("8s");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const nameInputRef = useInitialFocus<HTMLInputElement>(role !== "operator");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2459,7 +2479,7 @@ function SkillBindingPanel({
         <fieldset disabled={busy || role === "operator"}>
           <label>
             <span>Name</span>
-            <input autoFocus onChange={(event) => setName(event.target.value)} required value={name} />
+            <input ref={nameInputRef} onChange={(event) => setName(event.target.value)} required value={name} />
           </label>
           <label>
             <span>Protocol</span>
@@ -2838,10 +2858,12 @@ function CredentialRefPanel({
 }
 
 function LLMInvokePanel({
+  autoFocus = false,
   modelRoutes,
   onInvoked,
   role,
 }: {
+  autoFocus?: boolean;
   modelRoutes?: ModelRoute[];
   onInvoked: () => Promise<unknown>;
   role: RoleId;
@@ -2851,6 +2873,7 @@ function LLMInvokePanel({
   const [result, setResult] = useState<LLMInvokeResponse>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const modelAliasSelectRef = useInitialFocus<HTMLSelectElement>(autoFocus);
   const aliases = modelRoutes?.length
     ? modelRoutes.map((route) => route.alias)
     : ["chat-default", "embedding-default"];
@@ -2877,7 +2900,7 @@ function LLMInvokePanel({
         <fieldset disabled={busy}>
           <label>
             <span>Model Alias</span>
-            <select autoFocus onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
+            <select ref={modelAliasSelectRef} onChange={(event) => setModelAlias(event.target.value)} value={modelAlias}>
               {aliases.map((alias) => (
                 <option key={alias} value={alias}>
                   {alias}

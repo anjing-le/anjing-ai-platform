@@ -72,8 +72,8 @@ for (const formClass of ["model-route-form", "skill-binding-form", "invoke-form"
   }
 }
 
-if ((appSource.match(/autoFocus/g) || []).length < 3) {
-  errors.push("Console inline forms must autofocus their first editable control.");
+if (!appSource.includes("function useInitialFocus") || (appSource.match(/useInitialFocus</g) || []).length < 3) {
+  errors.push("Console inline forms must focus their first editable control after module mount.");
 }
 
 for (const fieldsetRule of ['disabled={busy || role === "operator"}', "disabled={busy}"]) {
