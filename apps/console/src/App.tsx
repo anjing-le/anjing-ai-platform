@@ -974,7 +974,11 @@ function ConsoleHome({
 
       <MetricGrid metrics={metrics} />
 
-      {notice ? <p className="inline-notice">{notice}</p> : null}
+      {notice ? (
+        <p aria-live="polite" className="inline-notice" role="status">
+          {notice}
+        </p>
+      ) : null}
 
       <section className="home-grid">
         <Panel title="模块入口" eyebrow="Modules" className="home-grid__main">
@@ -1767,7 +1771,11 @@ function ModulePage({
         </div>
       </section>
 
-      {notice ? <p className="inline-notice">{notice}</p> : null}
+      {notice ? (
+        <p aria-live="polite" className="inline-notice" role="status">
+          {notice}
+        </p>
+      ) : null}
 
       <ModuleWorkflow activeTab={activeTab} steps={moduleWorkflows[page.id]} />
 

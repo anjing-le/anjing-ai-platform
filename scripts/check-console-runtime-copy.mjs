@@ -85,6 +85,10 @@ if (!appSource.includes("window.setTimeout") || !appSource.includes("setNotice(\
   errors.push("Console notices must clear automatically after a short delay.");
 }
 
+if ((appSource.match(/className="inline-notice" role="status"/g) || []).length < 2) {
+  errors.push("Console notices must expose polite status regions on home and module pages.");
+}
+
 if (
   !actionDialogSource.includes("aria-describedby=\"action-dialog-description\"") ||
   !actionDialogSource.includes("id=\"action-dialog-description\"") ||
