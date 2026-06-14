@@ -341,6 +341,10 @@ if (!appSource.includes('aria-label="搜索模块、能力或入口"') || !appSo
   errors.push("Console search inputs must expose accessible labels without relying on placeholders.");
 }
 
+if (appSource.includes('placeholder="Search"') || !appSource.includes('placeholder="搜索表格"')) {
+  errors.push("Console module table search placeholder must use localized copy.");
+}
+
 if ((appSource.match(/<Search aria-hidden="true" size=\{16\}/g) || []).length < 2) {
   errors.push("Console decorative search icons must be hidden from assistive technology.");
 }

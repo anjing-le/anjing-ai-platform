@@ -1868,7 +1868,7 @@ function ModulePage({
               <input
                 aria-label={`${page.title} 表格搜索`}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search"
+                placeholder="搜索表格"
                 value={query}
               />
             </label>
