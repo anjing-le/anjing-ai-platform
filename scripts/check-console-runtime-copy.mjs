@@ -177,6 +177,10 @@ if (!appSource.includes("topbar__role-purpose") || !appSource.includes("activeRo
   errors.push("Console topbar must show the active role purpose beside the role switcher.");
 }
 
+if (!appSource.includes("{activeRole.label}视角") || appSource.includes("{activeRole.name} View")) {
+  errors.push("Console topbar role view label must use localized role copy.");
+}
+
 if (
   !appSource.includes("primaryAllowed") ||
   !appSource.includes("${page.title}：${page.primaryAction}") ||

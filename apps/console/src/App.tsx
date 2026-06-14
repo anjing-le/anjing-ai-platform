@@ -795,7 +795,7 @@ function ConsoleShell({
       <div className="workspace">
         <header className="topbar">
           <div>
-            <p className="eyebrow">{activeRole.name} View</p>
+            <p className="eyebrow">{activeRole.label}视角</p>
             <h1>{activeItem.label}</h1>
             <p className="topbar__role-purpose">{activeRole.purpose}</p>
           </div>
