@@ -751,6 +751,27 @@ a {
   display: grid;
 }
 
+.todo-summary {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfbfb;
+}
+
+.todo-summary strong {
+  font-size: 0.9rem;
+}
+
+.todo-summary span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
 .todo-item {
   position: relative;
   display: grid;
@@ -808,6 +829,29 @@ a {
 .todo-item__actions button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.todo-empty {
+  display: grid;
+  gap: 8px;
+  min-height: 150px;
+  align-content: center;
+  justify-items: center;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.todo-empty strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.todo-empty p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .role-summary {

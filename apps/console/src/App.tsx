@@ -888,6 +888,8 @@ function ConsoleHome({
   const lockedModuleCount = moduleAccessItems.length - visibleModuleCount;
   const roleLabel = roles.find((item) => item.id === role)?.label || "管理员";
   const liveTodos = hydrateTodos(snapshot) || todos;
+  const openTodos = liveTodos.filter((todo) => todo.status !== "Resolved");
+  const resolvedTodoCount = liveTodos.length - openTodos.length;
   const canResolveTodo = role === "admin" || role === "operator";
 
   return (
@@ -985,8 +987,12 @@ function ConsoleHome({
         </Panel>
 
         <Panel title="今日待办" eyebrow="Focus">
+          <div className="todo-summary">
+            <strong>{openTodos.length} 个待处理</strong>
+            <span>{resolvedTodoCount} 个已处理</span>
+          </div>
           <div className="todo-list">
-            {liveTodos.slice(0, 4).map((todo) => (
+            {openTodos.slice(0, 4).map((todo) => (
               <article className="todo-item" key={todo.id}>
                 <div>
                   <span>{todo.moduleLabel}</span>
@@ -1002,12 +1008,19 @@ function ConsoleHome({
                     disabled={!canResolveTodo || todo.status === "Resolved" || resolvingTodoId === todo.id}
                     onClick={() => void onTodoResolve(todo)}
                     type="button"
+                    title={!canResolveTodo ? "需要管理员或运维人员处理待办。" : undefined}
                   >
                     {todo.status === "Resolved" ? "已处理" : resolvingTodoId === todo.id ? "处理中" : "处理"}
                   </button>
                 </div>
               </article>
             ))}
+            {!openTodos.length ? (
+              <div className="todo-empty">
+                <strong>今日待办已清空</strong>
+                <p>新的告警、审批或接入校验会自动出现在这里。</p>
+              </div>
+            ) : null}
           </div>
         </Panel>
       </section>

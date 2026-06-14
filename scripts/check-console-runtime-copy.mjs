@@ -40,6 +40,10 @@ if (!appSource.includes("visibleModuleCount") || !appSource.includes("lockedModu
   errors.push("Console home module entry must show role access counts and a clear search action.");
 }
 
+if (!appSource.includes("openTodos") || !appSource.includes("todo-summary") || !appSource.includes("今日待办已清空")) {
+  errors.push("Console home todo list must focus unresolved work and show an all-done empty state.");
+}
+
 if (!appSource.includes("quickstart-snippet") || !appSource.includes("复制调用示例") || !appSource.includes("navigator.clipboard.writeText")) {
   errors.push("Console Quickstart must provide a copyable minimal call snippet.");
 }
