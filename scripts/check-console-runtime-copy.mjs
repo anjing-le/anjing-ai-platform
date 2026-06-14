@@ -59,6 +59,21 @@ for (const staleDetailLabel of [
   }
 }
 
+for (const localizedFormLabel of [
+  "<span>别名</span>",
+  "<span>场景</span>",
+  "<span>主模型</span>",
+  "<span>兜底模型</span>",
+  "<span>名称</span>",
+  "<span>协议</span>",
+  "<span>路由</span>",
+  "<span>超时</span>",
+]) {
+  if (!appSource.includes(localizedFormLabel)) {
+    errors.push(`Console model and skill forms must keep localized labels: ${localizedFormLabel}`);
+  }
+}
+
 if (dataSource.includes('cells: ["Enterprise", "private deployment", "custom", "custom", "Draft"]')) {
   errors.push("Console fallback billing plans must not expose Enterprise as an unfinished draft.");
 }

@@ -2411,13 +2411,13 @@ function GatewayRoutePanel({
 
   const checks = [
     {
-      label: "Auth",
+      label: "鉴权",
       value: route.auth,
       note: "入口鉴权策略",
       tone: route.auth === "API Key" ? "good" : "watch",
     },
-    { label: "Limit", value: route.limit, note: "限流窗口", tone: "neutral" },
-    { label: "Upstream", value: route.upstream, note: "服务入口", tone: "neutral" },
+    { label: "限流", value: route.limit, note: "限流窗口", tone: "neutral" },
+    { label: "上游", value: route.upstream, note: "服务入口", tone: "neutral" },
   ] as const;
   const publishLabel =
     route.status === "Active" ? `路由 ${route.route} 已发布` : publishing ? `正在发布路由 ${route.route}` : `发布路由 ${route.route}`;
@@ -2527,13 +2527,13 @@ function ModelRoutePanel({
 
           <div className="model-checks">
             <article>
-              <span>Primary</span>
+              <span>主模型</span>
               <strong>{modelRoute.primary}</strong>
               <p>默认供应商模型</p>
               <StatusDot tone="good" />
             </article>
             <article>
-              <span>Fallback</span>
+              <span>兜底模型</span>
               <strong>{modelRoute.fallback}</strong>
               <p>失败切换目标</p>
               <StatusDot tone="watch" />
@@ -2562,19 +2562,19 @@ function ModelRoutePanel({
       <form aria-busy={busy} className="model-route-form" onSubmit={handleSubmit}>
         <fieldset disabled={busy || role === "operator"}>
           <label>
-            <span>Alias</span>
+            <span>别名</span>
             <input ref={aliasInputRef} onChange={(event) => setAlias(event.target.value)} required value={alias} />
           </label>
           <label>
-            <span>Scenario</span>
+            <span>场景</span>
             <input onChange={(event) => setScenario(event.target.value)} required value={scenario} />
           </label>
           <label>
-            <span>Primary</span>
+            <span>主模型</span>
             <input onChange={(event) => setPrimary(event.target.value)} required value={primary} />
           </label>
           <label>
-            <span>Fallback</span>
+            <span>兜底模型</span>
             <input onChange={(event) => setFallback(event.target.value)} required value={fallback} />
           </label>
         </fieldset>
@@ -2665,13 +2665,13 @@ function SkillBindingPanel({
 
           <div className="skill-checks">
             <article>
-              <span>Protocol</span>
+              <span>协议</span>
               <strong>{skill.protocol}</strong>
               <p>调用协议</p>
               <StatusDot tone="neutral" />
             </article>
             <article>
-              <span>Timeout</span>
+              <span>超时</span>
               <strong>{skill.timeout}</strong>
               <p>治理超时</p>
               <StatusDot tone="watch" />
@@ -2700,22 +2700,22 @@ function SkillBindingPanel({
       <form aria-busy={busy} className="skill-binding-form" onSubmit={handleSubmit}>
         <fieldset disabled={busy || role === "operator"}>
           <label>
-            <span>Name</span>
+            <span>名称</span>
             <input ref={nameInputRef} onChange={(event) => setName(event.target.value)} required value={name} />
           </label>
           <label>
-            <span>Protocol</span>
+            <span>协议</span>
             <select onChange={(event) => setProtocol(event.target.value)} value={protocol}>
               <option value="HTTP">HTTP</option>
               <option value="MCP">MCP</option>
             </select>
           </label>
           <label>
-            <span>Route</span>
+            <span>路由</span>
             <input onChange={(event) => setRoute(event.target.value)} required value={route} />
           </label>
           <label>
-            <span>Timeout</span>
+            <span>超时</span>
             <input onChange={(event) => setTimeoutValue(event.target.value)} required value={timeout} />
           </label>
         </fieldset>
