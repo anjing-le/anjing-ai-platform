@@ -480,6 +480,19 @@ a {
   color: #ffffff;
 }
 
+.role-switcher button:focus-visible,
+.tab-row button:focus-visible {
+  border-color: var(--ink);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(18, 18, 18, 0.1);
+}
+
+.tab-row button[aria-selected="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #ffffff;
+}
+
 .page {
   display: grid;
   gap: 22px;

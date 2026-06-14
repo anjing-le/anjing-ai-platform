@@ -5,6 +5,7 @@ const appSource = readFileSync("apps/console/src/App.tsx", "utf8");
 const actionDialogSource = readFileSync("apps/console/src/components/ActionDialog.tsx", "utf8");
 const accessSource = readFileSync("apps/console/src/lib/access.ts", "utf8");
 const dataSource = readFileSync("apps/console/src/data/console.ts", "utf8");
+const styleSource = readFileSync("apps/console/src/styles.css", "utf8");
 
 if (!appSource.includes("<code>pnpm dev:api</code>")) {
   errors.push("Console home runtime command must show pnpm dev:api.");
@@ -128,6 +129,10 @@ if (
   !appSource.includes('event.key === "Home"')
 ) {
   errors.push("Console module tabs must expose accessible semantics, selected state and keyboard navigation.");
+}
+
+if (!styleSource.includes('.tab-row button:focus-visible') || !styleSource.includes('.tab-row button[aria-selected="true"]')) {
+  errors.push("Console module tabs must show visible focus and selected states in the stylesheet.");
 }
 
 if (!appSource.includes("filtersActive") || !appSource.includes("清空筛选")) {
