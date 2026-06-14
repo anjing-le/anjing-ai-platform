@@ -3102,8 +3102,12 @@ function ModuleWorkflow({ activeTab, steps }: { activeTab: string; steps: Workfl
         const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "next";
 
         return (
-          <article className={`workflow-step workflow-step--${state}`} key={step.label}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
+          <article
+            aria-current={state === "active" ? "step" : undefined}
+            className={`workflow-step workflow-step--${state}`}
+            key={step.label}
+          >
+            <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             <div>
               <strong>{step.label}</strong>
               <p>{step.note}</p>

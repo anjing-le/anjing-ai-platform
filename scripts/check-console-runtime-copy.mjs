@@ -172,6 +172,10 @@ if (
   errors.push("Console module tabs must expose accessible semantics, selected state and keyboard navigation.");
 }
 
+if (!appSource.includes('aria-current={state === "active" ? "step" : undefined}') || !appSource.includes('<span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>')) {
+  errors.push("Console module workflow must expose the active step and hide decorative step numbers.");
+}
+
 if (!styleSource.includes('.tab-row button:focus-visible') || !styleSource.includes('.tab-row button[aria-selected="true"]')) {
   errors.push("Console module tabs must show visible focus and selected states in the stylesheet.");
 }
