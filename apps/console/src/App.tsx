@@ -981,6 +981,7 @@ function ConsoleHome({
             <label className="search-field">
               <Search size={16} />
               <input
+                aria-label="搜索模块、能力或入口"
                 onChange={(event) => setModuleQuery(event.target.value)}
                 placeholder="搜索模块、能力或入口"
                 value={moduleQuery}
@@ -1800,12 +1801,13 @@ function ModulePage({
             <label className="search-field">
               <Search size={16} />
               <input
+                aria-label={`${page.title} 表格搜索`}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search"
                 value={query}
               />
             </label>
-            <select onChange={(event) => setStatus(event.target.value)} value={status}>
+            <select aria-label={`${page.title} 状态筛选`} onChange={(event) => setStatus(event.target.value)} value={status}>
               {statuses.map((item) => (
                 <option key={item}>{item}</option>
               ))}
