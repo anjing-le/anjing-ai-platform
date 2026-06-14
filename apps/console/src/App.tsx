@@ -3147,6 +3147,7 @@ function DataTable({
         <tbody>
           {rows.map((row) => (
             <tr
+              aria-label={onRowSelect ? `选择 ${row.cells[0]}` : undefined}
               aria-selected={onRowSelect ? row.id === selectedRowId : undefined}
               className={row.id === selectedRowId ? "is-selected" : ""}
               key={row.id}

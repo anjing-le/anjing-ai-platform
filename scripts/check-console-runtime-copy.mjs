@@ -126,8 +126,12 @@ if (!appSource.includes('<CheckCircle2 aria-hidden="true"') || !appSource.includ
   errors.push("Console decorative status icons must be hidden from assistive technology.");
 }
 
-if (!appSource.includes("ariaLabel={`${page.title} - ${tableView.title}`}") || !appSource.includes("aria-selected")) {
-  errors.push("Console data tables must keep accessible table labels and selected row state.");
+if (
+  !appSource.includes("ariaLabel={`${page.title} - ${tableView.title}`}") ||
+  !appSource.includes("aria-selected") ||
+  !appSource.includes("aria-label={onRowSelect ? `选择 ${row.cells[0]}` : undefined}")
+) {
+  errors.push("Console data tables must keep accessible table labels and selectable row state.");
 }
 
 if (
