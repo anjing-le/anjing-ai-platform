@@ -1925,7 +1925,7 @@ function ApplicationJourneyPanel({
   const budget = snapshot?.budgetAlerts?.find((item) => item.project === application.name);
   const logs = snapshot?.requestLogs?.filter((item) => item.consumer === application.name).slice(0, 3) || [];
   const quickstartCurl = [
-    "curl -X POST http://localhost:8080/api/v1/llm/chat \\",
+    "curl -X POST http://localhost:18080/api/v1/llm/chat \\",
     `  -H "Authorization: Bearer ${application.apiKey}" \\`,
     '  -H "Content-Type: application/json" \\',
     `  -d '{"appId":"${application.id}","route":"${application.defaultRoute}","message":"hello"}'`,

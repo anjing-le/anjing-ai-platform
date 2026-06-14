@@ -40,6 +40,10 @@ if (!appSource.includes("quickstart-snippet") || !appSource.includes("复制调�
   errors.push("Console Quickstart must provide a copyable minimal call snippet.");
 }
 
+if (!appSource.includes("http://localhost:18080/api/v1/llm/chat") || appSource.includes("http://localhost:8080/api/v1/llm/chat")) {
+  errors.push("Console Quickstart snippet must target the default platform-all API port 18080.");
+}
+
 for (const port of ["1820", "1821", "1822", "1823"]) {
   if (!dataSource.includes(`http://localhost:${port}/healthz`)) {
     errors.push(`Console backend plan must show http://localhost:${port}/healthz.`);
