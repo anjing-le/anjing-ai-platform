@@ -45,7 +45,13 @@ import {
   type PlatformSnapshot,
   type SkillBinding,
 } from "./lib/api";
-import { canAccessRoute, canRunPrimaryAction, primaryActionHint, visibleNavItems } from "./lib/access";
+import {
+  canAccessRoute,
+  canManageApplicationOnboarding,
+  canRunPrimaryAction,
+  primaryActionHint,
+  visibleNavItems,
+} from "./lib/access";
 import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
 import type {
   ConsoleRoute,
@@ -1862,6 +1868,7 @@ function ModulePage({
               onActivate={onApplicationActivate}
               onRotateKey={onApplicationKeyRotate}
               rotating={rotatingApplicationId === selectedApplication?.id}
+              role={role}
               snapshot={snapshot}
             />
           ) : null}
@@ -2005,6 +2012,7 @@ function ApplicationJourneyPanel({
   onActivate,
   onRotateKey,
   rotating,
+  role,
   snapshot,
 }: {
   activating: boolean;
@@ -2012,6 +2020,7 @@ function ApplicationJourneyPanel({
   onActivate: (id: string) => Promise<void>;
   onRotateKey: (id: string) => Promise<void>;
   rotating: boolean;
+  role: RoleId;
   snapshot?: PlatformSnapshot;
 }) {
   if (!application) {
@@ -2040,6 +2049,7 @@ function ApplicationJourneyPanel({
   const usage = snapshot?.usage?.find((item) => item.project === application.name);
   const budget = snapshot?.budgetAlerts?.find((item) => item.project === application.name);
   const logs = snapshot?.requestLogs?.filter((item) => item.consumer === application.name).slice(0, 3) || [];
+  const canManage = canManageApplicationOnboarding(role);
   const quickstartCurl = [
     "curl -X POST http://localhost:18080/api/v1/llm/chat \\",
     `  -H "Authorization: Bearer ${application.apiKey}" \\`,
@@ -2139,21 +2149,24 @@ function ApplicationJourneyPanel({
       <div className="application-actions">
         <button
           className="button"
-          disabled={rotating}
+          disabled={!canManage || rotating}
           onClick={() => void onRotateKey(application.id)}
+          title={!canManage ? "当前角色不能轮换接入应用 API Key。" : undefined}
           type="button"
         >
           {rotating ? "轮换中" : "轮换 API Key"}
         </button>
         <button
           className="button button--primary"
-          disabled={activating || application.status === "Active"}
+          disabled={!canManage || activating || application.status === "Active"}
           onClick={() => void onActivate(application.id)}
+          title={!canManage ? "当前角色不能完成接入应用校验。" : undefined}
           type="button"
         >
           {application.status === "Active" ? "已完成校验" : activating ? "校验中" : "完成接入校验"}
           <ChevronRight size={16} />
         </button>
+        {!canManage ? <ActionHint>需要管理员、使用用户或开发人员处理接入应用。</ActionHint> : null}
       </div>
     </Panel>
   );

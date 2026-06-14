@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 const errors = [];
 const appSource = readFileSync("apps/console/src/App.tsx", "utf8");
 const actionDialogSource = readFileSync("apps/console/src/components/ActionDialog.tsx", "utf8");
+const accessSource = readFileSync("apps/console/src/lib/access.ts", "utf8");
 const dataSource = readFileSync("apps/console/src/data/console.ts", "utf8");
 
 if (!appSource.includes("<code>pnpm dev:api</code>")) {
@@ -133,6 +134,14 @@ if (
   !appSource.includes("StatusBadge tone={toneForStatus(step.status)}")
 ) {
   errors.push("Console Quickstart must show the minimal onboarding checklist with live statuses.");
+}
+
+if (
+  !accessSource.includes("canManageApplicationOnboarding") ||
+  !appSource.includes("canManageApplicationOnboarding(role)") ||
+  !appSource.includes("需要管理员、使用用户或开发人员处理接入应用")
+) {
+  errors.push("Console Quickstart application actions must use the shared onboarding role boundary.");
 }
 
 if (!appSource.includes("http://localhost:18080/api/v1/llm/chat") || appSource.includes("http://localhost:8080/api/v1/llm/chat")) {

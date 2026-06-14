@@ -17,6 +17,10 @@ export function fallbackRouteForRole(role: RoleId, items: NavItem[] = navItems):
   return visibleNavItems(role, items)[0]?.id ?? "home";
 }
 
+export function canManageApplicationOnboarding(role: RoleId): boolean {
+  return role === "admin" || role === "user" || role === "developer";
+}
+
 export function canRunPrimaryAction(role: RoleId, route: ConsoleRoute): boolean {
   if (route === "home") {
     return true;
@@ -35,7 +39,7 @@ export function canRunPrimaryAction(role: RoleId, route: ConsoleRoute): boolean 
   }
 
   if (route === "docs") {
-    return role === "admin" || role === "user" || role === "developer";
+    return canManageApplicationOnboarding(role);
   }
 
   return false;

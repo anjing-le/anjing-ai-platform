@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { navItems, roles } from "../data/console";
 import type { ConsoleRoute, RoleId } from "../types";
-import { canAccessRoute, canRunPrimaryAction, fallbackRouteForRole, primaryActionHint, visibleNavItems } from "./access";
+import {
+  canAccessRoute,
+  canManageApplicationOnboarding,
+  canRunPrimaryAction,
+  fallbackRouteForRole,
+  primaryActionHint,
+  visibleNavItems,
+} from "./access";
 
 const routeIds = navItems.map((item) => item.id);
 
@@ -40,5 +47,12 @@ describe("console role access", () => {
     expect(canRunPrimaryAction("developer", "iam")).toBe(false);
     expect(primaryActionHint("operator", "docs")).toContain("接入应用");
     expect(primaryActionHint("user", "quota")).toContain("管理员");
+  });
+
+  it("keeps application onboarding write access aligned with backend roles", () => {
+    expect(canManageApplicationOnboarding("admin")).toBe(true);
+    expect(canManageApplicationOnboarding("user")).toBe(true);
+    expect(canManageApplicationOnboarding("developer")).toBe(true);
+    expect(canManageApplicationOnboarding("operator")).toBe(false);
   });
 });
