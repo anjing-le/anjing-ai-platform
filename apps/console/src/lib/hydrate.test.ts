@@ -54,6 +54,30 @@ const snapshot: PlatformSnapshot = {
       status: "Active",
     },
   ],
+  applications: [
+    {
+      id: "app-1",
+      name: "customer-service-agent",
+      owner: "owner@anjing.ai",
+      environment: "Production",
+      apiKey: "ak_live_customer",
+      defaultRoute: "/api/v1/llm/**",
+      plan: "Business",
+      status: "Active",
+      createdAt: "today",
+    },
+    {
+      id: "app-2",
+      name: "internal-workbench",
+      owner: "ops@anjing.ai",
+      environment: "Staging",
+      apiKey: "ak_live_ops",
+      defaultRoute: "/api/v1/agents/**",
+      plan: "Team",
+      status: "Pending",
+      createdAt: "today",
+    },
+  ],
   apiKeys: [],
   credentials: [],
   routes: [
@@ -117,10 +141,21 @@ describe("console snapshot hydration", () => {
     const iam = pages.find((page) => page.id === "iam");
     const gateway = pages.find((page) => page.id === "gateway");
     const quota = pages.find((page) => page.id === "quota");
+    const docs = pages.find((page) => page.id === "docs");
 
     expect(overview?.table.rows).toHaveLength(2);
     expect(iam?.metrics[0]).toMatchObject({ label: "用户", value: "1" });
     expect(gateway?.table.rows[0].cells).toContain("/api/v1/agents/**");
     expect(quota?.metrics[2]).toMatchObject({ label: "预算告警", value: "1", tone: "warn" });
+    expect(docs?.metrics[0]).toMatchObject({ label: "接入应用", value: "2" });
+    expect(docs?.metrics[1]).toMatchObject({ label: "生产应用", value: "1" });
+    expect(docs?.table.rows[0].cells).toEqual([
+      "customer-service-agent",
+      "owner@anjing.ai",
+      "Production",
+      "/api/v1/llm/**",
+      "Business",
+      "Active",
+    ]);
   });
 });
