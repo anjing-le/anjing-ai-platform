@@ -1072,6 +1072,12 @@ function ConsoleHome({
                 <div className="todo-item__actions">
                   <a href={routeHash[todo.moduleId]}>查看</a>
                   <button
+                    aria-label={
+                      canResolveTodo
+                        ? `处理待办：${todo.title}`
+                        : `无法处理待办：${todo.title}，需要管理员或运维人员`
+                    }
+                    aria-live="polite"
                     disabled={!canResolveTodo || todo.status === "Resolved" || resolvingTodoId === todo.id}
                     onClick={() => void onTodoResolve(todo)}
                     type="button"

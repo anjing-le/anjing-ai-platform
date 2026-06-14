@@ -174,6 +174,10 @@ if (!appSource.includes("openTodos") || !appSource.includes("todo-summary") || !
   errors.push("Console home todo list must focus unresolved work and show an all-done empty state.");
 }
 
+if (!appSource.includes("处理待办：${todo.title}") || !appSource.includes("无法处理待办：${todo.title}，需要管理员或运维人员")) {
+  errors.push("Console home todo action buttons must expose role-aware accessible labels.");
+}
+
 if (!appSource.includes("quickstart-snippet") || !appSource.includes("复制调用示例") || !appSource.includes("navigator.clipboard.writeText")) {
   errors.push("Console Quickstart must provide a copyable minimal call snippet.");
 }
