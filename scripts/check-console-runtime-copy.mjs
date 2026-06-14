@@ -303,6 +303,13 @@ if (!appSource.includes("aria-label={`进入${item.label}`}")) {
   errors.push("Console home module entry links must expose explicit destination labels.");
 }
 
+if (
+  !appSource.includes("aria-label={`查看${item.label}架构模块`}") ||
+  !appSource.includes("<item.icon aria-hidden=\"true\" size={20} />")
+) {
+  errors.push("Landing architecture cards must expose destination labels and hide decorative icons.");
+}
+
 if (!appSource.includes("<item.icon aria-hidden=\"true\" size={21} />")) {
   errors.push("Console home module card icons must be hidden as decorative icons.");
 }

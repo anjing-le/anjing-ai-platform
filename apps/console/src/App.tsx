@@ -725,8 +725,8 @@ function LandingPage() {
           {navItems
             .filter((item) => item.id !== "home")
             .map((item) => (
-              <a className="architecture-card" href={routeHash[item.id]} key={item.id}>
-                <item.icon size={20} />
+              <a aria-label={`查看${item.label}架构模块`} className="architecture-card" href={routeHash[item.id]} key={item.id}>
+                <item.icon aria-hidden="true" size={20} />
                 <strong>{item.label}</strong>
                 <p>{item.summary}</p>
                 <span>{item.tags.join(" / ")}</span>
