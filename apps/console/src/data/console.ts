@@ -151,7 +151,7 @@ export const todos: TodoItem[] = [
 export const backendPlan = [
   {
     label: "control-api",
-    title: "Access / IAM",
+    title: "用户与权限服务",
     note: ":1820 · 用户、角色、API Key、credentialRef。",
     command: "pnpm dev:control",
     health: "http://localhost:1820/healthz",
@@ -159,7 +159,7 @@ export const backendPlan = [
   },
   {
     label: "gateway-api",
-    title: "Gateway / Model",
+    title: "网关与模型服务",
     note: ":1821 · API 路由、模型路由、Skill、请求日志。",
     command: "pnpm dev:gateway",
     health: "http://localhost:1821/healthz",
@@ -167,7 +167,7 @@ export const backendPlan = [
   },
   {
     label: "billing-service",
-    title: "Quota / Billing",
+    title: "计费与配额服务",
     note: ":1822 · 套餐、配额、用量、预算告警。",
     command: "pnpm dev:billing",
     health: "http://localhost:1822/healthz",
@@ -175,7 +175,7 @@ export const backendPlan = [
   },
   {
     label: "ops-api",
-    title: "Operations",
+    title: "运营总览服务",
     note: ":1823 · 总览、健康、审计、待办。",
     command: "pnpm dev:ops",
     health: "http://localhost:1823/healthz",

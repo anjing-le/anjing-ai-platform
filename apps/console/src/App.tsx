@@ -1072,9 +1072,9 @@ function ConsoleHome({
               );
             })}
             {!filteredModuleItems.length ? (
-              <div aria-label="没有找到模块：换一个关键词，例如 Gateway、Billing、API 或权限。" className="module-empty" role="status">
+              <div aria-label="没有找到模块：换一个关键词，例如网关、计费、API 或权限。" className="module-empty" role="status">
                 <strong>没有找到模块</strong>
-                <p>换一个关键词，例如 Gateway、Billing、API 或权限。</p>
+                <p>换一个关键词，例如网关、计费、API 或权限。</p>
               </div>
             ) : null}
           </div>

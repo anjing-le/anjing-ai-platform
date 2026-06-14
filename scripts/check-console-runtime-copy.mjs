@@ -560,11 +560,23 @@ if (
 }
 
 if (
-  !appSource.includes("aria-label=\"没有找到模块：换一个关键词，例如 Gateway、Billing、API 或权限。\"") ||
+  !appSource.includes("aria-label=\"没有找到模块：换一个关键词，例如网关、计费、API 或权限。\"") ||
   !appSource.includes("aria-label=\"今日待办已清空：新的告警、审批或接入校验会自动出现在这里。\"") ||
   !appSource.includes('className="todo-empty" role="status"')
 ) {
   errors.push("Console home empty states must expose readable status summaries.");
+}
+
+for (const staleBackendTitle of ['title: "Access / IAM"', 'title: "Gateway / Model"', 'title: "Quota / Billing"', 'title: "Operations"']) {
+  if (dataSource.includes(staleBackendTitle)) {
+    errors.push(`Console backend plan titles must use localized service names instead of ${staleBackendTitle}.`);
+  }
+}
+
+for (const localizedBackendTitle of ["用户与权限服务", "网关与模型服务", "计费与配额服务", "运营总览服务"]) {
+  if (!dataSource.includes(localizedBackendTitle)) {
+    errors.push(`Console backend plan must keep localized service name: ${localizedBackendTitle}`);
+  }
 }
 
 if (!appSource.includes("aria-label={`查看待办所属模块：${todo.title}`}")) {
