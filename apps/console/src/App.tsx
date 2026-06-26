@@ -3591,7 +3591,7 @@ function DataTable({
                 tabIndex={onRowSelect ? 0 : undefined}
               >
                 {row.cells.map((cell, index) => (
-                  <td key={`${row.id}-${cell}`}>
+                  <td className={index === 0 ? "table-cell--primary" : undefined} key={`${row.id}-${cell}`}>
                     {index === row.cells.length - 1 ? (
                       <StatusBadge tone={row.tone}>{cell}</StatusBadge>
                     ) : (
