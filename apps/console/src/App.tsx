@@ -1873,7 +1873,12 @@ function ModulePage({
         ))}
       </div>
 
-      <MetricGrid metrics={page.metrics} />
+      <ModuleSummaryStrip
+        activeTab={activeTab}
+        metrics={page.metrics}
+        recordCount={tableView.rows.length}
+        visibleCount={rows.length}
+      />
 
       <section
         aria-labelledby={`module-tab-${page.id}-${activeTabIndex}`}
@@ -3225,6 +3230,40 @@ function MetricGrid({ metrics }: { metrics: MetricItem[] }) {
           <strong>{metric.value}</strong>
           <p>{metric.note}</p>
           {metric.tone ? <StatusDot tone={metric.tone} /> : null}
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function ModuleSummaryStrip({
+  activeTab,
+  metrics,
+  recordCount,
+  visibleCount,
+}: {
+  activeTab: string;
+  metrics: MetricItem[];
+  recordCount: number;
+  visibleCount: number;
+}) {
+  const primaryMetric = metrics[0] || { label: "模块状态", value: "正常", note: "等待后端同步" };
+  const secondaryMetric = metrics[1] || primaryMetric;
+  const tertiaryMetric = metrics[2] || secondaryMetric;
+  const summaryItems = [
+    { label: "当前视图", value: activeTab, note: `${visibleCount} / ${recordCount} 条记录` },
+    primaryMetric,
+    secondaryMetric,
+    tertiaryMetric,
+  ];
+
+  return (
+    <section aria-label="模块状态摘要" className="module-summary-strip">
+      {summaryItems.map((item) => (
+        <article aria-label={`${item.label}：${item.value}，${item.note}`} key={item.label}>
+          <span>{item.label}</span>
+          <strong>{item.value}</strong>
+          <p>{item.note}</p>
         </article>
       ))}
     </section>
