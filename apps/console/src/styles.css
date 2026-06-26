@@ -1388,6 +1388,31 @@ a {
   gap: 16px;
 }
 
+.side-panels .panel {
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.side-panels .panel__heading {
+  min-height: 44px;
+  padding: 11px 14px;
+  background: #fbfbfb;
+}
+
+.side-panels .panel__heading strong {
+  font-size: 0.95rem;
+}
+
+.side-panels .panel__heading span {
+  font-size: 0.68rem;
+}
+
+.side-panels .status {
+  min-height: 24px;
+  padding: 3px 7px;
+  font-size: 0.7rem;
+}
+
 .table-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -1743,7 +1768,7 @@ tbody tr.is-selected td:first-child {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  padding: 16px;
+  padding: 14px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1802,7 +1827,8 @@ tbody tr.is-selected td:first-child {
 .credential-summary strong,
 .selected-row-summary strong {
   overflow-wrap: anywhere;
-  font-size: 1.28rem;
+  font-size: 1.12rem;
+  line-height: 1.18;
 }
 
 .application-summary p,
@@ -1846,6 +1872,18 @@ tbody tr.is-selected td:first-child {
   display: grid;
 }
 
+.side-panels .route-checks,
+.side-panels .user-checks,
+.side-panels .model-checks,
+.side-panels .skill-checks,
+.side-panels .plan-checks,
+.side-panels .budget-alert-checks,
+.side-panels .api-key-checks,
+.side-panels .credential-checks,
+.side-panels .selected-row-fields {
+  background: #ffffff;
+}
+
 .route-checks article,
 .user-checks article,
 .model-checks article,
@@ -1857,9 +1895,9 @@ tbody tr.is-selected td:first-child {
 .selected-row-fields article {
   position: relative;
   display: grid;
-  gap: 7px;
-  min-height: 88px;
-  padding: 14px 40px 14px 16px;
+  gap: 5px;
+  min-height: 74px;
+  padding: 12px 38px 12px 14px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1885,19 +1923,28 @@ tbody tr.is-selected td:first-child {
 .credential-checks .status-dot,
 .selected-row-fields .status-dot {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 14px;
+  right: 14px;
 }
 
+.route-checks strong,
+.user-checks strong,
+.model-checks strong,
+.skill-checks strong,
+.plan-checks strong,
+.budget-alert-checks strong,
+.api-key-checks strong,
+.credential-checks strong,
 .selected-row-fields strong {
   overflow-wrap: anywhere;
-  font-size: 0.98rem;
+  font-size: 0.94rem;
+  line-height: 1.25;
 }
 
 .selected-row-next {
   display: grid;
-  gap: 7px;
-  padding: 14px 16px;
+  gap: 6px;
+  padding: 12px 14px;
   border-top: 1px solid var(--line);
   background: #f8f8f8;
 }
