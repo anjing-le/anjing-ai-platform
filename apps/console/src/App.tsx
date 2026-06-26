@@ -1944,6 +1944,12 @@ function ModulePage({
         </Panel>
 
         <div className="side-panels">
+          <ModuleSideBrief
+            activeTab={activeTab}
+            pageTitle={page.title}
+            rows={tableView.rows}
+            visibleRows={rows}
+          />
           {page.id === "overview" ? (
             <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
           ) : null}
@@ -2052,6 +2058,57 @@ function ModulePage({
         </div>
       </section>
     </main>
+  );
+}
+
+function ModuleSideBrief({
+  activeTab,
+  pageTitle,
+  rows,
+  visibleRows,
+}: {
+  activeTab: string;
+  pageTitle: string;
+  rows: TableRow[];
+  visibleRows: TableRow[];
+}) {
+  const recentRow = visibleRows[0] || rows[0];
+  const riskRow =
+    visibleRows.find((row) => row.tone === "warn" || row.tone === "watch") ||
+    rows.find((row) => row.tone === "warn" || row.tone === "watch");
+  const riskTone = riskRow?.tone || "good";
+
+  return (
+    <Panel eyebrow="Context" title="模块概览">
+      <div className="module-side-brief">
+        <article>
+          <span>当前视图</span>
+          <strong>{activeTab}</strong>
+          <p>
+            {pageTitle} 当前展示 {visibleRows.length} / {rows.length} 条关键记录。
+          </p>
+        </article>
+        <article>
+          <span>最近变化</span>
+          <strong>{recentRow?.cells[0] || "等待数据"}</strong>
+          <p>
+            {recentRow
+              ? `${displayStatus(recentRow.status)} · 进入详情可继续处理`
+              : "连接后端后展示最新记录。"}
+          </p>
+        </article>
+        <article>
+          <span>风险提示</span>
+          <strong>{riskRow?.cells[0] || "暂无风险"}</strong>
+          <p>
+            {riskRow
+              ? `${displayStatus(riskRow.status)} · 优先检查配置与审计链路`
+              : "当前视图没有需要优先处理的异常。"}
+          </p>
+          <StatusDot tone={riskTone} />
+        </article>
+      </div>
+    </Panel>
   );
 }
 
