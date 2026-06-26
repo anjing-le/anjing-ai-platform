@@ -1908,6 +1908,16 @@ function ModulePage({
         ))}
       </div>
 
+      <ModuleActionStrip
+        activeTab={activeTab}
+        onPrimaryAction={onPrimaryAction}
+        page={page}
+        primaryAllowed={primaryAllowed}
+        primaryHint={primaryHint}
+        recordCount={tableView.rows.length}
+        visibleCount={rows.length}
+      />
+
       <ModuleFocusBar
         activeTab={activeTab}
         recordCount={tableView.rows.length}
@@ -2093,6 +2103,60 @@ function ModulePage({
         </div>
       </section>
     </main>
+  );
+}
+
+function ModuleActionStrip({
+  activeTab,
+  onPrimaryAction,
+  page,
+  primaryAllowed,
+  primaryHint,
+  recordCount,
+  visibleCount,
+}: {
+  activeTab: string;
+  onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
+  page: ModulePageDefinition;
+  primaryAllowed: boolean;
+  primaryHint: string;
+  recordCount: number;
+  visibleCount: number;
+}) {
+  return (
+    <section aria-label={`${page.title} 模块操作摘要`} className="module-action-strip">
+      <div className="module-action-strip__intro">
+        <span>模块</span>
+        <strong>{page.title}</strong>
+        <p>{page.description}</p>
+      </div>
+      <div>
+        <span>当前视图</span>
+        <strong>{activeTab}</strong>
+        <p>
+          {visibleCount} / {recordCount} 条记录 · {visibleCount === recordCount ? "完整列表" : "已筛选"}
+        </p>
+      </div>
+      <div className="module-action-strip__action">
+        <span>{primaryAllowed ? "可执行" : "只读"}</span>
+        <button
+          aria-label={
+            primaryAllowed
+              ? `${page.title}：${page.primaryAction}`
+              : `${page.title}：无法执行 ${page.primaryAction}，${primaryHint}`
+          }
+          className="button button--primary"
+          disabled={!primaryAllowed}
+          onClick={() => void onPrimaryAction(page.id)}
+          title={primaryAllowed ? undefined : primaryHint}
+          type="button"
+        >
+          {page.primaryAction}
+          <ChevronRight aria-hidden="true" size={16} />
+        </button>
+        <p>{primaryAllowed ? "当前角色可以执行关键动作。" : primaryHint}</p>
+      </div>
+    </section>
   );
 }
 

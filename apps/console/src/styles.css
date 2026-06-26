@@ -1394,6 +1394,67 @@ a {
   color: var(--muted);
 }
 
+.module-action-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.74fr) minmax(260px, 0.78fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.module-action-strip > div {
+  display: grid;
+  min-height: 104px;
+  align-content: center;
+  gap: 7px;
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+}
+
+.module-action-strip > div:last-child {
+  border-right: 0;
+}
+
+.module-action-strip span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.module-action-strip strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 1.08rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-action-strip p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 760;
+  line-height: 1.4;
+}
+
+.module-action-strip__intro p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.module-action-strip__action {
+  align-content: start;
+}
+
+.module-action-strip__action .button {
+  width: 100%;
+}
+
 .module-focus-bar {
   display: grid;
   grid-template-columns: 1.35fr repeat(2, minmax(0, 1fr));
@@ -2500,6 +2561,20 @@ tbody tr.is-selected td:first-child {
 
   .module-summary-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .module-action-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .module-action-strip > div {
+    min-height: 88px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .module-action-strip > div:last-child {
+    border-bottom: 0;
   }
 
   .module-focus-bar {
