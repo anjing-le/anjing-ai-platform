@@ -160,6 +160,7 @@ function App() {
   const [snapshot, setSnapshot] = useState<PlatformSnapshot>();
   const [apiState, setApiState] = useState<ApiState>("loading");
   const [apiDetail, setApiDetail] = useState("正在连接 Go API");
+  const [apiIssue, setApiIssue] = useState("");
   const [lastSyncedAt, setLastSyncedAt] = useState("");
   const [refreshingSnapshot, setRefreshingSnapshot] = useState(false);
   const [actionMode, setActionMode] = useState<ActionMode | null>(null);
@@ -203,10 +204,12 @@ function App() {
     if (result.ok) {
       setSnapshot(result.snapshot);
       setApiState("live");
-      setApiDetail(result.source === "aggregate" ? "聚合快照 · ops-api" : `分组接口 · ${result.loaded} connected`);
+      setApiDetail(result.source === "aggregate" ? "聚合快照 · ops-api" : `分组接口 · ${result.loaded} 个接口已连接`);
+      setApiIssue("");
     } else {
       setApiState("fallback");
-      setApiDetail("本地演示数据 · console fallback");
+      setApiDetail("本地演示数据 · 后端未连接");
+      setApiIssue("无法连接 Go 后端 API，当前展示本地演示数据。启动 pnpm dev:api 后可重新同步。");
     }
 
     setLastSyncedAt(formatSyncTime(new Date()));
@@ -218,6 +221,7 @@ function App() {
     setRefreshingSnapshot(true);
     setApiState("loading");
     setApiDetail("正在刷新平台数据");
+    setApiIssue("");
 
     try {
       const result = await refreshSnapshot();
@@ -225,6 +229,7 @@ function App() {
     } catch {
       setApiState("fallback");
       setApiDetail("刷新失败 · 本地演示数据");
+      setApiIssue("刷新请求失败，当前保留本地演示数据。请确认 pnpm dev:api 正在运行后重试。");
       setLastSyncedAt(formatSyncTime(new Date()));
       setNotice("刷新失败，已保留本地演示数据。");
     } finally {
@@ -248,7 +253,8 @@ function App() {
           return;
         }
         setApiState("fallback");
-        setApiDetail("本地演示数据 · console fallback");
+        setApiDetail("本地演示数据 · 后端未连接");
+        setApiIssue("无法连接 Go 后端 API，当前展示本地演示数据。启动 pnpm dev:api 后可重新同步。");
       });
 
     return () => {
@@ -602,6 +608,7 @@ function App() {
     <>
       <ConsoleShell
         apiDetail={apiDetail}
+        apiIssue={apiIssue}
         apiState={apiState}
         activeRoute={activeRoute}
         lastSyncedAt={lastSyncedAt}
@@ -741,6 +748,7 @@ function LandingPage() {
 interface ConsoleShellProps {
   activeRoute: ConsoleRoute;
   apiDetail: string;
+  apiIssue: string;
   apiState: ApiState;
   children: React.ReactNode;
   lastSyncedAt: string;
@@ -754,6 +762,7 @@ interface ConsoleShellProps {
 function ConsoleShell({
   activeRoute,
   apiDetail,
+  apiIssue,
   apiState,
   children,
   lastSyncedAt,
@@ -830,9 +839,60 @@ function ConsoleShell({
             </div>
           </div>
         </header>
+        {apiIssue || apiState === "loading" ? (
+          <DataSyncBanner
+            issue={apiIssue}
+            loading={refreshing || apiState === "loading"}
+            onRetry={onRefresh}
+            state={apiState}
+          />
+        ) : null}
         {children}
       </div>
     </div>
+  );
+}
+
+function DataSyncBanner({
+  issue,
+  loading,
+  onRetry,
+  state,
+}: {
+  issue: string;
+  loading: boolean;
+  onRetry: () => void;
+  state: ApiState;
+}) {
+  const title = state === "loading" ? "正在同步平台数据" : "后端连接需要确认";
+  const description = issue || "正在读取 Go 后端数据，页面会先保留当前可用内容。";
+  const retryLabel = loading ? "同步中" : "重试同步";
+
+  return (
+    <section
+      aria-label={`${title}：${description}`}
+      aria-live="polite"
+      className={`sync-banner sync-banner--${state}`}
+      role="status"
+    >
+      <span aria-hidden="true" className="sync-banner__icon">
+        <RefreshCw className={loading ? "is-spinning" : undefined} size={16} />
+      </span>
+      <div className="sync-banner__copy">
+        <strong>{title}</strong>
+        <p>{description}</p>
+      </div>
+      <button
+        aria-label={loading ? "正在重试同步平台数据" : "重试同步平台数据"}
+        className="text-command sync-banner__action"
+        disabled={loading}
+        onClick={onRetry}
+        type="button"
+      >
+        <RefreshCw aria-hidden="true" className={loading ? "is-spinning" : undefined} size={14} />
+        <span>{retryLabel}</span>
+      </button>
+    </section>
   );
 }
 

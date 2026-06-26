@@ -238,7 +238,7 @@ if (!appSource.includes('state === "live" ? "实时 API"') || !appSource.include
   errors.push("Console topbar API source labels must use localized user-facing copy.");
 }
 
-if (!appSource.includes("聚合快照 · ops-api") || !appSource.includes("分组接口 ·") || !appSource.includes("本地演示数据 · console fallback")) {
+if (!appSource.includes("聚合快照 · ops-api") || !appSource.includes("分组接口 ·") || !appSource.includes("本地演示数据 · 后端未连接")) {
   errors.push("Console topbar must expose whether data comes from aggregate, granular or local demo mode.");
 }
 

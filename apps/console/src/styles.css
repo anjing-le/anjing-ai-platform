@@ -436,6 +436,78 @@ a {
   color: #8a4f00;
 }
 
+.sync-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 28px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
+}
+
+.sync-banner--loading {
+  background: #fafafa;
+}
+
+.sync-banner--fallback {
+  border-color: rgba(161, 92, 0, 0.2);
+  background: linear-gradient(90deg, #ffffff 0%, #fbfaf8 100%);
+}
+
+.sync-banner__icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.sync-banner__copy {
+  min-width: 0;
+}
+
+.sync-banner strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.sync-banner p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.sync-banner__action {
+  min-width: 94px;
+  min-height: 34px;
+}
+
+.is-spinning {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-spinning {
+    animation: none;
+  }
+}
+
 .role-switcher {
   display: flex;
   flex-wrap: wrap;
@@ -1709,6 +1781,11 @@ a {
   cursor: pointer;
 }
 
+.text-command:disabled {
+  cursor: wait;
+  opacity: 0.56;
+}
+
 .text-command:hover {
   border-color: #111111;
 }
@@ -2706,6 +2783,10 @@ tbody tr.is-selected td:first-child {
     flex-direction: column;
   }
 
+  .sync-banner {
+    margin: 12px 18px 0;
+  }
+
   .role-switcher {
     justify-content: flex-start;
   }
@@ -2803,6 +2884,7 @@ tbody tr.is-selected td:first-child {
 
   .table-toolbar,
   .table-toolbar__filters,
+  .sync-banner,
   .search-field,
   .table-toolbar select,
   .text-command,
@@ -2812,6 +2894,19 @@ tbody tr.is-selected td:first-child {
 
   .table-toolbar__filters {
     justify-content: stretch;
+  }
+
+  .sync-banner {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .sync-banner__icon {
+    display: none;
+  }
+
+  .sync-banner__action {
+    width: 100%;
   }
 
   .table-result-count {
