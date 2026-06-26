@@ -4,6 +4,22 @@ Anjing AI Infra Platform 是面向 AI 应用、Agent、内部工具和业务系�
 
 当前阶段先从前端体验开始迭代：用一个统一的 `console` 跑通后台首页、模块入口、Mock 数据和后续后端服务边界。工程落地以 DVSkyFolding 脚手架口径为基础。
 
+## 当前阶段完成度
+
+当前仓库已经完成第一阶段闭环：统一后台、Go 后端接口、OpenAPI 合约、PostgreSQL migration / seed、本地单镜像预览和质量门禁都已经接入。这个阶段的目标不是做满所有企业能力，而是把 public 开源平台的骨架、体验路径和后续拆分边界固定下来。
+
+已完成的关键闭环：
+
+- 统一后台入口：后台首页 + 运营总览 + 用户与权限 + 网关与模型 + 计费与配额 + 帮助文档
+- 角色视角：管理员、使用用户、开发人员、运维人员的导航和操作边界
+- 模块联动：应用接入、API Key、credentialRef、网关路由、模型路由、Skill、用量、预算告警、审计和待办
+- Go API：`control-api`、`gateway-api`、`billing-service`、`ops-api` 和本地聚合入口 `platform-all`
+- 数据底座：内存 seed 和 PostgreSQL repository 双路径
+- 合约治理：OpenAPI、服务边界、角色策略、前端 API client 和快照契约检查
+- 交付验证：`pnpm verify` 覆盖前端构建、测试、Go build/test、OpenAPI、文档、Dockerfile、Compose 和 smoke API
+
+后续路线图见 `docs/roadmap/ROADMAP.md`。
+
 ## 当前内容
 
 - `apps/console`: React + TypeScript + Vite 正式后台控制台
@@ -31,6 +47,20 @@ Anjing AI Infra Platform 是面向 AI 应用、Agent、内部工具和业务系�
 
 ## 本地启动
 
+最快体验：
+
+```bash
+pnpm install
+pnpm dev:api
+pnpm dev:console
+```
+
+默认访问：
+
+```text
+http://localhost:1818/
+```
+
 本地 PostgreSQL：
 
 ```bash
@@ -46,7 +76,6 @@ postgres://anjing:anjing@localhost:54329/anjing_ai_platform?sslmode=disable
 正式前端：
 
 ```bash
-pnpm install
 pnpm dev:api
 pnpm dev:console
 ```
