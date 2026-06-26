@@ -60,6 +60,10 @@ if (!workspacePatterns.includes("apps/*")) {
   fail("pnpm-workspace.yaml must include apps/*.");
 }
 
+if (workspacePatterns.some((pattern) => pattern.startsWith("frontend/") || pattern === "frontend")) {
+  fail("pnpm-workspace.yaml must not include frontend/*; apps/console is the canonical console app.");
+}
+
 for (const pattern of workspacePatterns) {
   const matches = resolveWorkspacePattern(pattern);
   if (matches.length === 0) {
@@ -78,6 +82,19 @@ if (!existsSync(consolePackagePath)) {
 
   if (consolePackage.private !== true) {
     fail(`${consolePackagePath} must stay private.`);
+  }
+}
+
+const legacyConsolePackagePath = "frontend/admin-console/package.json";
+if (existsSync(legacyConsolePackagePath)) {
+  const legacyReadmePath = "frontend/admin-console/README.md";
+  if (!existsSync(legacyReadmePath)) {
+    fail("frontend/admin-console must include README.md explaining it is a legacy prototype.");
+  }
+
+  const legacyPackage = readJson(legacyConsolePackagePath);
+  if (legacyPackage.name === "@anjing-ai-platform/console") {
+    fail("frontend/admin-console package name must not collide with @anjing-ai-platform/console.");
   }
 }
 

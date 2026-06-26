@@ -7,7 +7,7 @@ Anjing AI Infra Platform 是面向 AI 应用、Agent、内部工具和业务系�
 ## 当前内容
 
 - `apps/console`: React + TypeScript + Vite 正式后台控制台
-- `frontend/admin-console`: Vue 3 + TypeScript + Vite 早期信息架构原型
+- `frontend/admin-console`: Vue 3 + TypeScript + Vite 早期信息架构原型，仅保留为 legacy prototype
 - `cmd/control-api`: Go 应用接入、用户、角色、API Key、凭据接口
 - `cmd/gateway-api`: Go API 路由、模型路由、Skill、请求日志接口
 - `cmd/billing-service`: Go 套餐、用量、预算告警接口
@@ -24,6 +24,7 @@ Anjing AI Infra Platform 是面向 AI 应用、Agent、内部工具和业务系�
 - 后台数据加载：优先使用 `GET /api/ops/platform-snapshot` 聚合快照，快照由各模块 repository 组装，失败时回退到细分 API
 - OpenAPI 合约：见 `contracts/openapi/platform-api.yaml`
 - 后端规划：见 `docs/architecture/backend-services.md`
+- 前端结构：见 `docs/architecture/frontend-structure.md`
 - 技术基线：见 `docs/architecture/dvskyfolding-baseline.md`
 - 质量门禁：见 `docs/architecture/quality-gates.md`
 - 质量脚本：见 `scripts/README.md`
