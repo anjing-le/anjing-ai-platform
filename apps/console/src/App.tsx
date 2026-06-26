@@ -943,6 +943,30 @@ function ConsoleHome({
   const primaryMetric = metrics[0] || { label: "平台状态", value: "正常", note: "Mock 数据已接入" };
   const healthMetric = metrics.find((item) => item.label.includes("成功率")) || metrics[2] || primaryMetric;
   const pendingMetric = metrics.find((item) => item.label.includes("待")) || metrics[1] || primaryMetric;
+  const firstOpenTodo = openTodos[0];
+  const canViewGateway = canAccessRoute(role, "gateway");
+  const workbenchActions = [
+    {
+      href: routeHash[firstOpenTodo?.moduleId || "overview"],
+      label: firstOpenTodo ? "继续处理" : "查看运营",
+      note: firstOpenTodo
+        ? `${firstOpenTodo.moduleLabel} · ${displayStatus(firstOpenTodo.status)}`
+        : "查看平台健康、审计和调用趋势",
+      title: firstOpenTodo?.title || "运营总览",
+    },
+    {
+      href: routeHash.docs,
+      label: "开始接入",
+      note: role === "user" ? "创建应用、领取 API Key、查看调用方式" : "从文档入口串联应用、密钥和示例",
+      title: role === "user" ? "快速接入应用" : "配置业务入口",
+    },
+    {
+      href: canViewGateway ? routeHash.gateway : routeHash.docs,
+      label: canViewGateway ? "服务边界" : "帮助中心",
+      note: canViewGateway ? "查看 API 路由、模型别名和 Skill 调用" : "查看可访问模块与常见问题",
+      title: canViewGateway ? "网关与模型路由" : "接入文档",
+    },
+  ];
   const [runtimeCommandCopyState, setRuntimeCommandCopyState] = useState<"idle" | "success" | "error">("idle");
   const [copiedServiceCommand, setCopiedServiceCommand] = useState("");
   const [failedServiceCommand, setFailedServiceCommand] = useState("");
@@ -1018,6 +1042,17 @@ function ConsoleHome({
           <strong>{healthMetric.value}</strong>
           <p>{healthMetric.note}</p>
         </div>
+      </section>
+
+      <section aria-label="后台快捷工作台" className="home-workbench">
+        {workbenchActions.map((action) => (
+          <a aria-label={`${action.label}：${action.title}`} className="home-workbench__item" href={action.href} key={action.label}>
+            <span>{action.label}</span>
+            <strong>{action.title}</strong>
+            <p>{action.note}</p>
+            <ChevronRight aria-hidden="true" size={16} />
+          </a>
+        ))}
       </section>
 
       <section className="home-grid">
