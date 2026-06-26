@@ -940,6 +940,9 @@ function ConsoleHome({
   const hiddenOpenTodoCount = openTodos.length - visibleOpenTodos.length;
   const resolvedTodoCount = liveTodos.length - openTodos.length;
   const canResolveTodo = role === "admin" || role === "operator";
+  const primaryMetric = metrics[0] || { label: "平台状态", value: "正常", note: "Mock 数据已接入" };
+  const healthMetric = metrics.find((item) => item.label.includes("成功率")) || metrics[2] || primaryMetric;
+  const pendingMetric = metrics.find((item) => item.label.includes("待")) || metrics[1] || primaryMetric;
   const [runtimeCommandCopyState, setRuntimeCommandCopyState] = useState<"idle" | "success" | "error">("idle");
   const [copiedServiceCommand, setCopiedServiceCommand] = useState("");
   const [failedServiceCommand, setFailedServiceCommand] = useState("");
@@ -974,12 +977,12 @@ function ConsoleHome({
 
   return (
     <main className="page">
-      <section className="page-heading">
+      <section className="page-heading page-heading--compact">
         <div>
           <p className="eyebrow">Console Home</p>
           <h2>后台首页</h2>
           <p>
-            用这页先看清平台是否正常、当前角色能做什么、哪些模块需要进入，以及后端服务下一步怎么拆。
+            一屏看清平台状态、当前角色可进入的模块、需要处理的事项和后端服务边界。
           </p>
         </div>
         <a aria-label="进入帮助文档开始接入" className="button button--primary" href={routeHash.docs}>
@@ -988,13 +991,34 @@ function ConsoleHome({
         </a>
       </section>
 
-      <MetricGrid metrics={metrics} />
-
       {notice ? (
         <p aria-live="polite" className="inline-notice" role="status">
           {notice}
         </p>
       ) : null}
+
+      <section aria-label="平台关键状态" className="home-overview-strip">
+        <div>
+          <span>当前视角</span>
+          <strong>{roleLabel}</strong>
+          <p>{businessItems.length} 个可见业务入口</p>
+        </div>
+        <div>
+          <span>{primaryMetric.label}</span>
+          <strong>{primaryMetric.value}</strong>
+          <p>{primaryMetric.note}</p>
+        </div>
+        <div>
+          <span>{pendingMetric.label}</span>
+          <strong>{pendingMetric.value}</strong>
+          <p>{pendingMetric.note}</p>
+        </div>
+        <div>
+          <span>{healthMetric.label}</span>
+          <strong>{healthMetric.value}</strong>
+          <p>{healthMetric.note}</p>
+        </div>
+      </section>
 
       <section className="home-grid">
         <Panel title="模块入口" eyebrow="Modules" className="home-grid__main">
@@ -1033,7 +1057,7 @@ function ConsoleHome({
               const moduleCard = (
                 <>
                   <div className="module-card__top">
-                    <item.icon aria-hidden="true" size={21} />
+                    <item.icon aria-hidden="true" size={18} />
                     <span>{item.name}</span>
                   </div>
                   <div>
@@ -1043,11 +1067,6 @@ function ConsoleHome({
                   <div className="module-card__meta">
                     <StatusBadge tone={allowed ? "good" : "neutral"}>{accessLabel}</StatusBadge>
                     <small>{allowedRoleLabels}</small>
-                  </div>
-                  <div className="chip-row">
-                    {item.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
                   </div>
                 </>
               );
@@ -1140,7 +1159,7 @@ function ConsoleHome({
       </section>
 
       <section className="split-grid">
-        <Panel title="当前角色视角" eyebrow="访问">
+        <Panel title="角色权限矩阵" eyebrow="访问">
           <div className="role-summary">
             <strong>{roleLabel}</strong>
             <p>{roles.find((item) => item.id === role)?.purpose}</p>

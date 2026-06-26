@@ -544,7 +544,7 @@ if (
   errors.push("Landing architecture cards must expose destination labels and hide decorative icons.");
 }
 
-if (!appSource.includes("<item.icon aria-hidden=\"true\" size={21} />")) {
+if (!appSource.includes("<item.icon aria-hidden=\"true\" size={18} />")) {
   errors.push("Console home module card icons must be hidden as decorative icons.");
 }
 
