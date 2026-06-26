@@ -1873,6 +1873,13 @@ function ModulePage({
         ))}
       </div>
 
+      <ModuleFocusBar
+        activeTab={activeTab}
+        recordCount={tableView.rows.length}
+        steps={moduleWorkflows[page.id]}
+        visibleCount={rows.length}
+      />
+
       <ModuleSummaryStrip
         activeTab={activeTab}
         metrics={page.metrics}
@@ -3249,12 +3256,10 @@ function ModuleSummaryStrip({
 }) {
   const primaryMetric = metrics[0] || { label: "模块状态", value: "正常", note: "等待后端同步" };
   const secondaryMetric = metrics[1] || primaryMetric;
-  const tertiaryMetric = metrics[2] || secondaryMetric;
   const summaryItems = [
     { label: "当前视图", value: activeTab, note: `${visibleCount} / ${recordCount} 条记录` },
     primaryMetric,
     secondaryMetric,
-    tertiaryMetric,
   ];
 
   return (
@@ -3266,6 +3271,51 @@ function ModuleSummaryStrip({
           <p>{item.note}</p>
         </article>
       ))}
+    </section>
+  );
+}
+
+function ModuleFocusBar({
+  activeTab,
+  recordCount,
+  steps,
+  visibleCount,
+}: {
+  activeTab: string;
+  recordCount: number;
+  steps: WorkflowStep[];
+  visibleCount: number;
+}) {
+  const activeIndex = Math.max(
+    0,
+    steps.findIndex((step) => step.tab === activeTab),
+  );
+  const activeStep = steps[activeIndex] || steps[0];
+  const nextStep = steps[activeIndex + 1];
+  const progress = `${activeIndex + 1} / ${steps.length}`;
+
+  return (
+    <section
+      aria-label={`当前视图重点：${activeStep?.label || activeTab}，${activeStep?.note || "查看模块记录"}`}
+      className="module-focus-bar"
+    >
+      <div>
+        <span>{progress}</span>
+        <strong>{activeStep?.label || activeTab}</strong>
+        <p>{activeStep?.note || "查看模块记录与详情动作。"}</p>
+      </div>
+      <div>
+        <span>记录</span>
+        <strong>
+          {visibleCount} / {recordCount}
+        </strong>
+        <p>{visibleCount === recordCount ? "当前为完整列表" : "已应用搜索或状态筛选"}</p>
+      </div>
+      <div>
+        <span>下一步</span>
+        <strong>{nextStep?.label || "完成"}</strong>
+        <p>{nextStep?.note || "当前视图已覆盖主要处理动作。"}</p>
+      </div>
     </section>
   );
 }

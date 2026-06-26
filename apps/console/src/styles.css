@@ -1337,9 +1337,55 @@ a {
   color: var(--muted);
 }
 
+.module-focus-bar {
+  display: grid;
+  grid-template-columns: 1.35fr repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.module-focus-bar div {
+  display: grid;
+  min-height: 76px;
+  align-content: center;
+  gap: 5px;
+  padding: 12px 14px;
+  border-right: 1px solid var(--line);
+}
+
+.module-focus-bar div:last-child {
+  border-right: 0;
+}
+
+.module-focus-bar span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.module-focus-bar strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 1.02rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.module-focus-bar p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 760;
+  line-height: 1.36;
+}
+
 .module-summary-strip {
   display: grid;
-  grid-template-columns: 1.15fr repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1.2fr repeat(2, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2308,6 +2354,19 @@ tbody tr.is-selected td:first-child {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .module-focus-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .module-focus-bar div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .module-focus-bar div:last-child {
+    border-bottom: 0;
+  }
+
   .home-overview-strip div:nth-child(2n) {
     border-right: 0;
   }
@@ -2470,6 +2529,10 @@ tbody tr.is-selected td:first-child {
 
   .module-summary-strip {
     grid-template-columns: 1fr;
+  }
+
+  .module-focus-bar div {
+    min-height: 70px;
   }
 
   .home-overview-strip div {
