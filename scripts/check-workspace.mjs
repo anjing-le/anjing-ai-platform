@@ -37,9 +37,24 @@ if (!rootPackage.packageManager?.startsWith("pnpm@")) {
 }
 
 const workspaceYaml = readFileSync("pnpm-workspace.yaml", "utf8");
-const workspacePatterns = [
-  ...workspaceYaml.matchAll(/^\s*-\s+["']?([^"'\n]+)["']?\s*$/gm),
-].map((match) => match[1]);
+const workspacePatterns = [];
+let readingPackages = false;
+
+for (const line of workspaceYaml.split("\n")) {
+  if (/^\S/.test(line)) {
+    readingPackages = line.trim() === "packages:";
+    continue;
+  }
+
+  if (!readingPackages) {
+    continue;
+  }
+
+  const match = line.match(/^\s*-\s+["']?([^"'\n]+)["']?\s*$/);
+  if (match) {
+    workspacePatterns.push(match[1]);
+  }
+}
 
 if (!workspacePatterns.includes("apps/*")) {
   fail("pnpm-workspace.yaml must include apps/*.");

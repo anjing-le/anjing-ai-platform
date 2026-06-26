@@ -147,6 +147,16 @@ for (const localizedDetailFieldLabel of [
   }
 }
 
+if (
+  !appSource.includes("function displayRoleName") ||
+  !appSource.includes("function displayOrg") ||
+  !appSource.includes('{ label: "组织", value: displayOrg(user.org)') ||
+  !appSource.includes('{ label: "角色", value: displayRoleName(user.role)') ||
+  !appSource.includes('{ label: "MFA", value: displayStatus(user.mfa)')
+) {
+  errors.push("Console user detail panels must localize backend role, org and MFA values before display.");
+}
+
 if (dataSource.includes('cells: ["Enterprise", "private deployment", "custom", "custom", "Draft"]')) {
   errors.push("Console fallback billing plans must not expose Enterprise as an unfinished draft.");
 }

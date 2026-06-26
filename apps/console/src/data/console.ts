@@ -290,7 +290,7 @@ export const modulePages: ModulePageDefinition[] = [
     tabs: ["用户", "角色权限", "API Key", "凭据"],
     metrics: [
       { label: "用户", value: "42", note: "活跃 31", tone: "neutral" },
-      { label: "角色", value: "4", note: "admin / user / developer / operator", tone: "neutral" },
+      { label: "角色", value: "4", note: "管理员 / 使用用户 / 开发人员 / 运维人员", tone: "neutral" },
       { label: "API Key", value: "16", note: "有效密钥", tone: "good" },
       { label: "凭据引用", value: "28", note: "credentialRef", tone: "watch" },
     ],
@@ -301,19 +301,19 @@ export const modulePages: ModulePageDefinition[] = [
       rows: [
         {
           id: "lin",
-          cells: ["lin.chen@anjing.ai", "Platform", "Administrator", "Enabled", "Active"],
+          cells: ["lin.chen@anjing.ai", "平台管理", "管理员", "已启用", "Active"],
           status: "Active",
           tone: "good",
         },
         {
           id: "dev",
-          cells: ["dev-api@anjing.ai", "Engineering", "Developer", "Enabled", "Active"],
+          cells: ["dev-api@anjing.ai", "工程团队", "开发人员", "已启用", "Active"],
           status: "Active",
           tone: "good",
         },
         {
           id: "ops",
-          cells: ["ops-console@anjing.ai", "Operations", "Operator", "Required", "Pending"],
+          cells: ["ops-console@anjing.ai", "运维团队", "运维人员", "需配置", "Pending"],
           status: "Pending",
           tone: "neutral",
         },
@@ -333,8 +333,8 @@ export const modulePages: ModulePageDefinition[] = [
         eyebrow: "凭据",
         title: "凭据策略",
         items: [
-          { label: "明文读取", value: "Blocked", note: "仅运行时可用" },
-          { label: "脱敏展示", value: "Enabled", note: "只显示末 4 位" },
+          { label: "明文读取", value: "已阻断", note: "仅运行时可用" },
+          { label: "脱敏展示", value: "已启用", note: "只显示末 4 位" },
           { label: "轮换周期", value: "90d", note: "默认策略" },
         ],
       },
@@ -372,7 +372,7 @@ export const modulePages: ModulePageDefinition[] = [
         },
         {
           id: "internal",
-          cells: ["/internal/audit/**", "ops-api", "Session", "admin only", "Guarded"],
+          cells: ["/internal/audit/**", "ops-api", "登录会话", "仅管理员", "Guarded"],
           status: "Guarded",
           tone: "watch",
         },
@@ -384,8 +384,8 @@ export const modulePages: ModulePageDefinition[] = [
         title: "运行策略",
         items: [
           { label: "鉴权前置", value: "API Key + RBAC", note: "全部路由" },
-          { label: "模型 fallback", value: "Enabled", note: "供应商超时" },
-          { label: "Skill timeout", value: "8s", note: "默认策略" },
+          { label: "模型兜底", value: "已启用", note: "供应商超时" },
+          { label: "Skill 超时", value: "8s", note: "默认策略" },
         ],
       },
       {
@@ -393,7 +393,7 @@ export const modulePages: ModulePageDefinition[] = [
         title: "合并范围",
         items: [
           { label: "API Gateway", value: "主入口", note: "路由、限流、请求日志" },
-          { label: "LLM Gateway", value: "已并入", note: "供应商、模型别名、fallback" },
+          { label: "模型网关", value: "已并入", note: "供应商、模型别名、失败兜底" },
           { label: "Skill Hub", value: "已并入", note: "注册、协议、调用治理" },
         ],
       },
@@ -451,7 +451,7 @@ export const modulePages: ModulePageDefinition[] = [
         eyebrow: "控制",
         title: "配额控制",
         items: [
-          { label: "硬限制", value: "Enabled", note: "超限后拒绝" },
+          { label: "硬限制", value: "已启用", note: "超限后拒绝" },
           { label: "软告警", value: "70% / 85%", note: "控制台提醒" },
           { label: "重置窗口", value: "daily", note: "UTC+8 重置" },
         ],

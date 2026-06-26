@@ -2910,9 +2910,9 @@ function UserAccessPanel({
 
   const canActivate = role === "admin";
   const checks = [
-    { label: "Org", value: user.org, note: "组织归属", tone: "neutral" },
-    { label: "Role", value: user.role, note: "访问边界", tone: "neutral" },
-    { label: "MFA", value: user.mfa, note: "登录安全", tone: user.mfa === "Enabled" ? "good" : "watch" },
+    { label: "组织", value: displayOrg(user.org), note: "组织归属", tone: "neutral" },
+    { label: "角色", value: displayRoleName(user.role), note: "访问边界", tone: "neutral" },
+    { label: "MFA", value: displayStatus(user.mfa), note: "登录安全", tone: user.mfa === "Enabled" ? "good" : "watch" },
   ] as const;
   const activateLabel = !canActivate
     ? `无法激活用户 ${user.email}，需要管理员权限`
@@ -3425,6 +3425,27 @@ function displayStatus(status = "") {
   };
 
   return labels[status] || status;
+}
+
+function displayRoleName(role = "") {
+  const labels: Record<string, string> = {
+    Administrator: "管理员",
+    Developer: "开发人员",
+    Operator: "运维人员",
+    User: "使用用户",
+  };
+
+  return labels[role] || role;
+}
+
+function displayOrg(org = "") {
+  const labels: Record<string, string> = {
+    Engineering: "工程团队",
+    Operations: "运维团队",
+    Platform: "平台管理",
+  };
+
+  return labels[org] || org;
 }
 
 function nextStepForStatus(status = "") {
