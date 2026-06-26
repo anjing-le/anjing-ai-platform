@@ -1904,29 +1904,31 @@ function ModulePage({
                 value={query}
               />
             </label>
-            <select aria-label={`${page.title} 状态筛选`} onChange={(event) => setStatus(event.target.value)} value={status}>
-              {statuses.map((item) => (
-                <option key={item} value={item}>
-                  {item === "全部状态" ? item : displayStatus(item)}
-                </option>
-              ))}
-            </select>
-            {filtersActive ? (
-              <button
-                aria-label={`清空${page.title}表格筛选`}
-                className="text-command"
-                onClick={() => {
-                  setQuery("");
-                  setStatus("全部状态");
-                }}
-                type="button"
-              >
-                清空筛选
-              </button>
-            ) : null}
-            <span className="table-result-count">
-              {rows.length} / {tableView.rows.length} 条记录
-            </span>
+            <div className="table-toolbar__filters">
+              <select aria-label={`${page.title} 状态筛选`} onChange={(event) => setStatus(event.target.value)} value={status}>
+                {statuses.map((item) => (
+                  <option key={item} value={item}>
+                    {item === "全部状态" ? item : displayStatus(item)}
+                  </option>
+                ))}
+              </select>
+              {filtersActive ? (
+                <button
+                  aria-label={`清空${page.title}表格筛选`}
+                  className="text-command"
+                  onClick={() => {
+                    setQuery("");
+                    setStatus("全部状态");
+                  }}
+                  type="button"
+                >
+                  清空筛选
+                </button>
+              ) : null}
+              <span className="table-result-count">
+                {rows.length} / {tableView.rows.length} 条记录
+              </span>
+            </div>
           </div>
           <DataTable
             ariaLabel={`${page.title}：${tableView.title}`}

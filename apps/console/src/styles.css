@@ -1464,9 +1464,11 @@ a {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  min-height: 62px;
   padding: 12px 14px;
   border-bottom: 1px solid var(--line);
+  background: #fbfbfb;
 }
 
 .search-field {
@@ -1480,12 +1482,29 @@ a {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
+  color: var(--muted);
+}
+
+.search-field:focus-within {
+  border-color: #111111;
+  box-shadow: inset 0 0 0 1px #111111;
 }
 
 .search-field input {
   width: 100%;
   border: 0;
+  background: transparent;
+  color: var(--ink);
   outline: 0;
+}
+
+.table-toolbar__filters {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .table-toolbar select {
@@ -1518,7 +1537,13 @@ a {
 }
 
 .table-result-count {
-  margin-left: auto;
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 900;
@@ -1531,19 +1556,20 @@ a {
 
 table {
   width: 100%;
-  min-width: 680px;
+  min-width: 640px;
   border-collapse: collapse;
 }
 
 th,
 td {
-  padding: 14px 16px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   white-space: nowrap;
 }
 
 th {
+  background: #fbfbfb;
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 900;
@@ -1566,8 +1592,12 @@ tbody tr[tabindex] {
 tbody tr[tabindex]:hover,
 tbody tr[tabindex]:focus-visible,
 tbody tr.is-selected {
-  background: #ffffff;
+  background: #fbfbfb;
   outline: none;
+}
+
+tbody tr[tabindex]:focus-visible td {
+  box-shadow: inset 0 1px 0 #111111, inset 0 -1px 0 #111111;
 }
 
 tbody tr.is-selected td:first-child {
@@ -1575,7 +1605,7 @@ tbody tr.is-selected td:first-child {
 }
 
 .empty-cell {
-  padding: 28px 16px;
+  padding: 34px 16px;
   color: var(--muted);
   text-align: center;
 }
@@ -1584,6 +1614,8 @@ tbody tr.is-selected td:first-child {
   display: grid;
   gap: 6px;
   justify-items: center;
+  min-height: 86px;
+  align-content: center;
 }
 
 .empty-cell strong {
@@ -2521,6 +2553,23 @@ tbody tr.is-selected td:first-child {
 @media (max-width: 560px) {
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .table-toolbar,
+  .table-toolbar__filters,
+  .search-field,
+  .table-toolbar select,
+  .text-command,
+  .table-result-count {
+    width: 100%;
+  }
+
+  .table-toolbar__filters {
+    justify-content: stretch;
+  }
+
+  .table-result-count {
+    justify-content: center;
   }
 
   .home-overview-strip {
