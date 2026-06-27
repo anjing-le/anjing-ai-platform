@@ -25,6 +25,45 @@ SET
   schema_version = EXCLUDED.schema_version,
   status = EXCLUDED.status;
 
+INSERT INTO skill_schemas (id, skill_name, version, description, required_fields, optional_fields, status)
+VALUES
+  (
+    'schema_search_knowledge_v01',
+    'search-knowledge',
+    '0.1',
+    'Knowledge retrieval input contract',
+    '[{"name":"query","type":"string","description":"Search query"}]'::jsonb,
+    '[{"name":"topK","type":"number","description":"Maximum result count"}]'::jsonb,
+    'Published'
+  ),
+  (
+    'schema_send_message_v01',
+    'send-message',
+    '0.1',
+    'Outbound message input contract',
+    '[{"name":"target","type":"string","description":"Recipient or channel target"},{"name":"content","type":"string","description":"Message content"}]'::jsonb,
+    '[{"name":"channel","type":"string","description":"Delivery channel"}]'::jsonb,
+    'Draft'
+  ),
+  (
+    'schema_generate_image_v02',
+    'generate-image',
+    '0.2',
+    'Image generation prompt contract',
+    '[{"name":"prompt","type":"string","description":"Generation prompt"}]'::jsonb,
+    '[{"name":"size","type":"string","description":"Image size"},{"name":"style","type":"string","description":"Visual style"}]'::jsonb,
+    'Published'
+  )
+ON CONFLICT (id) DO UPDATE
+SET
+  skill_name = EXCLUDED.skill_name,
+  version = EXCLUDED.version,
+  description = EXCLUDED.description,
+  required_fields = EXCLUDED.required_fields,
+  optional_fields = EXCLUDED.optional_fields,
+  status = EXCLUDED.status,
+  updated_at = now();
+
 INSERT INTO request_logs (id, request, consumer, latency, result, status)
 VALUES
   ('req_chat', 'POST /llm/chat', 'customer-service-agent', '76ms', '200', 'Success'),

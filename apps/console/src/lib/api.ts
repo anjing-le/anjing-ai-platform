@@ -204,6 +204,23 @@ export interface SkillBinding {
   updatedAt: string;
 }
 
+export interface SkillSchemaField {
+  name: string;
+  type: string;
+  description: string;
+}
+
+export interface SkillSchema {
+  id: string;
+  skillName: string;
+  version: string;
+  description: string;
+  requiredFields: SkillSchemaField[];
+  optionalFields: SkillSchemaField[];
+  status: string;
+  updatedAt: string;
+}
+
 export interface RequestLog {
   id: string;
   request: string;
@@ -306,6 +323,7 @@ export interface PlatformSnapshot {
   routes?: GatewayRoute[];
   modelRoutes?: ModelRoute[];
   skills?: SkillBinding[];
+  skillSchemas?: SkillSchema[];
   requestLogs?: RequestLog[];
   plans?: BillingPlan[];
   usage?: UsageRecord[];
@@ -426,6 +444,7 @@ const endpoints = {
   routes: "/api/gateway/routes",
   modelRoutes: "/api/gateway/model-routes",
   skills: "/api/gateway/skills",
+  skillSchemas: "/api/gateway/skill-schemas",
   requestLogs: "/api/gateway/request-logs",
   plans: "/api/billing/plans",
   usage: "/api/billing/usage",
@@ -625,6 +644,10 @@ export function publishSkillBinding(id: string, role?: RoleId): Promise<SkillBin
     method: "POST",
     body: JSON.stringify({ id }),
   }, role);
+}
+
+export function fetchSkillSchemas(role?: RoleId): Promise<SkillSchema[]> {
+  return requestJson<SkillSchema[]>("/api/gateway/skill-schemas", undefined, role);
 }
 
 export function invokeSkill(input: SkillInvokeInput, role?: RoleId): Promise<SkillInvokeResponse> {

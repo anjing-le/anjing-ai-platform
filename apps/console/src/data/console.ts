@@ -211,6 +211,7 @@ export const consoleServiceMap = [
       "/api/gateway/model-routes",
       "/api/gateway/model-routes/update",
       "/api/gateway/skills",
+      "/api/gateway/skill-schemas",
       "/api/gateway/skills/update",
       "/api/gateway/skills/publish",
       "/api/gateway/skills/invoke",

@@ -62,6 +62,7 @@ x-anjing-service-boundaries:
       - /api/gateway/model-routes
       - /api/gateway/model-routes/update
       - /api/gateway/skills
+      - /api/gateway/skill-schemas
       - /api/gateway/skills/update
       - /api/gateway/skills/publish
       - /api/gateway/skills/invoke
@@ -984,6 +985,30 @@ paths:
                         $ref: "#/components/schemas/SkillBinding"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/gateway/skill-schemas:
+    get:
+      tags: [gateway]
+      operationId: listSkillSchemas
+      summary: List skill input schemas.
+      x-anjing-roles: [Administrator, Developer]
+      responses:
+        "200":
+          description: Skill schemas returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SkillSchema"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2572,6 +2597,41 @@ components:
           type: string
         updatedAt:
           type: string
+    SkillSchemaField:
+      type: object
+      required: [name, type, description]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [string, number, boolean, object, array]
+        description:
+          type: string
+    SkillSchema:
+      type: object
+      required: [id, skillName, version, description, requiredFields, optionalFields, status, updatedAt]
+      properties:
+        id:
+          type: string
+        skillName:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        requiredFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillSchemaField"
+        optionalFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillSchemaField"
+        status:
+          type: string
+        updatedAt:
+          type: string
     CreateSkillBindingRequest:
       type: object
       required: [name, route]
@@ -2920,6 +2980,7 @@ components:
         - routes
         - modelRoutes
         - skills
+        - skillSchemas
         - requestLogs
         - plans
         - usage
@@ -2960,6 +3021,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SkillBinding"
+        skillSchemas:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillSchema"
         requestLogs:
           type: array
           items:

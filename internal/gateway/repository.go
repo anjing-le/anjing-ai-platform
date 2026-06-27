@@ -124,6 +124,11 @@ type SkillRepository interface {
 	PublishSkillBinding(ctx context.Context, id string) (store.SkillBinding, bool, error)
 }
 
+type SkillSchemaRepository interface {
+	ListSkillSchemas(ctx context.Context) ([]store.SkillSchema, error)
+	FindSkillSchema(ctx context.Context, name, version string) (store.SkillSchema, bool, error)
+}
+
 type RequestLogRepository interface {
 	ListRequestLogs(ctx context.Context) ([]store.RequestLog, error)
 	QueryRequestLogs(ctx context.Context, query RequestLogQuery) ([]store.RequestLog, error)
@@ -143,16 +148,19 @@ type Repositories struct {
 	Routes        RouteRepository
 	ModelRoutes   ModelRouteRepository
 	Skills        SkillRepository
+	SkillSchemas  SkillSchemaRepository
 	RequestLogs   RequestLogRepository
 	Invocations   InvocationRecorder
 	ProxyRequests ProxyRecorder
 }
 
 func NewMemoryRepositories(st *store.Store) Repositories {
+	skillRepo := NewMemorySkillRepository(st)
 	return Repositories{
 		Routes:        NewMemoryRouteRepository(st),
 		ModelRoutes:   NewMemoryModelRouteRepository(st),
-		Skills:        NewMemorySkillRepository(st),
+		Skills:        skillRepo,
+		SkillSchemas:  skillRepo,
 		RequestLogs:   NewMemoryRequestLogRepository(st),
 		Invocations:   NewMemoryInvocationRecorder(st),
 		ProxyRequests: NewMemoryProxyRecorder(st),
@@ -267,6 +275,15 @@ func (repo MemorySkillRepository) UpdateSkillBinding(_ context.Context, input Up
 func (repo MemorySkillRepository) PublishSkillBinding(_ context.Context, id string) (store.SkillBinding, bool, error) {
 	skill, ok := repo.store.PublishSkillBinding(id)
 	return skill, ok, nil
+}
+
+func (repo MemorySkillRepository) ListSkillSchemas(context.Context) ([]store.SkillSchema, error) {
+	return repo.store.ListSkillSchemas(), nil
+}
+
+func (repo MemorySkillRepository) FindSkillSchema(_ context.Context, name, version string) (store.SkillSchema, bool, error) {
+	item, ok := repo.store.FindSkillSchema(name, version)
+	return item, ok, nil
 }
 
 type MemoryRequestLogRepository struct {
@@ -901,11 +918,79 @@ func (repo PostgresSkillRepository) PublishSkillBinding(ctx context.Context, id 
 	return skill, true, nil
 }
 
+func (repo PostgresSkillRepository) ListSkillSchemas(ctx context.Context) ([]store.SkillSchema, error) {
+	rows, err := repo.pool.Query(ctx, `
+		select id, skill_name, version, description, required_fields, optional_fields, status, updated_at
+		from skill_schemas
+		order by skill_name asc, version asc
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query skill schemas: %w", err)
+	}
+	defer rows.Close()
+
+	items, err := pgx.CollectRows(rows, scanSkillSchema)
+	if err != nil {
+		return nil, fmt.Errorf("collect skill schemas: %w", err)
+	}
+
+	return items, nil
+}
+
+func (repo PostgresSkillRepository) FindSkillSchema(ctx context.Context, name, version string) (store.SkillSchema, bool, error) {
+	version = strings.TrimSpace(version)
+	if version == "" {
+		version = "0.1"
+	}
+	rows, err := repo.pool.Query(ctx, `
+		select id, skill_name, version, description, required_fields, optional_fields, status, updated_at
+		from skill_schemas
+		where lower(skill_name) = lower($1) and version = $2
+		limit 1
+	`, strings.TrimSpace(name), version)
+	if err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("query skill schema: %w", err)
+	}
+	defer rows.Close()
+
+	item, err := pgx.CollectOneRow(rows, scanSkillSchema)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.SkillSchema{}, false, nil
+		}
+		return store.SkillSchema{}, false, fmt.Errorf("collect skill schema: %w", err)
+	}
+
+	return item, true, nil
+}
+
 func scanSkillBinding(row pgx.CollectableRow) (store.SkillBinding, error) {
 	var item store.SkillBinding
 	var updatedAt time.Time
 	if err := row.Scan(&item.ID, &item.Name, &item.Protocol, &item.Route, &item.Timeout, &item.SchemaVersion, &item.Status, &updatedAt); err != nil {
 		return store.SkillBinding{}, err
+	}
+	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
+	return item, nil
+}
+
+func scanSkillSchema(row pgx.CollectableRow) (store.SkillSchema, error) {
+	var item store.SkillSchema
+	var requiredJSON []byte
+	var optionalJSON []byte
+	var updatedAt time.Time
+	if err := row.Scan(&item.ID, &item.SkillName, &item.Version, &item.Description, &requiredJSON, &optionalJSON, &item.Status, &updatedAt); err != nil {
+		return store.SkillSchema{}, err
+	}
+	if len(requiredJSON) > 0 {
+		if err := json.Unmarshal(requiredJSON, &item.RequiredFields); err != nil {
+			return store.SkillSchema{}, fmt.Errorf("decode required skill schema fields: %w", err)
+		}
+	}
+	if len(optionalJSON) > 0 {
+		if err := json.Unmarshal(optionalJSON, &item.OptionalFields); err != nil {
+			return store.SkillSchema{}, fmt.Errorf("decode optional skill schema fields: %w", err)
+		}
 	}
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil

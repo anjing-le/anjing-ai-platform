@@ -51,6 +51,7 @@ import {
   type LLMInvokeResponse,
   type ModelRoute,
   type PlatformSnapshot,
+  type SkillSchema,
   type SkillInvokeInput,
   type SkillInvokeResponse,
   type SkillBinding,
@@ -2651,6 +2652,7 @@ function ModulePage({
               onUpdate={onSkillBindingUpdate}
               publishing={publishingSkillId === selectedSkill?.id}
               role={role}
+              schemas={snapshot?.skillSchemas}
               skill={selectedSkill}
             />
           ) : null}
@@ -3746,6 +3748,7 @@ function SkillBindingPanel({
   onUpdate,
   publishing,
   role,
+  schemas,
   skill,
 }: {
   onCreate: (input: CreateSkillBindingInput) => Promise<void>;
@@ -3754,6 +3757,7 @@ function SkillBindingPanel({
   onUpdate: (input: UpdateSkillBindingInput) => Promise<void>;
   publishing: boolean;
   role: RoleId;
+  schemas?: SkillSchema[];
   skill?: SkillBinding;
 }) {
   const [mode, setMode] = useState<"create" | "edit">("create");
@@ -3854,6 +3858,23 @@ function SkillBindingPanel({
   const invokeInputKeys = Array.isArray(invokeResult?.output.inputKeys)
     ? invokeResult.output.inputKeys.filter((key): key is string => typeof key === "string").join(", ")
     : "";
+  const activeSchema = useMemo(
+    () =>
+      schemas?.find(
+        (item) => item.skillName === skill?.name && item.version === (skill?.schemaVersion || "0.1"),
+      ),
+    [schemas, skill?.name, skill?.schemaVersion],
+  );
+  const schemaFields = useMemo(
+    () =>
+      activeSchema
+        ? [
+            ...activeSchema.requiredFields.map((field) => ({ ...field, mode: "必填" })),
+            ...activeSchema.optionalFields.map((field) => ({ ...field, mode: "可选" })),
+          ]
+        : [],
+    [activeSchema],
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3927,6 +3948,34 @@ function SkillBindingPanel({
               <p>输入版本</p>
               <StatusDot tone="neutral" />
             </article>
+          </div>
+
+          <div
+            aria-label={
+              activeSchema ? `Skill schema ${activeSchema.skillName} ${activeSchema.version}` : "Skill schema registry"
+            }
+            className="skill-schema-registry"
+          >
+            <div className="skill-schema-registry__head">
+              <span>Schema Registry</span>
+              <strong>{activeSchema ? `${activeSchema.skillName}@${activeSchema.version}` : "未匹配到 Schema"}</strong>
+              <p>{activeSchema?.description || "当前绑定还没有可展示的输入字段定义，调用时只做发布状态校验。"}</p>
+            </div>
+            {schemaFields.length ? (
+              <div className="skill-schema-fields">
+                {schemaFields.map((field) => (
+                  <article key={`${field.mode}-${field.name}`}>
+                    <span>{field.mode}</span>
+                    <strong>{field.name}</strong>
+                    <p>
+                      {field.type} · {field.description || "暂无说明"}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="skill-schema-empty">Schema registry 暂无字段。</p>
+            )}
           </div>
 
           <div className="application-actions">

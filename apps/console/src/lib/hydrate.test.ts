@@ -94,6 +94,7 @@ const snapshot: PlatformSnapshot = {
   ],
   modelRoutes: [],
   skills: [],
+  skillSchemas: [],
   requestLogs: [],
   plans: [
     {

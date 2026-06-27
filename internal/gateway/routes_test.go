@@ -1779,6 +1779,35 @@ func TestUpdateSkillBindingReturnsDraftSkill(t *testing.T) {
 	}
 }
 
+func TestListSkillSchemasReturnsRegistry(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/gateway/skill-schemas", nil)
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool                `json:"success"`
+		Data    []store.SkillSchema `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || len(payload.Data) == 0 {
+		t.Fatalf("expected skill schema registry, got %+v", payload)
+	}
+	if payload.Data[0].SkillName == "" || len(payload.Data[0].RequiredFields) == 0 {
+		t.Fatalf("expected schema name and required fields, got %+v", payload.Data[0])
+	}
+}
+
 func TestInvokeSkillUsesPublishedBinding(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())

@@ -29,6 +29,7 @@ func TestRepositoryLoadsConsoleSnapshotFromModuleRepositories(t *testing.T) {
 		Routes:           gatewayRepos.Routes,
 		ModelRoutes:      gatewayRepos.ModelRoutes,
 		Skills:           gatewayRepos.Skills,
+		SkillSchemas:     gatewayRepos.SkillSchemas,
 		RequestLogs:      gatewayRepos.RequestLogs,
 		Plans:            billingRepos.Plans,
 		Usage:            billingRepos.Usage,
@@ -44,8 +45,8 @@ func TestRepositoryLoadsConsoleSnapshotFromModuleRepositories(t *testing.T) {
 		t.Fatalf("load snapshot: %v", err)
 	}
 
-	if len(item.Users) == 0 || len(item.Routes) == 0 || len(item.Plans) == 0 || len(item.BillingSummaries) == 0 {
-		t.Fatalf("expected users, routes, plans and billing summaries in snapshot: %+v", item)
+	if len(item.Users) == 0 || len(item.Routes) == 0 || len(item.Skills) == 0 || len(item.SkillSchemas) == 0 || len(item.Plans) == 0 || len(item.BillingSummaries) == 0 {
+		t.Fatalf("expected users, routes, skills, skill schemas, plans and billing summaries in snapshot: %+v", item)
 	}
 	if len(item.Dashboard.Todos) == 0 || len(item.Dashboard.Health) == 0 || len(item.Dashboard.Audit) == 0 {
 		t.Fatalf("expected ops dashboard data in snapshot: %+v", item.Dashboard)

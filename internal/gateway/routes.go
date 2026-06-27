@@ -120,9 +120,10 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 	mux.HandleFunc("/api/gateway/model-routes/update", updateModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/model-routes/publish", publishModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/skills", skillsHandler(repos.Skills))
+	mux.HandleFunc("/api/gateway/skill-schemas", skillSchemasHandler(repos.SkillSchemas))
 	mux.HandleFunc("/api/gateway/skills/update", updateSkillBindingHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skills/publish", publishSkillBindingHandler(repos.Skills))
-	mux.HandleFunc("/api/gateway/skills/invoke", skillInvokeHandler(repos.Skills, repos.Invocations))
+	mux.HandleFunc("/api/gateway/skills/invoke", skillInvokeHandler(repos.Skills, repos.SkillSchemas, repos.Invocations))
 	mux.HandleFunc("/api/gateway/request-logs", requestLogsHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/request-logs/export", requestLogsExportHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/request-logs/retention/purge", requestLogsRetentionPurgeHandler(repos.RequestLogs))
@@ -832,6 +833,25 @@ func skillsHandler(skills SkillRepository) http.HandlerFunc {
 		default:
 			httpjson.MethodNotAllowed(w)
 		}
+	}
+}
+
+func skillSchemasHandler(schemas SkillSchemaRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodGet) {
+			return
+		}
+		if schemas == nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", "skill schema repository is not configured")
+			return
+		}
+
+		items, err := schemas.ListSkillSchemas(r.Context())
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		httpjson.OK(w, items)
 	}
 }
 

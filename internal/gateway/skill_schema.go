@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -23,30 +24,34 @@ type skillInputRule struct {
 	Optional map[string]skillInputType
 }
 
-var skillInputRules = map[string]skillInputRule{
-	"search-knowledge@0.1": {
-		Required: map[string]skillInputType{
-			"query": skillInputString,
-		},
-		Optional: map[string]skillInputType{
-			"topK": skillInputNumber,
-		},
-	},
-	"generate-image@0.2": {
-		Required: map[string]skillInputType{
-			"prompt": skillInputString,
-		},
-		Optional: map[string]skillInputType{
-			"size":  skillInputString,
-			"style": skillInputString,
-		},
-	},
+type skillSchemaLoadError struct {
+	err error
 }
 
-func validateSkillInput(skill store.SkillBinding, input map[string]any) error {
-	rule, ok := skillInputRuleFor(skill)
+func (err skillSchemaLoadError) Error() string {
+	return err.err.Error()
+}
+
+func (err skillSchemaLoadError) Unwrap() error {
+	return err.err
+}
+
+func validateSkillInput(ctx context.Context, schemas SkillSchemaRepository, skill store.SkillBinding, input map[string]any) error {
+	if schemas == nil {
+		return nil
+	}
+
+	version := normalizedSkillSchemaVersion(skill.SchemaVersion)
+	schema, ok, err := schemas.FindSkillSchema(ctx, skill.Name, version)
+	if err != nil {
+		return skillSchemaLoadError{err: fmt.Errorf("load skill schema %s %s: %w", skill.Name, version, err)}
+	}
 	if !ok {
 		return nil
+	}
+	rule, err := skillInputRuleFromSchema(schema)
+	if err != nil {
+		return err
 	}
 	if input == nil {
 		input = map[string]any{}
@@ -75,13 +80,59 @@ func validateSkillInput(skill store.SkillBinding, input map[string]any) error {
 	return nil
 }
 
-func skillInputRuleFor(skill store.SkillBinding) (skillInputRule, bool) {
-	version := strings.TrimSpace(skill.SchemaVersion)
+func normalizedSkillSchemaVersion(version string) string {
+	version = strings.TrimSpace(version)
 	if version == "" {
-		version = "0.1"
+		return "0.1"
 	}
-	rule, ok := skillInputRules[fmt.Sprintf("%s@%s", skill.Name, version)]
-	return rule, ok
+	return version
+}
+
+func skillInputRuleFromSchema(schema store.SkillSchema) (skillInputRule, error) {
+	required := make(map[string]skillInputType, len(schema.RequiredFields))
+	for _, field := range schema.RequiredFields {
+		name := strings.TrimSpace(field.Name)
+		if name == "" {
+			continue
+		}
+		inputType, ok := skillInputTypeFromString(field.Type)
+		if !ok {
+			return skillInputRule{}, fmt.Errorf("skill schema %s %s field %s uses unsupported type %s", schema.SkillName, schema.Version, name, field.Type)
+		}
+		required[name] = inputType
+	}
+
+	optional := make(map[string]skillInputType, len(schema.OptionalFields))
+	for _, field := range schema.OptionalFields {
+		name := strings.TrimSpace(field.Name)
+		if name == "" {
+			continue
+		}
+		inputType, ok := skillInputTypeFromString(field.Type)
+		if !ok {
+			return skillInputRule{}, fmt.Errorf("skill schema %s %s field %s uses unsupported type %s", schema.SkillName, schema.Version, name, field.Type)
+		}
+		optional[name] = inputType
+	}
+
+	return skillInputRule{Required: required, Optional: optional}, nil
+}
+
+func skillInputTypeFromString(value string) (skillInputType, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "string":
+		return skillInputString, true
+	case "number":
+		return skillInputNumber, true
+	case "boolean":
+		return skillInputBoolean, true
+	case "object":
+		return skillInputObject, true
+	case "array":
+		return skillInputArray, true
+	default:
+		return "", false
+	}
 }
 
 func validateSkillInputValue(field string, value any, expected skillInputType, required bool) error {

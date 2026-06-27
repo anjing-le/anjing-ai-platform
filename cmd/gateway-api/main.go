@@ -44,7 +44,9 @@ func main() {
 		repos := gateway.NewMemoryRepositories(st)
 		repos.Routes = gateway.NewPostgresRouteRepository(pool)
 		repos.ModelRoutes = gateway.NewPostgresModelRouteRepository(pool)
-		repos.Skills = gateway.NewPostgresSkillRepository(pool)
+		skillRepo := gateway.NewPostgresSkillRepository(pool)
+		repos.Skills = skillRepo
+		repos.SkillSchemas = skillRepo
 		repos.RequestLogs = gateway.NewPostgresRequestLogRepository(pool)
 		repos.Invocations = gateway.NewPostgresInvocationRecorder(pool)
 		repos.ProxyRequests = gateway.NewPostgresProxyRecorder(pool)

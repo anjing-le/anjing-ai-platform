@@ -2343,6 +2343,8 @@ tbody tr.is-selected td:first-child {
 .user-checks span,
 .model-checks span,
 .skill-checks span,
+.skill-schema-registry__head span,
+.skill-schema-fields span,
 .plan-checks span,
 .budget-alert-checks span,
 .api-key-checks span,
@@ -2394,6 +2396,9 @@ tbody tr.is-selected td:first-child {
 .user-checks p,
 .model-checks p,
 .skill-checks p,
+.skill-schema-registry__head p,
+.skill-schema-fields p,
+.skill-schema-empty,
 .plan-checks p,
 .budget-alert-checks p,
 .api-key-checks p,
@@ -2495,6 +2500,47 @@ tbody tr.is-selected td:first-child {
 
 .selected-row-next strong {
   font-size: 1rem;
+}
+
+.skill-schema-registry {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #f8f8f8;
+}
+
+.skill-schema-registry__head {
+  display: grid;
+  gap: 6px;
+}
+
+.skill-schema-registry__head strong {
+  overflow-wrap: anywhere;
+  font-size: 0.94rem;
+  line-height: 1.25;
+}
+
+.skill-schema-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.skill-schema-fields article {
+  display: grid;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.skill-schema-fields strong {
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.25;
 }
 
 .docs-reference-grid {

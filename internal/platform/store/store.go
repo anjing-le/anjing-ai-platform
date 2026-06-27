@@ -18,10 +18,11 @@ type Store struct {
 	apiKeys      []APIKey
 	credentials  []Credential
 
-	routes      []GatewayRoute
-	modelRoutes []ModelRoute
-	skills      []SkillBinding
-	requestLogs []RequestLog
+	routes       []GatewayRoute
+	modelRoutes  []ModelRoute
+	skills       []SkillBinding
+	skillSchemas []SkillSchema
+	requestLogs  []RequestLog
 
 	plans        []BillingPlan
 	usageRecords []UsageRecord
@@ -163,6 +164,23 @@ type SkillBindingUpdateInput struct {
 	SchemaVersion string
 }
 
+type SkillSchemaField struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Description string `json:"description"`
+}
+
+type SkillSchema struct {
+	ID             string             `json:"id"`
+	SkillName      string             `json:"skillName"`
+	Version        string             `json:"version"`
+	Description    string             `json:"description"`
+	RequiredFields []SkillSchemaField `json:"requiredFields"`
+	OptionalFields []SkillSchemaField `json:"optionalFields"`
+	Status         string             `json:"status"`
+	UpdatedAt      string             `json:"updatedAt"`
+}
+
 type RequestLog struct {
 	ID        string `json:"id"`
 	Request   string `json:"request"`
@@ -286,6 +304,7 @@ type PlatformSnapshot struct {
 	Routes           []GatewayRoute          `json:"routes"`
 	ModelRoutes      []ModelRoute            `json:"modelRoutes"`
 	Skills           []SkillBinding          `json:"skills"`
+	SkillSchemas     []SkillSchema           `json:"skillSchemas"`
 	RequestLogs      []RequestLog            `json:"requestLogs"`
 	Plans            []BillingPlan           `json:"plans"`
 	Usage            []UsageRecord           `json:"usage"`
@@ -336,6 +355,52 @@ func NewSeedStore() *Store {
 		skills: []SkillBinding{
 			{ID: "skill_search", Name: "search-knowledge", Protocol: "MCP", Route: "/api/v1/skills/search", Timeout: "8s", SchemaVersion: "0.1", Status: "Published", UpdatedAt: now},
 			{ID: "skill_message", Name: "send-message", Protocol: "HTTP", Route: "/api/v1/skills/send-message", Timeout: "8s", SchemaVersion: "0.1", Status: "Draft", UpdatedAt: now},
+		},
+		skillSchemas: []SkillSchema{
+			{
+				ID:          "schema_search_knowledge_0_1",
+				SkillName:   "search-knowledge",
+				Version:     "0.1",
+				Description: "知识检索 Skill 输入契约",
+				RequiredFields: []SkillSchemaField{
+					{Name: "query", Type: "string", Description: "用户问题或检索关键词"},
+				},
+				OptionalFields: []SkillSchemaField{
+					{Name: "topK", Type: "number", Description: "返回候选数量"},
+				},
+				Status:    "Published",
+				UpdatedAt: now,
+			},
+			{
+				ID:          "schema_send_message_0_1",
+				SkillName:   "send-message",
+				Version:     "0.1",
+				Description: "发送通知/消息 Skill 输入契约",
+				RequiredFields: []SkillSchemaField{
+					{Name: "target", Type: "string", Description: "接收方标识"},
+					{Name: "content", Type: "string", Description: "消息正文"},
+				},
+				OptionalFields: []SkillSchemaField{
+					{Name: "channel", Type: "string", Description: "发送渠道"},
+				},
+				Status:    "Draft",
+				UpdatedAt: now,
+			},
+			{
+				ID:          "schema_generate_image_0_2",
+				SkillName:   "generate-image",
+				Version:     "0.2",
+				Description: "图像生成 Skill 输入契约",
+				RequiredFields: []SkillSchemaField{
+					{Name: "prompt", Type: "string", Description: "图像提示词"},
+				},
+				OptionalFields: []SkillSchemaField{
+					{Name: "size", Type: "string", Description: "输出尺寸"},
+					{Name: "style", Type: "string", Description: "风格预设"},
+				},
+				Status:    "Published",
+				UpdatedAt: now,
+			},
 		},
 		requestLogs: []RequestLog{
 			{ID: "req_chat", Request: "POST /llm/chat", Consumer: "customer-service-agent", Latency: "76ms", Result: "200", Status: "Success", CreatedAt: now},
@@ -775,6 +840,28 @@ func (s *Store) ListSkills() []SkillBinding {
 	return append([]SkillBinding(nil), s.skills...)
 }
 
+func (s *Store) ListSkillSchemas() []SkillSchema {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return cloneSkillSchemas(s.skillSchemas)
+}
+
+func (s *Store) FindSkillSchema(name, version string) (SkillSchema, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	name = strings.TrimSpace(name)
+	version = strings.TrimSpace(version)
+	if version == "" {
+		version = "0.1"
+	}
+	for _, item := range s.skillSchemas {
+		if strings.EqualFold(item.SkillName, name) && item.Version == version {
+			return cloneSkillSchema(item), true
+		}
+	}
+	return SkillSchema{}, false
+}
+
 func (s *Store) CreateSkillBinding(name, protocol, route, timeout string, schemaVersion ...string) SkillBinding {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -1118,6 +1205,7 @@ func (s *Store) Snapshot() PlatformSnapshot {
 		Routes:       cloneGatewayRoutes(s.routes),
 		ModelRoutes:  append([]ModelRoute(nil), s.modelRoutes...),
 		Skills:       append([]SkillBinding(nil), s.skills...),
+		SkillSchemas: cloneSkillSchemas(s.skillSchemas),
 		RequestLogs:  append([]RequestLog(nil), s.requestLogs...),
 		Plans:        append([]BillingPlan(nil), s.plans...),
 		Usage:        append([]UsageRecord(nil), s.usageRecords...),
@@ -1517,6 +1605,20 @@ func cloneGatewayRoutes(items []GatewayRoute) []GatewayRoute {
 
 func cloneGatewayRoute(item GatewayRoute) GatewayRoute {
 	item.UpstreamWeights = cloneIntMap(item.UpstreamWeights)
+	return item
+}
+
+func cloneSkillSchemas(items []SkillSchema) []SkillSchema {
+	cloned := make([]SkillSchema, len(items))
+	for index, item := range items {
+		cloned[index] = cloneSkillSchema(item)
+	}
+	return cloned
+}
+
+func cloneSkillSchema(item SkillSchema) SkillSchema {
+	item.RequiredFields = append([]SkillSchemaField(nil), item.RequiredFields...)
+	item.OptionalFields = append([]SkillSchemaField(nil), item.OptionalFields...)
 	return item
 }
 

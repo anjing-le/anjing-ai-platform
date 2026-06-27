@@ -39,6 +39,10 @@ type SkillRepository interface {
 	ListSkills(ctx context.Context) ([]store.SkillBinding, error)
 }
 
+type SkillSchemaRepository interface {
+	ListSkillSchemas(ctx context.Context) ([]store.SkillSchema, error)
+}
+
 type RequestLogRepository interface {
 	ListRequestLogs(ctx context.Context) ([]store.RequestLog, error)
 }
@@ -80,6 +84,7 @@ type Sources struct {
 	Routes           RouteRepository
 	ModelRoutes      ModelRouteRepository
 	Skills           SkillRepository
+	SkillSchemas     SkillSchemaRepository
 	RequestLogs      RequestLogRepository
 	Plans            PlanRepository
 	Usage            UsageRepository
@@ -138,6 +143,10 @@ func (repo Repository) LoadSnapshot(ctx context.Context) (store.PlatformSnapshot
 	if err != nil {
 		return store.PlatformSnapshot{}, fmt.Errorf("list skills: %w", err)
 	}
+	item.SkillSchemas, err = repo.sources.SkillSchemas.ListSkillSchemas(ctx)
+	if err != nil {
+		return store.PlatformSnapshot{}, fmt.Errorf("list skill schemas: %w", err)
+	}
 	item.RequestLogs, err = repo.sources.RequestLogs.ListRequestLogs(ctx)
 	if err != nil {
 		return store.PlatformSnapshot{}, fmt.Errorf("list request logs: %w", err)
@@ -194,6 +203,8 @@ func missingSource(sources Sources) string {
 		return "modelRoutes"
 	case sources.Skills == nil:
 		return "skills"
+	case sources.SkillSchemas == nil:
+		return "skillSchemas"
 	case sources.RequestLogs == nil:
 		return "requestLogs"
 	case sources.Plans == nil:

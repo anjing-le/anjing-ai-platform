@@ -59,7 +59,7 @@ type routingSkillAdapter struct {
 
 type httpSkillAdapter struct{}
 
-func skillInvokeHandler(skills SkillRepository, recorder InvocationRecorder) http.HandlerFunc {
+func skillInvokeHandler(skills SkillRepository, schemas SkillSchemaRepository, recorder InvocationRecorder) http.HandlerFunc {
 	adapter := routingSkillAdapter{mock: mockSkillAdapter{}, http: httpSkillAdapter{}}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +90,12 @@ func skillInvokeHandler(skills SkillRepository, recorder InvocationRecorder) htt
 			httpjson.NotFound(w, "published skill binding not found")
 			return
 		}
-		if err := validateSkillInput(skill, req.Input); err != nil {
+		if err := validateSkillInput(r.Context(), schemas, skill, req.Input); err != nil {
+			var loadErr skillSchemaLoadError
+			if errors.As(err, &loadErr) {
+				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+				return
+			}
 			httpjson.BadRequest(w, err.Error())
 			return
 		}

@@ -63,7 +63,9 @@ func main() {
 		gatewayRepos := gateway.NewMemoryRepositories(st)
 		gatewayRepos.Routes = gateway.NewPostgresRouteRepository(pool)
 		gatewayRepos.ModelRoutes = gateway.NewPostgresModelRouteRepository(pool)
-		gatewayRepos.Skills = gateway.NewPostgresSkillRepository(pool)
+		skillRepo := gateway.NewPostgresSkillRepository(pool)
+		gatewayRepos.Skills = skillRepo
+		gatewayRepos.SkillSchemas = skillRepo
 		gatewayRepos.RequestLogs = gateway.NewPostgresRequestLogRepository(pool)
 		gatewayRepos.Invocations = gateway.NewPostgresInvocationRecorder(pool)
 		gatewayRepos.ProxyRequests = gateway.NewPostgresProxyRecorder(pool)
@@ -91,6 +93,7 @@ func main() {
 			Routes:           gatewayRepos.Routes,
 			ModelRoutes:      gatewayRepos.ModelRoutes,
 			Skills:           gatewayRepos.Skills,
+			SkillSchemas:     gatewayRepos.SkillSchemas,
 			RequestLogs:      gatewayRepos.RequestLogs,
 			Plans:            billingRepos.Plans,
 			Usage:            billingRepos.Usage,

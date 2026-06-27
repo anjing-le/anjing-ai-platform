@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  fetchSkillSchemas,
   loadCurrentSession,
   loadPlatformSnapshot,
   loginSession,
@@ -34,6 +35,7 @@ const snapshot: PlatformSnapshot = {
   routes: [],
   modelRoutes: [],
   skills: [],
+  skillSchemas: [],
   requestLogs: [],
   plans: [],
   usage: [],
@@ -88,7 +90,7 @@ describe("console API client", () => {
 
     const result = await loadPlatformSnapshot("operator");
 
-    expect(result).toMatchObject({ ok: false, loaded: 0, failed: 14, source: "none" });
+    expect(result).toMatchObject({ ok: false, loaded: 0, failed: 15, source: "none" });
     expect(result.snapshot).toEqual({});
     expect(fetchMock.mock.calls[0][0]).toBe("/api/ops/platform-snapshot");
   });
@@ -221,5 +223,30 @@ describe("console API client", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/skills/update");
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
     expect(fetchMock.mock.calls[0][1]?.body).toBe(JSON.stringify(input));
+  });
+
+  it("loads skill schemas", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        success: true,
+        data: [
+          {
+            id: "schema_search_v01",
+            skillName: "search-knowledge",
+            version: "0.1",
+            description: "Search input contract",
+            requiredFields: [{ name: "query", type: "string", description: "Search query" }],
+            optionalFields: [],
+            status: "Published",
+            updatedAt: "today",
+          },
+        ],
+      }),
+    );
+
+    const result = await fetchSkillSchemas("developer");
+
+    expect(result[0].skillName).toBe("search-knowledge");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/skill-schemas");
   });
 });

@@ -32,6 +32,7 @@ func main() {
 		repos.Todos = ops.NewPostgresTodoRepository(pool)
 		repos.Health = ops.NewPostgresHealthRepository(pool)
 		repos.Audit = ops.NewPostgresAuditRepository(pool)
+		skillRepo := gateway.NewPostgresSkillRepository(pool)
 		repos.Snapshot = platformsnapshot.NewRepository(platformsnapshot.Sources{
 			Users:            control.NewPostgresUserRepository(pool),
 			Applications:     control.NewPostgresApplicationRepository(pool),
@@ -40,7 +41,8 @@ func main() {
 			Credentials:      control.NewPostgresCredentialRepository(pool),
 			Routes:           gateway.NewPostgresRouteRepository(pool),
 			ModelRoutes:      gateway.NewPostgresModelRouteRepository(pool),
-			Skills:           gateway.NewPostgresSkillRepository(pool),
+			Skills:           skillRepo,
+			SkillSchemas:     skillRepo,
 			RequestLogs:      gateway.NewPostgresRequestLogRepository(pool),
 			Plans:            billing.NewPostgresPlanRepository(pool),
 			Usage:            billing.NewPostgresUsageRepository(pool),
