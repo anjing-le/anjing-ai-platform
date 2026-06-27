@@ -22,6 +22,7 @@
     "dev:console": "pnpm --filter @anjing-ai-platform/console dev",
     "build:console": "pnpm --filter @anjing-ai-platform/console build",
     "preview:console": "pnpm --filter @anjing-ai-platform/console preview",
+    "screenshots:console": "node scripts/capture-console-screenshots.mjs",
     "test:console": "pnpm --filter @anjing-ai-platform/console test",
     "build:go": "go build ./cmd/...",
     "test:go": "go test ./...",

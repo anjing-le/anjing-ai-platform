@@ -2,6 +2,8 @@
 
 这个目录放仓库级质量门禁脚本。它们都通过根目录 `package.json` 暴露为 `pnpm verify:*` 命令，并被统一入口 `pnpm verify` 串起来。
 
+另外有一个不接入 `pnpm verify` 的交付辅助脚本：`scripts/capture-console-screenshots.mjs` 对应 `pnpm screenshots:console`，用于启动本地 `platform-all` 并生成 README / docs 使用的控制台截图。
+
 | Script | NPM command | Purpose |
 | --- | --- | --- |
 | `scripts/check-workspace.mjs` | `pnpm verify:workspace` | 检查 pnpm workspace、正式 console 包名和根脚本 filter 是否一致。 |

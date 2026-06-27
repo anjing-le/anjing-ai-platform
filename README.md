@@ -20,6 +20,18 @@ Anjing AI Infra Platform 是面向 AI 应用、Agent、内部工具和业务系�
 
 后续路线图见 `docs/roadmap/ROADMAP.md`。
 
+## 控制台预览
+
+![后台首页](docs/assets/screenshots/console-home.png)
+
+![网关与模型](docs/assets/screenshots/gateway-model.png)
+
+更多模块截图见 `docs/architecture/console-screenshots.md`。更新截图可以运行：
+
+```bash
+pnpm screenshots:console
+```
+
 ## 当前内容
 
 - `apps/console`: React + TypeScript + Vite 正式后台控制台
@@ -41,6 +53,7 @@ Anjing AI Infra Platform 是面向 AI 应用、Agent、内部工具和业务系�
 - OpenAPI 合约：见 `contracts/openapi/platform-api.yaml`
 - 后端规划：见 `docs/architecture/backend-services.md`
 - 前端结构：见 `docs/architecture/frontend-structure.md`
+- 控制台截图：见 `docs/architecture/console-screenshots.md`
 - 技术基线：见 `docs/architecture/dvskyfolding-baseline.md`
 - 质量门禁：见 `docs/architecture/quality-gates.md`
 - 质量脚本：见 `scripts/README.md`
