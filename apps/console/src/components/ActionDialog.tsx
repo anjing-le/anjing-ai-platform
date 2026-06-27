@@ -5,6 +5,8 @@ export type ActionMode = "iam" | "gateway" | "quota" | "docs";
 
 export type ActionValues = Record<string, string>;
 
+type SelectOption = string | { label: string; value: string };
+
 interface ActionDialogProps {
   busy: boolean;
   error: string;
@@ -25,15 +27,19 @@ const actionCopy: Record<
           label: string;
           name: string;
           placeholder: string;
+          help?: string;
           required?: boolean;
+          span?: "full";
           type?: string;
         }
       | {
           kind: "select";
           label: string;
           name: string;
-          options: string[];
+          options: SelectOption[];
+          help?: string;
           required?: boolean;
+          span?: "full";
         }
     >;
   }
@@ -69,7 +75,7 @@ const actionCopy: Record<
   },
   gateway: {
     title: "新增路由",
-    description: "先创建一条 API gateway 路由，后续再接模型路由、限流和鉴权策略。",
+    description: "创建一条统一入口路由，并同时声明负载策略、权重和灰度规则。",
     submit: "创建路由",
     fields: [
       {
@@ -77,14 +83,18 @@ const actionCopy: Record<
         label: "Route",
         name: "route",
         placeholder: "/api/v1/agents/**",
+        help: "对外暴露的 API 路径，支持 V1 通配符。",
         required: true,
+        span: "full",
       },
       {
         kind: "input",
         label: "Upstream",
         name: "upstream",
-        placeholder: "gateway-api",
+        placeholder: "https://primary.internal, https://fallback.internal",
+        help: "一个或多个 http/https 上游，多个候选用逗号、分号或换行分隔。",
         required: true,
+        span: "full",
       },
       {
         kind: "input",
@@ -92,6 +102,47 @@ const actionCopy: Record<
         name: "limit",
         placeholder: "600/min",
         required: true,
+      },
+      {
+        kind: "select",
+        label: "Strategy",
+        name: "strategy",
+        options: [
+          { label: "Ordered · 主上游优先", value: "ordered" },
+          { label: "Round robin · 轮询", value: "round_robin" },
+          { label: "Weighted · 权重", value: "weighted" },
+        ],
+        required: true,
+      },
+      {
+        kind: "input",
+        label: "Weights",
+        name: "upstreamWeights",
+        placeholder: "https://primary.internal=80, https://fallback.internal=20",
+        help: "仅 Weighted 策略使用；key 必须和 Upstream 候选完全一致。",
+        span: "full",
+      },
+      {
+        kind: "input",
+        label: "Canary Header",
+        name: "canaryHeader",
+        placeholder: "X-Release-Cohort",
+        help: "填写后，命中该 header 的请求会优先走 Canary Upstream。",
+      },
+      {
+        kind: "input",
+        label: "Canary Value",
+        name: "canaryValue",
+        placeholder: "beta",
+        help: "可选；留空表示 header 非空即可命中。",
+      },
+      {
+        kind: "input",
+        label: "Canary Upstream",
+        name: "canaryUpstream",
+        placeholder: "https://canary.internal",
+        help: "启用灰度时必填，必须是可代理的 http/https 地址。",
+        span: "full",
       },
     ],
   },
@@ -200,7 +251,7 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
         aria-describedby="action-dialog-description"
         aria-labelledby="action-dialog-title"
         aria-modal="true"
-        className="action-dialog"
+        className={`action-dialog action-dialog--${mode}`}
         role="dialog"
       >
         <header>
@@ -214,9 +265,9 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
           </button>
         </header>
 
-        <form aria-busy={busy} className="action-form" onSubmit={handleSubmit}>
+        <form aria-busy={busy} className={`action-form action-form--${mode}`} onSubmit={handleSubmit}>
           {copy.fields.map((field, index) => (
-            <label key={field.name}>
+            <label className={field.span === "full" ? "action-form__field action-form__field--full" : "action-form__field"} key={field.name}>
               <span>{field.label}</span>
               {field.kind === "input" ? (
                 <input
@@ -229,10 +280,13 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
               ) : (
                 <select autoFocus={index === 0} name={field.name} required={field.required}>
                   {field.options.map((option) => (
-                    <option key={option}>{option}</option>
+                    <option key={typeof option === "string" ? option : option.value} value={typeof option === "string" ? option : option.value}>
+                      {typeof option === "string" ? option : option.label}
+                    </option>
                   ))}
                 </select>
               )}
+              {field.help ? <small>{field.help}</small> : null}
             </label>
           ))}
 

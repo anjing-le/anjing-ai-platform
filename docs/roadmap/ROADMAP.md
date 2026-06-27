@@ -45,6 +45,7 @@
 - [x] 为网关增加 route 发布前治理预检最小闭环。
 - [x] 为网关增加多 upstream 候选、`ordered` / `round_robin` / `weighted` 负载策略和请求级 canary 灰度最小闭环。
 - [x] 为网关增加 route 级策略、权重和 canary 灰度持久化配置。
+- [x] 为控制台新增路由表单接入 route 级策略、权重和 canary 配置。
 - [ ] 为网关增加故障隔离和更细粒度治理。
 - [x] 为 LLM 调用增加 provider adapter、模型路由策略和 token 用量计量最小闭环。
 - [x] 为 LLM 调用增加 SSE 流式输出最小闭环。

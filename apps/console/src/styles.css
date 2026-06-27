@@ -2754,11 +2754,16 @@ tbody tr.is-selected td:first-child {
 
 .action-dialog {
   width: min(520px, 100%);
+  max-height: calc(100vh - 36px);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.24);
+}
+
+.action-dialog--gateway {
+  width: min(680px, 100%);
 }
 
 .action-dialog header {
@@ -2801,12 +2806,24 @@ tbody tr.is-selected td:first-child {
 .action-form {
   display: grid;
   gap: 14px;
+  max-height: min(680px, calc(100vh - 190px));
+  overflow: auto;
   padding: 18px 20px 20px;
 }
 
-.action-form label {
+.action-form--gateway {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.action-form label,
+.action-form__field {
   display: grid;
+  min-width: 0;
   gap: 7px;
+}
+
+.action-form__field--full {
+  grid-column: 1 / -1;
 }
 
 .action-form label span {
@@ -2826,6 +2843,13 @@ tbody tr.is-selected td:first-child {
   color: var(--ink);
 }
 
+.action-form small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
 .action-form input:focus,
 .action-form select:focus {
   border-color: var(--ink);
@@ -2843,6 +2867,7 @@ tbody tr.is-selected td:first-child {
 
 .action-form footer {
   display: flex;
+  grid-column: 1 / -1;
   justify-content: flex-end;
   gap: 10px;
   padding-top: 6px;
@@ -3458,6 +3483,10 @@ tbody tr.is-selected td:first-child {
 
   .quickstart-snippet code {
     font-size: 0.7rem;
+  }
+
+  .action-form--gateway {
+    grid-template-columns: 1fr;
   }
 
   .action-form footer,

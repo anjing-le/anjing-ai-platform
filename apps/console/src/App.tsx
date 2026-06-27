@@ -60,6 +60,7 @@ import {
   visibleNavItems,
 } from "./lib/access";
 import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
+import { buildGatewayRouteCreateInput } from "./lib/routePolicy";
 import type {
   ConsoleRoute,
   MetricItem,
@@ -413,15 +414,7 @@ function App() {
       }
 
       if (actionMode === "gateway") {
-        const route = await createRoute(
-          {
-            route: values.route,
-            strategy: "ordered",
-            upstream: values.upstream,
-            limit: values.limit,
-          },
-          role,
-        );
+        const route = await createRoute(buildGatewayRouteCreateInput(values), role);
         setSelectedRouteId(route.id);
         setNotice(`已创建路由：${route.route}`);
       }
