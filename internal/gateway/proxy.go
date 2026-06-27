@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
@@ -19,15 +20,22 @@ const (
 	maxProxyTimeout           = 30 * time.Second
 	maxProxyRetries           = 3
 	maxProxyResponseBodyBytes = 1 << 20
+	defaultProxyStrategy      = "ordered"
+	roundRobinProxyStrategy   = "round_robin"
 )
 
-var errActiveRouteNotFound = errors.New("active gateway route not found")
+var (
+	errActiveRouteNotFound     = errors.New("active gateway route not found")
+	gatewayProxyStrategyCursor atomic.Uint64
+)
 
 type gatewayProxyRequest struct {
 	Route            string            `json:"route"`
 	Method           string            `json:"method"`
 	Upstream         string            `json:"upstream"`
+	Upstreams        []string          `json:"upstreams,omitempty"`
 	FallbackUpstream string            `json:"fallbackUpstream"`
+	Strategy         string            `json:"strategy,omitempty"`
 	TimeoutMS        int               `json:"timeoutMs"`
 	Retries          int               `json:"retries"`
 	Headers          map[string]string `json:"headers"`
@@ -36,19 +44,23 @@ type gatewayProxyRequest struct {
 }
 
 type gatewayProxyResponse struct {
-	Route      string              `json:"route"`
-	Upstream   string              `json:"upstream"`
-	StatusCode int                 `json:"statusCode"`
-	Attempts   int                 `json:"attempts"`
-	Fallback   bool                `json:"fallback"`
-	DurationMS int64               `json:"durationMs"`
-	Headers    map[string][]string `json:"headers"`
-	Body       string              `json:"body"`
-	Streamed   bool                `json:"-"`
+	Route              string              `json:"route"`
+	Upstream           string              `json:"upstream"`
+	Strategy           string              `json:"strategy,omitempty"`
+	CandidateUpstreams []string            `json:"candidateUpstreams,omitempty"`
+	StatusCode         int                 `json:"statusCode"`
+	Attempts           int                 `json:"attempts"`
+	Fallback           bool                `json:"fallback"`
+	DurationMS         int64               `json:"durationMs"`
+	Headers            map[string][]string `json:"headers"`
+	Body               string              `json:"body"`
+	Streamed           bool                `json:"-"`
 }
 
 type resolvedProxyRoute struct {
 	Upstream     string
+	Upstreams    []string
+	Strategy     string
 	RoutePattern string
 	Limit        string
 }
@@ -98,7 +110,7 @@ func proxyHandlerWithGovernance(routes RouteRepository, recorder ProxyRecorder, 
 			return
 		}
 
-		resolved, err := resolveProxyRoute(r.Context(), routes, req.Route, req.Upstream)
+		resolved, err := resolveProxyRoute(r.Context(), routes, req.Route, req.Upstream, req.Upstreams, req.Strategy)
 		if err != nil {
 			if errors.Is(err, errActiveRouteNotFound) {
 				httpjson.NotFound(w, err.Error())
@@ -110,14 +122,25 @@ func proxyHandlerWithGovernance(routes RouteRepository, recorder ProxyRecorder, 
 
 		req.Method = method
 		req.Upstream = resolved.Upstream
+		req.Upstreams, err = buildGatewayProxyAttemptUpstreams(resolved.Upstreams, req.FallbackUpstream)
+		if err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if len(req.Upstreams) > 0 {
+			req.Upstream = req.Upstreams[0]
+		}
+		req.Strategy = resolved.Strategy
 		circuitKey := proxyCircuitBreakerKey(req, resolved)
 		if decision := limiter.Allow(r.Context(), resolved.RoutePattern, resolved.Limit); !decision.Allowed {
 			w.Header().Set("Retry-After", strconv.Itoa(proxyRetryAfterSeconds(decision.RetryAfter)))
 			result := gatewayProxyResponse{
-				Route:      req.Route,
-				Upstream:   req.Upstream,
-				StatusCode: http.StatusTooManyRequests,
-				Headers:    map[string][]string{},
+				Route:              req.Route,
+				Upstream:           req.Upstream,
+				Strategy:           req.Strategy,
+				CandidateUpstreams: append([]string(nil), req.Upstreams...),
+				StatusCode:         http.StatusTooManyRequests,
+				Headers:            map[string][]string{},
 			}
 			if logErr := recordProxyRequest(r.Context(), recorder, req, result, "RateLimited"); logErr != nil {
 				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", logErr.Error())
@@ -129,10 +152,12 @@ func proxyHandlerWithGovernance(routes RouteRepository, recorder ProxyRecorder, 
 		if decision := breaker.Allow(circuitKey); !decision.Allowed {
 			w.Header().Set("Retry-After", strconv.Itoa(proxyRetryAfterSeconds(decision.RetryAfter)))
 			result := gatewayProxyResponse{
-				Route:      req.Route,
-				Upstream:   req.Upstream,
-				StatusCode: http.StatusServiceUnavailable,
-				Headers:    map[string][]string{},
+				Route:              req.Route,
+				Upstream:           req.Upstream,
+				Strategy:           req.Strategy,
+				CandidateUpstreams: append([]string(nil), req.Upstreams...),
+				StatusCode:         http.StatusServiceUnavailable,
+				Headers:            map[string][]string{},
 			}
 			if logErr := recordProxyRequest(r.Context(), recorder, req, result, "CircuitOpen"); logErr != nil {
 				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", logErr.Error())
@@ -210,10 +235,7 @@ func executeGatewayProxy(ctx context.Context, req gatewayProxyRequest) (gatewayP
 	timeout := normalizeProxyTimeout(req.TimeoutMS)
 	retries := normalizeProxyRetries(req.Retries)
 	client := http.Client{Timeout: timeout}
-	upstreams := []string{req.Upstream}
-	if strings.TrimSpace(req.FallbackUpstream) != "" {
-		upstreams = append(upstreams, strings.TrimSpace(req.FallbackUpstream))
-	}
+	upstreams := gatewayProxyAttemptUpstreams(req)
 
 	var result gatewayProxyResponse
 	var lastErr error
@@ -229,6 +251,8 @@ func executeGatewayProxy(ctx context.Context, req gatewayProxyRequest) (gatewayP
 			response.Attempts = attempts
 			response.Fallback = index > 0
 			response.DurationMS = time.Since(started).Milliseconds()
+			response.Strategy = req.Strategy
+			response.CandidateUpstreams = append([]string(nil), upstreams...)
 			result = response
 			if err != nil {
 				lastErr = err
@@ -244,11 +268,13 @@ func executeGatewayProxy(ctx context.Context, req gatewayProxyRequest) (gatewayP
 
 	if result.Route == "" {
 		result = gatewayProxyResponse{
-			Route:      req.Route,
-			Upstream:   req.Upstream,
-			Attempts:   attempts,
-			DurationMS: time.Since(started).Milliseconds(),
-			Headers:    map[string][]string{},
+			Route:              req.Route,
+			Upstream:           req.Upstream,
+			Strategy:           req.Strategy,
+			CandidateUpstreams: append([]string(nil), upstreams...),
+			Attempts:           attempts,
+			DurationMS:         time.Since(started).Milliseconds(),
+			Headers:            map[string][]string{},
 		}
 	}
 	if lastErr == nil {
@@ -260,23 +286,24 @@ func executeGatewayProxy(ctx context.Context, req gatewayProxyRequest) (gatewayP
 func sendGatewayProxyAttempt(ctx context.Context, client http.Client, req gatewayProxyRequest, upstream string) (gatewayProxyResponse, error) {
 	httpReq, err := newGatewayProxyHTTPRequest(ctx, req, upstream)
 	if err != nil {
-		return gatewayProxyResponse{Route: req.Route, Upstream: upstream, Headers: map[string][]string{}}, err
+		return gatewayProxyResponse{Route: req.Route, Upstream: upstream, Strategy: req.Strategy, Headers: map[string][]string{}}, err
 	}
 
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return gatewayProxyResponse{Route: req.Route, Upstream: upstream, Headers: map[string][]string{}}, err
+		return gatewayProxyResponse{Route: req.Route, Upstream: upstream, Strategy: req.Strategy, Headers: map[string][]string{}}, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxProxyResponseBodyBytes))
 	if err != nil {
-		return gatewayProxyResponse{Route: req.Route, Upstream: upstream, StatusCode: resp.StatusCode, Headers: cloneHeader(resp.Header)}, err
+		return gatewayProxyResponse{Route: req.Route, Upstream: upstream, Strategy: req.Strategy, StatusCode: resp.StatusCode, Headers: cloneHeader(resp.Header)}, err
 	}
 
 	return gatewayProxyResponse{
 		Route:      req.Route,
 		Upstream:   upstream,
+		Strategy:   req.Strategy,
 		StatusCode: resp.StatusCode,
 		Headers:    cloneHeader(resp.Header),
 		Body:       string(body),
@@ -288,10 +315,7 @@ func streamGatewayProxy(ctx context.Context, w http.ResponseWriter, req gatewayP
 	timeout := normalizeProxyTimeout(req.TimeoutMS)
 	retries := normalizeProxyRetries(req.Retries)
 	client := http.Client{Timeout: timeout}
-	upstreams := []string{req.Upstream}
-	if strings.TrimSpace(req.FallbackUpstream) != "" {
-		upstreams = append(upstreams, strings.TrimSpace(req.FallbackUpstream))
-	}
+	upstreams := gatewayProxyAttemptUpstreams(req)
 
 	var result gatewayProxyResponse
 	var lastErr error
@@ -304,11 +328,13 @@ func streamGatewayProxy(ctx context.Context, w http.ResponseWriter, req gatewayP
 		for attempt := 0; attempt < attemptLimit; attempt++ {
 			attempts++
 			response := gatewayProxyResponse{
-				Route:    req.Route,
-				Upstream: upstream,
-				Attempts: attempts,
-				Fallback: index > 0,
-				Headers:  map[string][]string{},
+				Route:              req.Route,
+				Upstream:           upstream,
+				Strategy:           req.Strategy,
+				CandidateUpstreams: append([]string(nil), upstreams...),
+				Attempts:           attempts,
+				Fallback:           index > 0,
+				Headers:            map[string][]string{},
 			}
 			httpReq, err := newGatewayProxyHTTPRequest(ctx, req, upstream)
 			if err != nil {
@@ -348,11 +374,13 @@ func streamGatewayProxy(ctx context.Context, w http.ResponseWriter, req gatewayP
 
 	if result.Route == "" {
 		result = gatewayProxyResponse{
-			Route:      req.Route,
-			Upstream:   req.Upstream,
-			Attempts:   attempts,
-			DurationMS: time.Since(started).Milliseconds(),
-			Headers:    map[string][]string{},
+			Route:              req.Route,
+			Upstream:           req.Upstream,
+			Strategy:           req.Strategy,
+			CandidateUpstreams: append([]string(nil), upstreams...),
+			Attempts:           attempts,
+			DurationMS:         time.Since(started).Milliseconds(),
+			Headers:            map[string][]string{},
 		}
 	}
 	if lastErr == nil {
@@ -407,14 +435,19 @@ func copyProxyResponseHeaders(dst http.Header, src http.Header) {
 	}
 }
 
-func resolveProxyRoute(ctx context.Context, routes RouteRepository, route string, upstreamOverride string) (resolvedProxyRoute, error) {
-	upstream := strings.TrimSpace(upstreamOverride)
-	if upstream != "" {
-		validated, err := validateProxyUpstream(upstream)
+func resolveProxyRoute(ctx context.Context, routes RouteRepository, route string, upstreamOverride string, upstreamOverrides []string, strategyOverride string) (resolvedProxyRoute, error) {
+	strategy, err := normalizeGatewayProxyStrategy(strategyOverride)
+	if err != nil {
+		return resolvedProxyRoute{}, err
+	}
+	upstreams := splitGatewayProxyUpstreams(append([]string{upstreamOverride}, upstreamOverrides...)...)
+	if len(upstreams) > 0 {
+		validated, err := validateGatewayProxyUpstreams(upstreams)
 		if err != nil {
 			return resolvedProxyRoute{}, err
 		}
-		return resolvedProxyRoute{Upstream: validated}, nil
+		ordered := orderGatewayProxyUpstreams(validated, strategy)
+		return resolvedProxyRoute{Upstream: ordered[0], Upstreams: ordered, Strategy: strategy}, nil
 	}
 
 	items, err := routes.ListRoutes(ctx)
@@ -426,18 +459,119 @@ func resolveProxyRoute(ctx context.Context, routes RouteRepository, route string
 			continue
 		}
 		if routeMatches(item.Route, route) {
-			validated, err := validateProxyUpstream(item.Upstream)
+			validated, err := validateGatewayProxyUpstreams(splitGatewayProxyUpstreams(item.Upstream))
 			if err != nil {
 				return resolvedProxyRoute{}, err
 			}
+			ordered := orderGatewayProxyUpstreams(validated, strategy)
 			return resolvedProxyRoute{
-				Upstream:     validated,
+				Upstream:     ordered[0],
+				Upstreams:    ordered,
+				Strategy:     strategy,
 				RoutePattern: item.Route,
 				Limit:        item.Limit,
 			}, nil
 		}
 	}
 	return resolvedProxyRoute{}, errActiveRouteNotFound
+}
+
+func normalizeGatewayProxyStrategy(strategy string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(strategy)) {
+	case "", defaultProxyStrategy, "primary":
+		return defaultProxyStrategy, nil
+	case roundRobinProxyStrategy, "round-robin", "roundrobin":
+		return roundRobinProxyStrategy, nil
+	default:
+		return "", errors.New("strategy must be ordered or round_robin")
+	}
+}
+
+func splitGatewayProxyUpstreams(values ...string) []string {
+	seen := map[string]struct{}{}
+	upstreams := []string{}
+	for _, value := range values {
+		for _, upstream := range strings.FieldsFunc(value, func(r rune) bool {
+			return r == ',' || r == '\n' || r == '\r' || r == '\t' || r == ';'
+		}) {
+			upstream = strings.TrimSpace(upstream)
+			if upstream == "" {
+				continue
+			}
+			if _, ok := seen[upstream]; ok {
+				continue
+			}
+			seen[upstream] = struct{}{}
+			upstreams = append(upstreams, upstream)
+		}
+	}
+	return upstreams
+}
+
+func validateGatewayProxyUpstreams(upstreams []string) ([]string, error) {
+	if len(upstreams) == 0 {
+		return nil, errors.New("upstream is required")
+	}
+	validated := make([]string, 0, len(upstreams))
+	for _, upstream := range upstreams {
+		validatedUpstream, err := validateProxyUpstream(upstream)
+		if err != nil {
+			return nil, err
+		}
+		validated = append(validated, validatedUpstream)
+	}
+	return validated, nil
+}
+
+func orderGatewayProxyUpstreams(upstreams []string, strategy string) []string {
+	ordered := append([]string(nil), upstreams...)
+	if len(ordered) <= 1 || strategy != roundRobinProxyStrategy {
+		return ordered
+	}
+	offset := int(gatewayProxyStrategyCursor.Add(1)-1) % len(ordered)
+	return append(ordered[offset:], ordered[:offset]...)
+}
+
+func buildGatewayProxyAttemptUpstreams(primary []string, fallback string) ([]string, error) {
+	upstreams := appendGatewayProxyUpstreams(nil, primary...)
+	fallbackUpstreams := splitGatewayProxyUpstreams(fallback)
+	if len(fallbackUpstreams) > 0 {
+		validated, err := validateGatewayProxyUpstreams(fallbackUpstreams)
+		if err != nil {
+			return nil, err
+		}
+		upstreams = appendGatewayProxyUpstreams(upstreams, validated...)
+	}
+	if len(upstreams) == 0 {
+		return nil, errors.New("upstream is required")
+	}
+	return upstreams, nil
+}
+
+func gatewayProxyAttemptUpstreams(req gatewayProxyRequest) []string {
+	upstreams := appendGatewayProxyUpstreams(nil, req.Upstreams...)
+	if len(upstreams) == 0 {
+		upstreams = appendGatewayProxyUpstreams(upstreams, req.Upstream)
+	}
+	upstreams = appendGatewayProxyUpstreams(upstreams, splitGatewayProxyUpstreams(req.FallbackUpstream)...)
+	return upstreams
+}
+
+func appendGatewayProxyUpstreams(base []string, extras ...string) []string {
+	seen := make(map[string]struct{}, len(base)+len(extras))
+	result := make([]string, 0, len(base)+len(extras))
+	for _, upstream := range append(append([]string(nil), base...), extras...) {
+		upstream = strings.TrimSpace(upstream)
+		if upstream == "" {
+			continue
+		}
+		if _, ok := seen[upstream]; ok {
+			continue
+		}
+		seen[upstream] = struct{}{}
+		result = append(result, upstream)
+	}
+	return result
 }
 
 func validateProxyUpstream(upstream string) (string, error) {

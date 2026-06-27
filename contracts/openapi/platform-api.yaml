@@ -1112,10 +1112,11 @@ paths:
       summary: Proxy an HTTP request through a configured gateway route or explicit upstream.
       description: >
         Executes the V1 gateway runtime path with timeout, bounded retries,
-        optional fallback upstream, published route rate limits, route-level
-        circuit breaker cooldown and request log recording. When request
-        `stream` is true, the endpoint returns the upstream response stream
-        directly instead of the JSON envelope.
+        optional upstream candidates, ordered or round-robin strategy, fallback
+        upstream, published route rate limits, route-level circuit breaker
+        cooldown and request log recording. When request `stream` is true, the
+        endpoint returns the upstream response stream directly instead of the
+        JSON envelope.
       x-anjing-roles: [Administrator, User, Developer]
       requestBody:
         required: true
@@ -2111,6 +2112,7 @@ components:
           type: string
         upstream:
           type: string
+          description: Primary upstream. Multiple candidates can be represented as a comma-separated http/https list in V1.
         auth:
           type: string
         limit:
@@ -2129,6 +2131,7 @@ components:
         upstream:
           type: string
           default: gateway-api
+          description: Primary upstream. Multiple candidates can be represented as a comma-separated http/https list in V1.
         limit:
           type: string
           default: 600/min
@@ -2236,7 +2239,17 @@ components:
           default: POST
         upstream:
           type: string
-          description: Optional explicit http/https upstream. If omitted, the gateway resolves an active route.
+          description: Optional explicit http/https upstream. It can contain a comma-separated candidate list. If omitted, the gateway resolves an active route.
+        upstreams:
+          type: array
+          description: Optional explicit upstream candidate list. Takes precedence over route configuration when provided.
+          items:
+            type: string
+        strategy:
+          type: string
+          enum: [ordered, round_robin]
+          default: ordered
+          description: Candidate upstream selection strategy before retries and fallback handling.
         fallbackUpstream:
           type: string
           description: Optional fallback upstream used after primary retries fail.
@@ -2268,6 +2281,13 @@ components:
           type: string
         upstream:
           type: string
+        strategy:
+          type: string
+          enum: [ordered, round_robin]
+        candidateUpstreams:
+          type: array
+          items:
+            type: string
         statusCode:
           type: integer
         attempts:

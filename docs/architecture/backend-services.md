@@ -304,9 +304,9 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/llm/invoke`
 - `POST /api/gateway/llm/stream`
 
-`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、按已发布 route 的 `limit` 做固定窗口限流、`timeout`、有限 `retry`、`fallback`、route 级熔断冷却、请求日志和审计记录；当请求设置 `stream: true` 时，网关会直接透传上游流式响应。默认限流后端是进程内内存，适合本地轻启动；设置 `ANJING_RATE_LIMIT_BACKEND=redis` 和 `ANJING_REDIS_ADDR` 后，可用 Redis 做多实例共享计数，Redis 不可用时会回退到本机限流。
+`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream`、显式 `upstreams` 或已发布 `route` 解析、按已发布 route 的 `limit` 做固定窗口限流、`timeout`、有限 `retry`、`fallback`、`ordered` / `round_robin` 多 upstream 选择、route 级熔断冷却、请求日志和审计记录；当请求设置 `stream: true` 时，网关会直接透传上游流式响应。route 配置里的 `upstream` 在 V1 可用逗号、分号或换行声明候选列表，便于先保持简单数据模型。默认限流后端是进程内内存，适合本地轻启动；设置 `ANJING_RATE_LIMIT_BACKEND=redis` 和 `ANJING_REDIS_ADDR` 后，可用 Redis 做多实例共享计数，Redis 不可用时会回退到本机限流。
 
-`POST /api/gateway/routes/health-check` 提供 route 级主动健康检查最小闭环：按 route ID 读取配置，对 `http/https` upstream 做单次 HEAD 探测，遇到 405 自动回退 GET，并返回 `Healthy`、`Degraded`、`Unreachable` 或 `Invalid`。结果当前不持久化，主要服务于控制台调试、发布前检查和后续负载策略演进；负载策略和更细粒度治理保留到后续迭代。
+`POST /api/gateway/routes/health-check` 提供 route 级主动健康检查最小闭环：按 route ID 读取配置，对一个或多个 `http/https` upstream 候选做单次 HEAD 探测，遇到 405 自动回退 GET，并返回 `Healthy`、`Degraded`、`Unreachable` 或 `Invalid`。结果当前不持久化，主要服务于控制台调试、发布前检查和后续权重、灰度、故障隔离策略演进。
 
 `POST /api/gateway/routes/preflight` 提供 route 发布前治理预检：在不落库的情况下检查 route pattern、auth policy、rate limit、lifecycle status 和 upstream health，并汇总为 `Pass`、`Warn` 或 `Block`。`Warn` 表示需要人工审查但不阻断，`Block` 表示当前配置不适合进入发布链路；该接口用于后续后台发布按钮、审批流和变更记录的共同前置判断。
 

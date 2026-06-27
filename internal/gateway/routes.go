@@ -407,27 +407,48 @@ func checkGatewayRouteHealth(ctx context.Context, route store.GatewayRoute, time
 		CheckedAt: started.UTC().Format(time.RFC3339),
 	}
 
-	if _, err := validateProxyUpstream(route.Upstream); err != nil {
+	upstreams, err := validateGatewayProxyUpstreams(splitGatewayProxyUpstreams(route.Upstream))
+	if err != nil {
 		result.LatencyMS = time.Since(started).Milliseconds()
 		result.Error = err.Error()
 		return result
 	}
 
-	statusCode, err := probeGatewayRouteUpstream(ctx, route.Upstream, timeout)
-	result.LatencyMS = time.Since(started).Milliseconds()
-	result.StatusCode = statusCode
-	if err != nil {
-		result.Status = "Unreachable"
-		result.Error = err.Error()
-		return result
-	}
-	if statusCode >= http.StatusInternalServerError {
-		result.Status = "Degraded"
-		return result
+	var degraded *gatewayRouteHealthCheckResponse
+	var unreachable *gatewayRouteHealthCheckResponse
+	for _, upstream := range upstreams {
+		probe := result
+		probe.Upstream = upstream
+		statusCode, err := probeGatewayRouteUpstream(ctx, upstream, timeout)
+		probe.LatencyMS = time.Since(started).Milliseconds()
+		probe.StatusCode = statusCode
+		if err != nil {
+			probe.Status = "Unreachable"
+			probe.Error = err.Error()
+			unreachable = &probe
+			continue
+		}
+		if statusCode >= http.StatusInternalServerError {
+			probe.Status = "Degraded"
+			if degraded == nil {
+				degraded = &probe
+			}
+			continue
+		}
+
+		probe.Status = "Healthy"
+		probe.Healthy = true
+		return probe
 	}
 
-	result.Status = "Healthy"
-	result.Healthy = true
+	if degraded != nil {
+		return *degraded
+	}
+	if unreachable != nil {
+		return *unreachable
+	}
+	result.LatencyMS = time.Since(started).Milliseconds()
+	result.Error = "upstream is required"
 	return result
 }
 

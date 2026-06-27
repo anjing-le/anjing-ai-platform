@@ -144,6 +144,35 @@ export interface GatewayRoutePreflight {
   health?: GatewayRouteHealthCheck;
 }
 
+export type GatewayProxyStrategy = "ordered" | "round_robin";
+
+export interface GatewayProxyRequest {
+  route: string;
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  upstream?: string;
+  upstreams?: string[];
+  fallbackUpstream?: string;
+  strategy?: GatewayProxyStrategy;
+  timeoutMs?: number;
+  retries?: number;
+  headers?: Record<string, string>;
+  body?: string;
+  stream?: boolean;
+}
+
+export interface GatewayProxyResponse {
+  route: string;
+  upstream: string;
+  strategy?: GatewayProxyStrategy;
+  candidateUpstreams?: string[];
+  statusCode: number;
+  attempts: number;
+  fallback: boolean;
+  durationMs: number;
+  headers: Record<string, string[]>;
+  body: string;
+}
+
 export interface ModelRoute {
   id: string;
   alias: string;
@@ -512,6 +541,13 @@ export function preflightRoute(id: string, role?: RoleId, timeoutMs = 1000): Pro
   return requestJson<GatewayRoutePreflight>("/api/gateway/routes/preflight", {
     method: "POST",
     body: JSON.stringify({ id, timeoutMs }),
+  }, role);
+}
+
+export function proxyGatewayRequest(input: GatewayProxyRequest, role?: RoleId): Promise<GatewayProxyResponse> {
+  return requestJson<GatewayProxyResponse>("/api/gateway/proxy", {
+    method: "POST",
+    body: JSON.stringify(input),
   }, role);
 }
 

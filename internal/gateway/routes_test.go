@@ -824,6 +824,130 @@ func TestProxyGatewayResolvesPublishedRoute(t *testing.T) {
 	}
 }
 
+func TestProxyGatewayUsesRoundRobinRouteUpstreams(t *testing.T) {
+	st := store.NewSeedStore()
+	firstUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`first`))
+	}))
+	defer firstUpstream.Close()
+	secondUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`second`))
+	}))
+	defer secondUpstream.Close()
+
+	draft := st.CreateRoute("/api/v1/balanced/**", firstUpstream.URL+","+secondUpstream.URL, "100/min")
+	if _, ok := st.PublishRoute(draft.ID); !ok {
+		t.Fatalf("expected route to publish")
+	}
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	proxyOnce := func() struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Upstream           string   `json:"upstream"`
+			Strategy           string   `json:"strategy"`
+			CandidateUpstreams []string `json:"candidateUpstreams"`
+			StatusCode         int      `json:"statusCode"`
+			Attempts           int      `json:"attempts"`
+		} `json:"data"`
+	} {
+		body := bytes.NewBufferString(`{"route":"/api/v1/balanced/ping","method":"GET","strategy":"round_robin","timeoutMs":1000}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+		var payload struct {
+			Success bool `json:"success"`
+			Data    struct {
+				Upstream           string   `json:"upstream"`
+				Strategy           string   `json:"strategy"`
+				CandidateUpstreams []string `json:"candidateUpstreams"`
+				StatusCode         int      `json:"statusCode"`
+				Attempts           int      `json:"attempts"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode response: %v", err)
+		}
+		return payload
+	}
+
+	first := proxyOnce()
+	second := proxyOnce()
+
+	if !first.Success || !second.Success || first.Data.StatusCode != http.StatusOK || second.Data.StatusCode != http.StatusOK {
+		t.Fatalf("expected successful round robin responses, got %+v and %+v", first, second)
+	}
+	if first.Data.Strategy != "round_robin" || second.Data.Strategy != "round_robin" {
+		t.Fatalf("expected round_robin strategy, got %+v and %+v", first.Data, second.Data)
+	}
+	if len(first.Data.CandidateUpstreams) != 2 || len(second.Data.CandidateUpstreams) != 2 {
+		t.Fatalf("expected two candidate upstreams, got %+v and %+v", first.Data, second.Data)
+	}
+	if first.Data.Upstream == second.Data.Upstream {
+		t.Fatalf("expected consecutive round robin requests to use different upstreams, got %s", first.Data.Upstream)
+	}
+	if first.Data.Attempts != 1 || second.Data.Attempts != 1 {
+		t.Fatalf("expected single attempt per healthy upstream, got %+v and %+v", first.Data, second.Data)
+	}
+}
+
+func TestProxyGatewayFallsBackAcrossExplicitUpstreams(t *testing.T) {
+	st := store.NewSeedStore()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "temporary outage", http.StatusBadGateway)
+	}))
+	defer primary.Close()
+	secondary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`secondary`))
+	}))
+	defer secondary.Close()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"route":"/api/v1/explicit","method":"GET","upstreams":["` + primary.URL + `","` + secondary.URL + `"],"strategy":"ordered","timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Upstream           string   `json:"upstream"`
+			Strategy           string   `json:"strategy"`
+			CandidateUpstreams []string `json:"candidateUpstreams"`
+			StatusCode         int      `json:"statusCode"`
+			Attempts           int      `json:"attempts"`
+			Fallback           bool     `json:"fallback"`
+			Body               string   `json:"body"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Upstream != secondary.URL || payload.Data.StatusCode != http.StatusOK {
+		t.Fatalf("unexpected explicit upstream payload: %+v", payload)
+	}
+	if payload.Data.Strategy != "ordered" || len(payload.Data.CandidateUpstreams) != 2 {
+		t.Fatalf("expected ordered candidates, got %+v", payload.Data)
+	}
+	if payload.Data.Attempts != 2 || !payload.Data.Fallback || payload.Data.Body != "secondary" {
+		t.Fatalf("expected fallback across explicit upstreams, got %+v", payload.Data)
+	}
+}
+
 func TestProxyGatewayStreamsUpstreamResponse(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())
