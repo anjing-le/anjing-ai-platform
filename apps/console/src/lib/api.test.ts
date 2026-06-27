@@ -34,6 +34,7 @@ const snapshot: PlatformSnapshot = {
   requestLogs: [],
   plans: [],
   usage: [],
+  billingSummaries: [],
   budgetAlerts: [],
 };
 
@@ -84,7 +85,7 @@ describe("console API client", () => {
 
     const result = await loadPlatformSnapshot("operator");
 
-    expect(result).toMatchObject({ ok: false, loaded: 0, failed: 13, source: "none" });
+    expect(result).toMatchObject({ ok: false, loaded: 0, failed: 14, source: "none" });
     expect(result.snapshot).toEqual({});
     expect(fetchMock.mock.calls[0][0]).toBe("/api/ops/platform-snapshot");
   });

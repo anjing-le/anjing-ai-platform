@@ -168,7 +168,7 @@ export const backendPlan = [
   {
     label: "billing-service",
     title: "计费与配额服务",
-    note: ":1822 · 套餐、配额、用量、预算告警。",
+    note: ":1822 · 套餐、账单汇总、用量、预算告警。",
     command: "pnpm dev:billing",
     health: "http://localhost:1822/healthz",
     icon: KeyRound,
@@ -209,8 +209,14 @@ export const consoleServiceMap = [
     id: "billing",
     entry: "计费与配额",
     owner: "billing-service",
-    scope: "套餐、配额、用量统计、预算告警",
-    apis: ["/api/billing/plans", "/api/billing/usage", "/api/billing/usage-events", "/api/billing/budget-alerts"],
+    scope: "套餐、账单汇总、用量统计、预算告警",
+    apis: [
+      "/api/billing/plans",
+      "/api/billing/invoices",
+      "/api/billing/usage",
+      "/api/billing/usage-events",
+      "/api/billing/budget-alerts",
+    ],
   },
   {
     id: "docs",
@@ -403,9 +409,9 @@ export const modulePages: ModulePageDefinition[] = [
     id: "quota",
     eyebrow: "计费",
     title: "计费与配额",
-    description: "把套餐、配额、用量和预算告警放在一个入口，后续再接真实账单与计费。",
+    description: "把套餐、账单汇总、用量和预算告警放在一个入口，用最少视图完成成本治理闭环。",
     primaryAction: "新增套餐",
-    tabs: ["套餐", "用量", "预算告警"],
+    tabs: ["套餐", "账单汇总", "用量", "预算告警"],
     metrics: [
       { label: "本月成本", value: "$18.4K", note: "估算", tone: "neutral" },
       { label: "今日 Token", value: "8.6M", note: "+14%", tone: "watch" },

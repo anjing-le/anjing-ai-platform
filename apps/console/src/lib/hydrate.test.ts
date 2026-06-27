@@ -105,6 +105,20 @@ const snapshot: PlatformSnapshot = {
     },
   ],
   usage: [],
+  billingSummaries: [
+    {
+      id: "invoice-1",
+      project: "aigc-lab",
+      period: "current-day",
+      tokens: "3.1M",
+      skillCalls: "4.8K",
+      cost: "$920",
+      budget: "$1000",
+      threshold: "90%",
+      utilization: "92%",
+      status: "Warning",
+    },
+  ],
   budgetAlerts: [
     {
       id: "budget-1",

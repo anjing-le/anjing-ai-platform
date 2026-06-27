@@ -41,10 +41,15 @@ type BudgetAlertRepository interface {
 	ResolveBudgetAlert(ctx context.Context, id string) (store.BudgetAlert, bool, error)
 }
 
+type InvoiceRepository interface {
+	ListInvoiceSummaries(ctx context.Context) ([]store.BillingInvoiceSummary, error)
+}
+
 type Repositories struct {
 	Plans        PlanRepository
 	Usage        UsageRepository
 	BudgetAlerts BudgetAlertRepository
+	Invoices     InvoiceRepository
 }
 
 func NewMemoryRepositories(st *store.Store) Repositories {
@@ -52,6 +57,7 @@ func NewMemoryRepositories(st *store.Store) Repositories {
 		Plans:        NewMemoryPlanRepository(st),
 		Usage:        NewMemoryUsageRepository(st),
 		BudgetAlerts: NewMemoryBudgetAlertRepository(st),
+		Invoices:     NewMemoryInvoiceRepository(st),
 	}
 }
 
@@ -109,6 +115,18 @@ func (repo MemoryBudgetAlertRepository) ListBudgetAlerts(context.Context) ([]sto
 func (repo MemoryBudgetAlertRepository) ResolveBudgetAlert(_ context.Context, id string) (store.BudgetAlert, bool, error) {
 	alert, ok := repo.store.ResolveBudgetAlert(id)
 	return alert, ok, nil
+}
+
+type MemoryInvoiceRepository struct {
+	store *store.Store
+}
+
+func NewMemoryInvoiceRepository(st *store.Store) MemoryInvoiceRepository {
+	return MemoryInvoiceRepository{store: st}
+}
+
+func (repo MemoryInvoiceRepository) ListInvoiceSummaries(context.Context) ([]store.BillingInvoiceSummary, error) {
+	return repo.store.ListBillingSummaries(), nil
 }
 
 type PostgresPlanRepository struct {
@@ -409,6 +427,26 @@ func scanBudgetAlert(row pgx.CollectableRow) (store.BudgetAlert, error) {
 		return store.BudgetAlert{}, err
 	}
 	return item, nil
+}
+
+type PostgresInvoiceRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresInvoiceRepository(pool *pgxpool.Pool) PostgresInvoiceRepository {
+	return PostgresInvoiceRepository{pool: pool}
+}
+
+func (repo PostgresInvoiceRepository) ListInvoiceSummaries(ctx context.Context) ([]store.BillingInvoiceSummary, error) {
+	usage, err := (PostgresUsageRepository{pool: repo.pool}).ListUsage(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list invoice usage records: %w", err)
+	}
+	alerts, err := (PostgresBudgetAlertRepository{pool: repo.pool}).ListBudgetAlerts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list invoice budget alerts: %w", err)
+	}
+	return store.BuildBillingInvoiceSummaries(usage, alerts), nil
 }
 
 func scanBillingPlan(row pgx.CollectableRow) (store.BillingPlan, error) {

@@ -57,6 +57,7 @@ func main() {
 		billingRepos.Plans = billing.NewPostgresPlanRepository(pool)
 		billingRepos.Usage = billing.NewPostgresUsageRepository(pool)
 		billingRepos.BudgetAlerts = billing.NewPostgresBudgetAlertRepository(pool)
+		billingRepos.Invoices = billing.NewPostgresInvoiceRepository(pool)
 		billingRegister = func(mux *http.ServeMux, st *store.Store) {
 			billing.RegisterWithRepositories(mux, st, billingRepos)
 		}
@@ -65,21 +66,22 @@ func main() {
 		opsRepos.Health = ops.NewPostgresHealthRepository(pool)
 		opsRepos.Audit = ops.NewPostgresAuditRepository(pool)
 		opsRepos.Snapshot = platformsnapshot.NewRepository(platformsnapshot.Sources{
-			Users:        controlRepos.Users,
-			Applications: controlRepos.Applications,
-			Roles:        controlRepos.Roles,
-			APIKeys:      controlRepos.APIKeys,
-			Credentials:  controlRepos.Credentials,
-			Routes:       gatewayRepos.Routes,
-			ModelRoutes:  gatewayRepos.ModelRoutes,
-			Skills:       gatewayRepos.Skills,
-			RequestLogs:  gatewayRepos.RequestLogs,
-			Plans:        billingRepos.Plans,
-			Usage:        billingRepos.Usage,
-			BudgetAlerts: billingRepos.BudgetAlerts,
-			Todos:        opsRepos.Todos,
-			Health:       opsRepos.Health,
-			Audit:        opsRepos.Audit,
+			Users:            controlRepos.Users,
+			Applications:     controlRepos.Applications,
+			Roles:            controlRepos.Roles,
+			APIKeys:          controlRepos.APIKeys,
+			Credentials:      controlRepos.Credentials,
+			Routes:           gatewayRepos.Routes,
+			ModelRoutes:      gatewayRepos.ModelRoutes,
+			Skills:           gatewayRepos.Skills,
+			RequestLogs:      gatewayRepos.RequestLogs,
+			Plans:            billingRepos.Plans,
+			Usage:            billingRepos.Usage,
+			BudgetAlerts:     billingRepos.BudgetAlerts,
+			BillingSummaries: billingRepos.Invoices,
+			Todos:            opsRepos.Todos,
+			Health:           opsRepos.Health,
+			Audit:            opsRepos.Audit,
 		})
 		opsRegister = func(mux *http.ServeMux, st *store.Store) {
 			ops.RegisterWithRepositories(mux, st, opsRepos)

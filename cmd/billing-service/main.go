@@ -28,6 +28,7 @@ func main() {
 		repos.Plans = billing.NewPostgresPlanRepository(pool)
 		repos.Usage = billing.NewPostgresUsageRepository(pool)
 		repos.BudgetAlerts = billing.NewPostgresBudgetAlertRepository(pool)
+		repos.Invoices = billing.NewPostgresInvoiceRepository(pool)
 		billingRegister = func(mux *http.ServeMux, st *store.Store) {
 			billing.RegisterWithRepositories(mux, st, repos)
 		}

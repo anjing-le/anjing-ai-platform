@@ -21,21 +21,22 @@ func TestRepositoryLoadsConsoleSnapshotFromModuleRepositories(t *testing.T) {
 	opsRepos := ops.NewMemoryRepositories(st)
 
 	repo := snapshot.NewRepository(snapshot.Sources{
-		Users:        controlRepos.Users,
-		Applications: controlRepos.Applications,
-		Roles:        controlRepos.Roles,
-		APIKeys:      controlRepos.APIKeys,
-		Credentials:  controlRepos.Credentials,
-		Routes:       gatewayRepos.Routes,
-		ModelRoutes:  gatewayRepos.ModelRoutes,
-		Skills:       gatewayRepos.Skills,
-		RequestLogs:  gatewayRepos.RequestLogs,
-		Plans:        billingRepos.Plans,
-		Usage:        billingRepos.Usage,
-		BudgetAlerts: billingRepos.BudgetAlerts,
-		Todos:        opsRepos.Todos,
-		Health:       opsRepos.Health,
-		Audit:        opsRepos.Audit,
+		Users:            controlRepos.Users,
+		Applications:     controlRepos.Applications,
+		Roles:            controlRepos.Roles,
+		APIKeys:          controlRepos.APIKeys,
+		Credentials:      controlRepos.Credentials,
+		Routes:           gatewayRepos.Routes,
+		ModelRoutes:      gatewayRepos.ModelRoutes,
+		Skills:           gatewayRepos.Skills,
+		RequestLogs:      gatewayRepos.RequestLogs,
+		Plans:            billingRepos.Plans,
+		Usage:            billingRepos.Usage,
+		BudgetAlerts:     billingRepos.BudgetAlerts,
+		BillingSummaries: billingRepos.Invoices,
+		Todos:            opsRepos.Todos,
+		Health:           opsRepos.Health,
+		Audit:            opsRepos.Audit,
 	})
 
 	item, err := repo.LoadSnapshot(context.Background())
@@ -43,8 +44,8 @@ func TestRepositoryLoadsConsoleSnapshotFromModuleRepositories(t *testing.T) {
 		t.Fatalf("load snapshot: %v", err)
 	}
 
-	if len(item.Users) == 0 || len(item.Routes) == 0 || len(item.Plans) == 0 {
-		t.Fatalf("expected users, routes and plans in snapshot: %+v", item)
+	if len(item.Users) == 0 || len(item.Routes) == 0 || len(item.Plans) == 0 || len(item.BillingSummaries) == 0 {
+		t.Fatalf("expected users, routes, plans and billing summaries in snapshot: %+v", item)
 	}
 	if len(item.Dashboard.Todos) == 0 || len(item.Dashboard.Health) == 0 || len(item.Dashboard.Audit) == 0 {
 		t.Fatalf("expected ops dashboard data in snapshot: %+v", item.Dashboard)

@@ -204,6 +204,19 @@ export interface UsageRecord {
   updatedAt: string;
 }
 
+export interface BillingInvoiceSummary {
+  id: string;
+  project: string;
+  period: string;
+  tokens: string;
+  skillCalls: string;
+  cost: string;
+  budget: string;
+  threshold: string;
+  utilization: string;
+  status: string;
+}
+
 export interface BudgetAlert {
   id: string;
   project: string;
@@ -226,6 +239,7 @@ export interface PlatformSnapshot {
   requestLogs?: RequestLog[];
   plans?: BillingPlan[];
   usage?: UsageRecord[];
+  billingSummaries?: BillingInvoiceSummary[];
   budgetAlerts?: BudgetAlert[];
 }
 
@@ -327,6 +341,7 @@ const endpoints = {
   requestLogs: "/api/gateway/request-logs",
   plans: "/api/billing/plans",
   usage: "/api/billing/usage",
+  billingSummaries: "/api/billing/invoices",
   budgetAlerts: "/api/billing/budget-alerts",
 } as const;
 

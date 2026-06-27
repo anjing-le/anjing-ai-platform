@@ -28,6 +28,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/billing/plans/activate", activatePlanHandler(repos.Plans))
 	mux.HandleFunc("/api/billing/usage", usageHandler(repos.Usage))
 	mux.HandleFunc("/api/billing/usage-events", usageEventsHandler(repos.Usage))
+	mux.HandleFunc("/api/billing/invoices", invoiceSummariesHandler(repos.Invoices))
 	mux.HandleFunc("/api/billing/budget-alerts", budgetAlertsHandler(repos.BudgetAlerts))
 	mux.HandleFunc("/api/billing/budget-alerts/resolve", resolveBudgetAlertHandler(repos.BudgetAlerts))
 }
@@ -120,6 +121,20 @@ func usageHandler(usage UsageRepository) http.HandlerFunc {
 			return
 		}
 		items, err := usage.ListUsage(r.Context())
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		httpjson.OK(w, items)
+	}
+}
+
+func invoiceSummariesHandler(invoices InvoiceRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodGet) {
+			return
+		}
+		items, err := invoices.ListInvoiceSummaries(r.Context())
 		if err != nil {
 			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
 			return

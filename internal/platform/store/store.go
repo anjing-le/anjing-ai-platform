@@ -2,6 +2,8 @@ package store
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -181,6 +183,19 @@ type BudgetAlert struct {
 	Status    string `json:"status"`
 }
 
+type BillingInvoiceSummary struct {
+	ID          string `json:"id"`
+	Project     string `json:"project"`
+	Period      string `json:"period"`
+	Tokens      string `json:"tokens"`
+	SkillCalls  string `json:"skillCalls"`
+	Cost        string `json:"cost"`
+	Budget      string `json:"budget"`
+	Threshold   string `json:"threshold"`
+	Utilization string `json:"utilization"`
+	Status      string `json:"status"`
+}
+
 type OpsTodo struct {
 	ID        string `json:"id"`
 	Title     string `json:"title"`
@@ -216,19 +231,20 @@ type OpsDashboard struct {
 }
 
 type PlatformSnapshot struct {
-	Dashboard    OpsDashboard   `json:"dashboard"`
-	Users        []User         `json:"users"`
-	Applications []Application  `json:"applications"`
-	Roles        []RolePolicy   `json:"roles"`
-	APIKeys      []APIKey       `json:"apiKeys"`
-	Credentials  []Credential   `json:"credentials"`
-	Routes       []GatewayRoute `json:"routes"`
-	ModelRoutes  []ModelRoute   `json:"modelRoutes"`
-	Skills       []SkillBinding `json:"skills"`
-	RequestLogs  []RequestLog   `json:"requestLogs"`
-	Plans        []BillingPlan  `json:"plans"`
-	Usage        []UsageRecord  `json:"usage"`
-	BudgetAlerts []BudgetAlert  `json:"budgetAlerts"`
+	Dashboard        OpsDashboard            `json:"dashboard"`
+	Users            []User                  `json:"users"`
+	Applications     []Application           `json:"applications"`
+	Roles            []RolePolicy            `json:"roles"`
+	APIKeys          []APIKey                `json:"apiKeys"`
+	Credentials      []Credential            `json:"credentials"`
+	Routes           []GatewayRoute          `json:"routes"`
+	ModelRoutes      []ModelRoute            `json:"modelRoutes"`
+	Skills           []SkillBinding          `json:"skills"`
+	RequestLogs      []RequestLog            `json:"requestLogs"`
+	Plans            []BillingPlan           `json:"plans"`
+	Usage            []UsageRecord           `json:"usage"`
+	BudgetAlerts     []BudgetAlert           `json:"budgetAlerts"`
+	BillingSummaries []BillingInvoiceSummary `json:"billingSummaries"`
 }
 
 type Metric struct {
@@ -866,6 +882,15 @@ func (s *Store) ListBudgetAlerts() []BudgetAlert {
 	return append([]BudgetAlert(nil), s.budgetAlerts...)
 }
 
+func (s *Store) ListBillingSummaries() []BillingInvoiceSummary {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return BuildBillingInvoiceSummaries(
+		append([]UsageRecord(nil), s.usageRecords...),
+		append([]BudgetAlert(nil), s.budgetAlerts...),
+	)
+}
+
 func (s *Store) ResolveBudgetAlert(id string) (BudgetAlert, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -905,6 +930,10 @@ func (s *Store) Snapshot() PlatformSnapshot {
 		Plans:        append([]BillingPlan(nil), s.plans...),
 		Usage:        append([]UsageRecord(nil), s.usageRecords...),
 		BudgetAlerts: append([]BudgetAlert(nil), s.budgetAlerts...),
+		BillingSummaries: BuildBillingInvoiceSummaries(
+			append([]UsageRecord(nil), s.usageRecords...),
+			append([]BudgetAlert(nil), s.budgetAlerts...),
+		),
 	}
 }
 
@@ -970,6 +999,213 @@ func (s *Store) addAuditLocked(module, action, object, status string) {
 		Status:    status,
 		RequestID: nextID("req"),
 	}}, s.audit...)
+}
+
+func BuildBillingInvoiceSummaries(usage []UsageRecord, alerts []BudgetAlert) []BillingInvoiceSummary {
+	type accumulator struct {
+		project        string
+		tokenTotal     float64
+		skillCallTotal float64
+		costTotal      float64
+		budget         string
+		threshold      string
+		status         string
+	}
+
+	items := make(map[string]*accumulator)
+	order := []string{}
+	ensure := func(project string) *accumulator {
+		project = strings.TrimSpace(project)
+		if project == "" {
+			project = "unknown-project"
+		}
+		if item, ok := items[project]; ok {
+			return item
+		}
+		item := &accumulator{project: project}
+		items[project] = item
+		order = append(order, project)
+		return item
+	}
+
+	for _, record := range usage {
+		item := ensure(record.Project)
+		item.tokenTotal += parseScaledNumber(record.Tokens)
+		item.skillCallTotal += parseScaledNumber(record.SkillCalls)
+		item.costTotal += parseCurrency(record.Cost)
+		item.status = mergeBillingStatus(item.status, record.Status)
+	}
+
+	for _, alert := range alerts {
+		item := ensure(alert.Project)
+		item.budget = alert.Budget
+		item.threshold = alert.Threshold
+		if item.costTotal == 0 {
+			item.costTotal = parseCurrency(alert.Current)
+		}
+		item.status = mergeBillingStatus(item.status, alert.Status)
+	}
+
+	summaries := make([]BillingInvoiceSummary, 0, len(order))
+	for _, project := range order {
+		item := items[project]
+		budget := item.budget
+		if budget == "" {
+			budget = "n/a"
+		}
+		threshold := item.threshold
+		if threshold == "" {
+			threshold = "n/a"
+		}
+
+		utilization := "n/a"
+		if budgetValue := parseCurrency(budget); budgetValue > 0 {
+			utilization = fmt.Sprintf("%d%%", int(math.Round(item.costTotal/budgetValue*100)))
+		}
+
+		status := item.status
+		if status == "" {
+			status = "Normal"
+		}
+
+		summaries = append(summaries, BillingInvoiceSummary{
+			ID:          "invoice_" + slugKey(project),
+			Project:     project,
+			Period:      "current-day",
+			Tokens:      formatScaledQuantity(item.tokenTotal),
+			SkillCalls:  formatScaledQuantity(item.skillCallTotal),
+			Cost:        formatCurrency(item.costTotal),
+			Budget:      budget,
+			Threshold:   threshold,
+			Utilization: utilization,
+			Status:      status,
+		})
+	}
+
+	return summaries
+}
+
+func parseScaledNumber(value string) float64 {
+	normalized := strings.ToUpper(strings.TrimSpace(strings.ReplaceAll(value, ",", "")))
+	if normalized == "" {
+		return 0
+	}
+
+	multiplier := 1.0
+	switch {
+	case strings.HasSuffix(normalized, "M"):
+		multiplier = 1_000_000
+		normalized = strings.TrimSuffix(normalized, "M")
+	case strings.HasSuffix(normalized, "K"):
+		multiplier = 1_000
+		normalized = strings.TrimSuffix(normalized, "K")
+	}
+
+	number, err := strconv.ParseFloat(strings.TrimSpace(normalized), 64)
+	if err != nil {
+		return 0
+	}
+	return number * multiplier
+}
+
+func parseCurrency(value string) float64 {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	normalized = strings.NewReplacer(
+		"$", "",
+		",", "",
+		"/day", "",
+		"/month", "",
+		" ", "",
+	).Replace(normalized)
+	number, err := strconv.ParseFloat(normalized, 64)
+	if err != nil {
+		return 0
+	}
+	return number
+}
+
+func formatScaledQuantity(value float64) string {
+	switch {
+	case value >= 1_000_000:
+		return trimFloat(value/1_000_000, 1) + "M"
+	case value >= 1_000:
+		return trimFloat(value/1_000, 1) + "K"
+	default:
+		return fmt.Sprintf("%.0f", value)
+	}
+}
+
+func formatCurrency(value float64) string {
+	return "$" + trimFloat(value, 4)
+}
+
+func trimFloat(value float64, precision int) string {
+	text := strconv.FormatFloat(value, 'f', precision, 64)
+	text = strings.TrimRight(text, "0")
+	text = strings.TrimRight(text, ".")
+	if text == "" {
+		return "0"
+	}
+	return text
+}
+
+func mergeBillingStatus(current, next string) string {
+	if billingStatusWeight(next) > billingStatusWeight(current) {
+		return billingStatusLabel(next)
+	}
+	return billingStatusLabel(current)
+}
+
+func billingStatusWeight(status string) int {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "warning", "failed", "degraded", "expiring":
+		return 4
+	case "watching", "pending", "draft", "guarded", "invited":
+		return 3
+	case "ready":
+		return 2
+	case "normal", "active", "resolved", "success", "published":
+		return 1
+	default:
+		return 0
+	}
+}
+
+func billingStatusLabel(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "warning":
+		return "Warning"
+	case "failed":
+		return "Failed"
+	case "degraded":
+		return "Degraded"
+	case "expiring":
+		return "Expiring"
+	case "watching":
+		return "Watching"
+	case "pending":
+		return "Pending"
+	case "draft":
+		return "Draft"
+	case "guarded":
+		return "Guarded"
+	case "invited":
+		return "Invited"
+	case "ready":
+		return "Ready"
+	case "active":
+		return "Active"
+	case "resolved":
+		return "Resolved"
+	case "success":
+		return "Success"
+	case "published":
+		return "Published"
+	case "normal":
+		return "Normal"
+	default:
+		return strings.TrimSpace(status)
+	}
 }
 
 func estimateMockCost(tokens int) string {

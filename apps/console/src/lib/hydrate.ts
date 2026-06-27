@@ -122,9 +122,9 @@ export function hydrateModulePages(
         ...page,
         metrics: [
           metric("套餐", `${snapshot.plans.length}`, "Go API 在线"),
-          metric("用量项目", `${snapshot.usage?.length || 0}`, "usage records"),
+          metric("账单汇总", `${snapshot.billingSummaries?.length || 0}`, "invoice summaries"),
           metric("预算告警", `${warningCount}`, "near limit", warningCount > 0 ? "warn" : "good"),
-          metric("预算规则", `${snapshot.budgetAlerts?.length || 0}`, "active budgets"),
+          metric("用量记录", `${snapshot.usage?.length || 0}`, "usage records"),
         ],
         table: {
           ...page.table,

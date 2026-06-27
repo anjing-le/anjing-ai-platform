@@ -18,7 +18,7 @@
 | 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
 | 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke` |
-| 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
+| 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/invoices`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
 ## V1：Go command 边界 + 简单部署
@@ -157,6 +157,8 @@ internal/ops/
 
 用量事件的 V1 写入口是 `POST /api/billing/usage-events`。调用方必须传入稳定的 `eventId`，服务端按 `eventId` 做幂等：首次写入返回新用量记录，重复提交返回已存在记录，不重复入账。
 
+账单汇总的 V1 读入口是 `GET /api/billing/invoices`，由 `usage_records` 与 `budget_alerts` 派生，先不新增结算表，保持后台成本视图可用且可重算。
+
 ### `ops-api`
 
 - 运营总览
@@ -280,6 +282,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/billing/plans`
 - `POST /api/billing/plans/activate`
 - `GET /api/billing/usage`
+- `GET /api/billing/invoices`
 - `POST /api/billing/usage-events`
 - `GET /api/billing/budget-alerts`
 - `POST /api/billing/budget-alerts/resolve`
@@ -298,7 +301,7 @@ go run ./cmd/console-web      # :1818
 
 ## 后台首页聚合策略
 
-控制台进入后台后优先调用 `GET /api/ops/platform-snapshot`。这个接口一次性返回首页和模块入口需要的核心数据：运营指标、待办、健康、审计、用户、应用、角色、API Key、凭据、网关路由、模型路由、Skill、请求日志、套餐、用量和预算告警。
+控制台进入后台后优先调用 `GET /api/ops/platform-snapshot`。这个接口一次性返回首页和模块入口需要的核心数据：运营指标、待办、健康、审计、用户、应用、角色、API Key、凭据、网关路由、模型路由、Skill、请求日志、套餐、账单汇总、用量和预算告警。
 
 聚合实现放在 `internal/platform/snapshot`，只依赖各模块暴露的 repository interface，不直接读取某个业务包内部状态。内存模式下会使用 seed store 的 repository；PostgreSQL 模式下，`cmd/platform-all` 和 `cmd/ops-api` 会把 control、gateway、billing、ops 的 Postgres repository 组装进同一个 snapshot repository。这样后台首页在 demo、单服务和数据库模式下使用同一条边界。
 

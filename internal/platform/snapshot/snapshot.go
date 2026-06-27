@@ -55,6 +55,10 @@ type BudgetAlertRepository interface {
 	ListBudgetAlerts(ctx context.Context) ([]store.BudgetAlert, error)
 }
 
+type BillingSummaryRepository interface {
+	ListInvoiceSummaries(ctx context.Context) ([]store.BillingInvoiceSummary, error)
+}
+
 type TodoRepository interface {
 	ListTodos(ctx context.Context) ([]store.OpsTodo, error)
 }
@@ -68,21 +72,22 @@ type AuditRepository interface {
 }
 
 type Sources struct {
-	Users        UserRepository
-	Applications ApplicationRepository
-	Roles        RoleRepository
-	APIKeys      APIKeyRepository
-	Credentials  CredentialRepository
-	Routes       RouteRepository
-	ModelRoutes  ModelRouteRepository
-	Skills       SkillRepository
-	RequestLogs  RequestLogRepository
-	Plans        PlanRepository
-	Usage        UsageRepository
-	BudgetAlerts BudgetAlertRepository
-	Todos        TodoRepository
-	Health       HealthRepository
-	Audit        AuditRepository
+	Users            UserRepository
+	Applications     ApplicationRepository
+	Roles            RoleRepository
+	APIKeys          APIKeyRepository
+	Credentials      CredentialRepository
+	Routes           RouteRepository
+	ModelRoutes      ModelRouteRepository
+	Skills           SkillRepository
+	RequestLogs      RequestLogRepository
+	Plans            PlanRepository
+	Usage            UsageRepository
+	BudgetAlerts     BudgetAlertRepository
+	BillingSummaries BillingSummaryRepository
+	Todos            TodoRepository
+	Health           HealthRepository
+	Audit            AuditRepository
 }
 
 type Repository struct {
@@ -149,6 +154,10 @@ func (repo Repository) LoadSnapshot(ctx context.Context) (store.PlatformSnapshot
 	if err != nil {
 		return store.PlatformSnapshot{}, fmt.Errorf("list budget alerts: %w", err)
 	}
+	item.BillingSummaries, err = repo.sources.BillingSummaries.ListInvoiceSummaries(ctx)
+	if err != nil {
+		return store.PlatformSnapshot{}, fmt.Errorf("list billing invoice summaries: %w", err)
+	}
 
 	todos, err := repo.sources.Todos.ListTodos(ctx)
 	if err != nil {
@@ -193,6 +202,8 @@ func missingSource(sources Sources) string {
 		return "usage"
 	case sources.BudgetAlerts == nil:
 		return "budgetAlerts"
+	case sources.BillingSummaries == nil:
+		return "billingSummaries"
 	case sources.Todos == nil:
 		return "todos"
 	case sources.Health == nil:

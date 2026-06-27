@@ -93,6 +93,47 @@ func TestResolveBudgetAlert(t *testing.T) {
 	}
 }
 
+func TestListInvoiceSummaries(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/billing/invoices", nil)
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool                          `json:"success"`
+		Data    []store.BillingInvoiceSummary `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success {
+		t.Fatalf("expected success response, got %+v", payload)
+	}
+
+	var aigc store.BillingInvoiceSummary
+	for _, item := range payload.Data {
+		if item.Project == "aigc-lab" {
+			aigc = item
+			break
+		}
+	}
+
+	if aigc.Project == "" {
+		t.Fatalf("expected aigc-lab invoice summary in %+v", payload.Data)
+	}
+	if aigc.Status != "Warning" || aigc.Budget != "$360/day" || aigc.Cost != "$312" || aigc.Utilization != "87%" {
+		t.Fatalf("unexpected aigc invoice summary: %+v", aigc)
+	}
+}
+
 func TestRecordUsageEventIsIdempotent(t *testing.T) {
 	st := store.NewSeedStore()
 	initialUsageCount := len(st.ListUsage())

@@ -65,6 +65,7 @@ x-anjing-service-boundaries:
     apiGroups:
       - /api/billing/plans
       - /api/billing/usage
+      - /api/billing/invoices
       - /api/billing/usage-events
       - /api/billing/budget-alerts
   - consoleEntry: docs
@@ -1058,6 +1059,34 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/billing/invoices:
+    get:
+      tags: [billing]
+      operationId: listBillingInvoiceSummaries
+      summary: List derived billing invoice summaries.
+      description: >
+        Returns V1 billing summaries derived from usage records and budget alerts.
+        The read model keeps the console billing view useful without introducing
+        settlement tables before the billing lifecycle is stable.
+      x-anjing-roles: [Administrator, User, Developer, Operator]
+      responses:
+        "200":
+          description: Billing invoice summaries returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BillingInvoiceSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/billing/usage-events:
     post:
       tags: [billing]
@@ -2011,6 +2040,40 @@ components:
           type: string
         updatedAt:
           type: string
+    BillingInvoiceSummary:
+      type: object
+      required:
+        - id
+        - project
+        - period
+        - tokens
+        - skillCalls
+        - cost
+        - budget
+        - threshold
+        - utilization
+        - status
+      properties:
+        id:
+          type: string
+        project:
+          type: string
+        period:
+          type: string
+        tokens:
+          type: string
+        skillCalls:
+          type: string
+        cost:
+          type: string
+        budget:
+          type: string
+        threshold:
+          type: string
+        utilization:
+          type: string
+        status:
+          type: string
     BudgetAlert:
       type: object
       required: [id, project, budget, current, threshold, status]
@@ -2068,6 +2131,7 @@ components:
         - requestLogs
         - plans
         - usage
+        - billingSummaries
         - budgetAlerts
       properties:
         dashboard:
@@ -2116,6 +2180,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/UsageRecord"
+        billingSummaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/BillingInvoiceSummary"
         budgetAlerts:
           type: array
           items:

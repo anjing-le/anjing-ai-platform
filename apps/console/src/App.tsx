@@ -170,6 +170,7 @@ const moduleWorkflows: Record<Exclude<ConsoleRoute, "home">, WorkflowStep[]> = {
   ],
   quota: [
     { label: "套餐", note: "定义套餐配额", tab: "套餐" },
+    { label: "账单", note: "汇总成本水位", tab: "账单汇总" },
     { label: "用量", note: "追踪项目用量", tab: "用量" },
     { label: "预算", note: "处理预算告警", tab: "预算告警" },
   ],
@@ -1905,6 +1906,28 @@ function ModulePage({
       };
     }
 
+    if (page.id === "quota" && activeTab === "账单汇总") {
+      return {
+        eyebrow: "账单",
+        title: "账单汇总",
+        columns: ["项目", "周期", "Token", "成本", "预算", "使用率", "状态"],
+        rows: (snapshot?.billingSummaries || []).map((invoice) => ({
+          id: invoice.id,
+          cells: [
+            invoice.project,
+            invoice.period,
+            invoice.tokens,
+            invoice.cost,
+            invoice.budget,
+            invoice.utilization,
+            invoice.status,
+          ],
+          status: invoice.status,
+          tone: toneForStatus(invoice.status),
+        })),
+      };
+    }
+
     if (page.id === "quota" && activeTab === "用量") {
       return {
         eyebrow: "用量",
@@ -2023,6 +2046,7 @@ function ModulePage({
     snapshot?.routes,
     snapshot?.roles,
     snapshot?.skills,
+    snapshot?.billingSummaries,
     snapshot?.budgetAlerts,
     snapshot?.usage,
   ]);
@@ -2236,6 +2260,9 @@ function ModulePage({
   }
   if (page.id === "quota" && activeTab === "套餐") {
     selectedTableRowId = selectedPlan?.id;
+  }
+  if (page.id === "quota" && activeTab === "账单汇总") {
+    selectedTableRowId = selectedRowId;
   }
   if (page.id === "quota" && activeTab === "用量") {
     selectedTableRowId = selectedRowId;
@@ -2561,7 +2588,7 @@ function ModulePage({
               role={role}
             />
           ) : null}
-          {page.id === "quota" && activeTab === "用量" ? (
+          {page.id === "quota" && (activeTab === "账单汇总" || activeTab === "用量") ? (
             <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
           ) : null}
           {page.id === "docs" && activeTab === "Guides" ? (

@@ -33,21 +33,22 @@ func main() {
 		repos.Health = ops.NewPostgresHealthRepository(pool)
 		repos.Audit = ops.NewPostgresAuditRepository(pool)
 		repos.Snapshot = platformsnapshot.NewRepository(platformsnapshot.Sources{
-			Users:        control.NewPostgresUserRepository(pool),
-			Applications: control.NewPostgresApplicationRepository(pool),
-			Roles:        control.NewPostgresRoleRepository(pool),
-			APIKeys:      control.NewPostgresAPIKeyRepository(pool),
-			Credentials:  control.NewPostgresCredentialRepository(pool),
-			Routes:       gateway.NewPostgresRouteRepository(pool),
-			ModelRoutes:  gateway.NewPostgresModelRouteRepository(pool),
-			Skills:       gateway.NewPostgresSkillRepository(pool),
-			RequestLogs:  gateway.NewPostgresRequestLogRepository(pool),
-			Plans:        billing.NewPostgresPlanRepository(pool),
-			Usage:        billing.NewPostgresUsageRepository(pool),
-			BudgetAlerts: billing.NewPostgresBudgetAlertRepository(pool),
-			Todos:        repos.Todos,
-			Health:       repos.Health,
-			Audit:        repos.Audit,
+			Users:            control.NewPostgresUserRepository(pool),
+			Applications:     control.NewPostgresApplicationRepository(pool),
+			Roles:            control.NewPostgresRoleRepository(pool),
+			APIKeys:          control.NewPostgresAPIKeyRepository(pool),
+			Credentials:      control.NewPostgresCredentialRepository(pool),
+			Routes:           gateway.NewPostgresRouteRepository(pool),
+			ModelRoutes:      gateway.NewPostgresModelRouteRepository(pool),
+			Skills:           gateway.NewPostgresSkillRepository(pool),
+			RequestLogs:      gateway.NewPostgresRequestLogRepository(pool),
+			Plans:            billing.NewPostgresPlanRepository(pool),
+			Usage:            billing.NewPostgresUsageRepository(pool),
+			BudgetAlerts:     billing.NewPostgresBudgetAlertRepository(pool),
+			BillingSummaries: billing.NewPostgresInvoiceRepository(pool),
+			Todos:            repos.Todos,
+			Health:           repos.Health,
+			Audit:            repos.Audit,
 		})
 		opsRegister = func(mux *http.ServeMux, st *store.Store) {
 			ops.RegisterWithRepositories(mux, st, repos)
