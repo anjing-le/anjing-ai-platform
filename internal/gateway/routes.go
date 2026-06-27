@@ -1,9 +1,11 @@
 package gateway
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/csvexport"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
@@ -11,9 +13,26 @@ import (
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
 
+const (
+	defaultRouteHealthTimeout = time.Second
+	maxRouteHealthTimeout     = 5 * time.Second
+)
+
 type Options struct {
 	RateLimiter    RouteLimiter
 	CircuitBreaker RouteCircuitBreaker
+}
+
+type gatewayRouteHealthCheckResponse struct {
+	ID         string `json:"id"`
+	Route      string `json:"route"`
+	Upstream   string `json:"upstream"`
+	Status     string `json:"status"`
+	Healthy    bool   `json:"healthy"`
+	StatusCode int    `json:"statusCode"`
+	LatencyMS  int64  `json:"latencyMs"`
+	CheckedAt  string `json:"checkedAt"`
+	Error      string `json:"error,omitempty"`
 }
 
 func Register(mux *http.ServeMux, st *store.Store) {
@@ -52,6 +71,7 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 	})
 	mux.HandleFunc("/api/gateway/routes", routesHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/routes/publish", publishRouteHandler(repos.Routes))
+	mux.HandleFunc("/api/gateway/routes/health-check", routeHealthCheckHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/model-routes", modelRoutesHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/model-routes/publish", publishModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/skills", skillsHandler(repos.Skills))
@@ -145,6 +165,134 @@ func publishRouteHandler(routes RouteRepository) http.HandlerFunc {
 
 		httpjson.OK(w, route)
 	}
+}
+
+func routeHealthCheckHandler(routes RouteRepository) http.HandlerFunc {
+	type healthCheckRouteRequest struct {
+		ID        string `json:"id"`
+		TimeoutMS int    `json:"timeoutMs"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req healthCheckRouteRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		req.ID = strings.TrimSpace(req.ID)
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+		if req.TimeoutMS < 0 {
+			httpjson.BadRequest(w, "timeoutMs must be greater than or equal to 0")
+			return
+		}
+
+		route, ok, err := findGatewayRoute(r.Context(), routes, req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "route not found")
+			return
+		}
+
+		httpjson.OK(w, checkGatewayRouteHealth(r.Context(), route, normalizeRouteHealthTimeout(req.TimeoutMS)))
+	}
+}
+
+func findGatewayRoute(ctx context.Context, routes RouteRepository, id string) (store.GatewayRoute, bool, error) {
+	items, err := routes.ListRoutes(ctx)
+	if err != nil {
+		return store.GatewayRoute{}, false, err
+	}
+	for _, item := range items {
+		if item.ID == id {
+			return item, true, nil
+		}
+	}
+	return store.GatewayRoute{}, false, nil
+}
+
+func checkGatewayRouteHealth(ctx context.Context, route store.GatewayRoute, timeout time.Duration) gatewayRouteHealthCheckResponse {
+	started := time.Now()
+	result := gatewayRouteHealthCheckResponse{
+		ID:        route.ID,
+		Route:     route.Route,
+		Upstream:  route.Upstream,
+		Status:    "Invalid",
+		CheckedAt: started.UTC().Format(time.RFC3339),
+	}
+
+	if _, err := validateProxyUpstream(route.Upstream); err != nil {
+		result.LatencyMS = time.Since(started).Milliseconds()
+		result.Error = err.Error()
+		return result
+	}
+
+	statusCode, err := probeGatewayRouteUpstream(ctx, route.Upstream, timeout)
+	result.LatencyMS = time.Since(started).Milliseconds()
+	result.StatusCode = statusCode
+	if err != nil {
+		result.Status = "Unreachable"
+		result.Error = err.Error()
+		return result
+	}
+	if statusCode >= http.StatusInternalServerError {
+		result.Status = "Degraded"
+		return result
+	}
+
+	result.Status = "Healthy"
+	result.Healthy = true
+	return result
+}
+
+func probeGatewayRouteUpstream(ctx context.Context, upstream string, timeout time.Duration) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	statusCode, err := probeGatewayRouteUpstreamWithMethod(ctx, http.MethodHead, upstream, timeout)
+	if err == nil && statusCode != http.StatusMethodNotAllowed {
+		return statusCode, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return probeGatewayRouteUpstreamWithMethod(ctx, http.MethodGet, upstream, timeout)
+}
+
+func probeGatewayRouteUpstreamWithMethod(ctx context.Context, method string, upstream string, timeout time.Duration) (int, error) {
+	req, err := http.NewRequestWithContext(ctx, method, upstream, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("User-Agent", "anjing-gateway-health-check/0.1")
+
+	client := http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode, nil
+}
+
+func normalizeRouteHealthTimeout(timeoutMS int) time.Duration {
+	if timeoutMS <= 0 {
+		return defaultRouteHealthTimeout
+	}
+	timeout := time.Duration(timeoutMS) * time.Millisecond
+	if timeout > maxRouteHealthTimeout {
+		return maxRouteHealthTimeout
+	}
+	return timeout
 }
 
 func modelRoutesHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {

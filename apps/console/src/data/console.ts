@@ -205,6 +205,7 @@ export const consoleServiceMap = [
     scope: "API 路由、模型路由、Skill 调用、请求日志",
     apis: [
       "/api/gateway/routes",
+      "/api/gateway/routes/health-check",
       "/api/gateway/model-routes",
       "/api/gateway/proxy",
       "/api/gateway/llm/invoke",

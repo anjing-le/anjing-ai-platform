@@ -205,6 +205,7 @@ func allowDeveloper(method, path string) bool {
 			path == "/api/control/applications/rotate-key" ||
 			path == "/api/gateway/routes" ||
 			path == "/api/gateway/routes/publish" ||
+			path == "/api/gateway/routes/health-check" ||
 			path == "/api/gateway/model-routes" ||
 			path == "/api/gateway/model-routes/publish" ||
 			path == "/api/gateway/skills" ||

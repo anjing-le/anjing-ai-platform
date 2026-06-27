@@ -17,7 +17,7 @@
 | --- | --- | --- | --- |
 | 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events`, `/api/ops/audit-events/export`, `/api/ops/audit-events/retention/purge` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
-| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/llm/stream`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
+| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/routes/health-check`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/llm/stream`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
 | 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/invoices`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
@@ -288,6 +288,7 @@ go run ./cmd/console-web      # :1818
 - `GET /api/gateway/routes`
 - `POST /api/gateway/routes`
 - `POST /api/gateway/routes/publish`
+- `POST /api/gateway/routes/health-check`
 - `GET /api/gateway/model-routes`
 - `POST /api/gateway/model-routes`
 - `POST /api/gateway/model-routes/publish`
@@ -302,7 +303,9 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/llm/invoke`
 - `POST /api/gateway/llm/stream`
 
-`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、按已发布 route 的 `limit` 做固定窗口限流、`timeout`、有限 `retry`、`fallback`、route 级熔断冷却、请求日志和审计记录；当请求设置 `stream: true` 时，网关会直接透传上游流式响应。默认限流后端是进程内内存，适合本地轻启动；设置 `ANJING_RATE_LIMIT_BACKEND=redis` 和 `ANJING_REDIS_ADDR` 后，可用 Redis 做多实例共享计数，Redis 不可用时会回退到本机限流。主动健康检查、负载策略和更细粒度治理保留到后续迭代。
+`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、按已发布 route 的 `limit` 做固定窗口限流、`timeout`、有限 `retry`、`fallback`、route 级熔断冷却、请求日志和审计记录；当请求设置 `stream: true` 时，网关会直接透传上游流式响应。默认限流后端是进程内内存，适合本地轻启动；设置 `ANJING_RATE_LIMIT_BACKEND=redis` 和 `ANJING_REDIS_ADDR` 后，可用 Redis 做多实例共享计数，Redis 不可用时会回退到本机限流。
+
+`POST /api/gateway/routes/health-check` 提供 route 级主动健康检查最小闭环：按 route ID 读取配置，对 `http/https` upstream 做单次 HEAD 探测，遇到 405 自动回退 GET，并返回 `Healthy`、`Degraded`、`Unreachable` 或 `Invalid`。结果当前不持久化，主要服务于控制台调试、发布前检查和后续负载策略演进；负载策略和更细粒度治理保留到后续迭代。
 
 `POST /api/gateway/llm/invoke` 已提供 V1 可替换 provider adapter 最小闭环：解析 Active 模型别名、按 primary/fallback 尝试模型、返回是否走兜底、估算 token、写入请求日志、审计和成功用量记录。
 

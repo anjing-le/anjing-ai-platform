@@ -114,6 +114,18 @@ export interface GatewayRoute {
   updatedAt: string;
 }
 
+export interface GatewayRouteHealthCheck {
+  id: string;
+  route: string;
+  upstream: string;
+  status: "Healthy" | "Degraded" | "Unreachable" | "Invalid";
+  healthy: boolean;
+  statusCode: number;
+  latencyMs: number;
+  checkedAt: string;
+  error?: string;
+}
+
 export interface ModelRoute {
   id: string;
   alias: string;
@@ -468,6 +480,13 @@ export function publishRoute(id: string, role?: RoleId): Promise<GatewayRoute> {
   return requestJson<GatewayRoute>("/api/gateway/routes/publish", {
     method: "POST",
     body: JSON.stringify({ id }),
+  }, role);
+}
+
+export function checkRouteHealth(id: string, role?: RoleId, timeoutMs = 1000): Promise<GatewayRouteHealthCheck> {
+  return requestJson<GatewayRouteHealthCheck>("/api/gateway/routes/health-check", {
+    method: "POST",
+    body: JSON.stringify({ id, timeoutMs }),
   }, role);
 }
 

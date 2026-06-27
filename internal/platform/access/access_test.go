@@ -52,6 +52,14 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 		t.Fatalf("expected gateway publish to be allowed, got %d", publishAllowedRec.Code)
 	}
 
+	healthCheckAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/health-check", nil)
+	healthCheckAllowed.Header.Set("Authorization", "Bearer developer-test-token")
+	healthCheckAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(healthCheckAllowedRec, healthCheckAllowed)
+	if healthCheckAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected gateway route health check to be allowed, got %d", healthCheckAllowedRec.Code)
+	}
+
 	modelRouteAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/model-routes", nil)
 	modelRouteAllowed.Header.Set("Authorization", "Bearer developer-test-token")
 	modelRouteAllowedRec := httptest.NewRecorder()
@@ -233,6 +241,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler.ServeHTTP(publishDeniedRec, publishDenied)
 	if publishDeniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected gateway publish to be forbidden for operator, got %d", publishDeniedRec.Code)
+	}
+
+	healthCheckDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/health-check", nil)
+	healthCheckDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	healthCheckDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(healthCheckDeniedRec, healthCheckDenied)
+	if healthCheckDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected gateway route health check to be forbidden for operator, got %d", healthCheckDeniedRec.Code)
 	}
 
 	modelRouteDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/model-routes", nil)

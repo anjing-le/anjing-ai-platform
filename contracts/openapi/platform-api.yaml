@@ -56,6 +56,7 @@ x-anjing-service-boundaries:
     owner: gateway-api
     apiGroups:
       - /api/gateway/routes
+      - /api/gateway/routes/health-check
       - /api/gateway/model-routes
       - /api/gateway/proxy
       - /api/gateway/llm/invoke
@@ -700,6 +701,39 @@ paths:
                     properties:
                       data:
                         $ref: "#/components/schemas/GatewayRoute"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/gateway/routes/health-check:
+    post:
+      tags: [gateway]
+      operationId: checkGatewayRouteHealth
+      summary: Check a gateway route upstream once.
+      description: Runs a single active probe against the configured upstream and returns the route health state without persisting the result.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GatewayRouteHealthCheckRequest"
+      responses:
+        "200":
+          description: Route health check returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/GatewayRouteHealthCheckResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2069,6 +2103,42 @@ components:
       required: [id]
       properties:
         id:
+          type: string
+    GatewayRouteHealthCheckRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        timeoutMs:
+          type: integer
+          minimum: 0
+          maximum: 5000
+          default: 1000
+    GatewayRouteHealthCheckResponse:
+      type: object
+      required: [id, route, upstream, status, healthy, statusCode, latencyMs, checkedAt]
+      properties:
+        id:
+          type: string
+        route:
+          type: string
+        upstream:
+          type: string
+        status:
+          type: string
+          enum: [Healthy, Degraded, Unreachable, Invalid]
+        healthy:
+          type: boolean
+        statusCode:
+          type: integer
+          minimum: 0
+        latencyMs:
+          type: integer
+          minimum: 0
+        checkedAt:
+          type: string
+        error:
           type: string
     GatewayProxyRequest:
       type: object

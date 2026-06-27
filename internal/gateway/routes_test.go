@@ -81,6 +81,176 @@ func TestCreateRouteAddsRoute(t *testing.T) {
 	}
 }
 
+func TestGatewayRouteHealthCheckReportsHealthy(t *testing.T) {
+	st := store.NewSeedStore()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodHead {
+			t.Errorf("expected HEAD, got %s", r.Method)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstream.Close()
+
+	draft := st.CreateRoute("/api/v1/healthy/**", upstream.URL, "100/min")
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"id":"` + draft.ID + `","timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/health-check", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			ID         string `json:"id"`
+			Route      string `json:"route"`
+			Upstream   string `json:"upstream"`
+			Status     string `json:"status"`
+			Healthy    bool   `json:"healthy"`
+			StatusCode int    `json:"statusCode"`
+			LatencyMS  int64  `json:"latencyMs"`
+			CheckedAt  string `json:"checkedAt"`
+			Error      string `json:"error"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.ID != draft.ID || payload.Data.Route != draft.Route {
+		t.Fatalf("unexpected health payload: %+v", payload)
+	}
+	if !payload.Data.Healthy || payload.Data.Status != "Healthy" || payload.Data.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected healthy route, got %+v", payload.Data)
+	}
+	if payload.Data.Upstream != upstream.URL || payload.Data.CheckedAt == "" || payload.Data.LatencyMS < 0 || payload.Data.Error != "" {
+		t.Fatalf("unexpected health metadata: %+v", payload.Data)
+	}
+}
+
+func TestGatewayRouteHealthCheckFallsBackToGetWhenHeadIsNotAllowed(t *testing.T) {
+	st := store.NewSeedStore()
+	getHits := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET fallback, got %s", r.Method)
+		}
+		getHits++
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	draft := st.CreateRoute("/api/v1/headless/**", upstream.URL, "100/min")
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"id":"` + draft.ID + `","timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/health-check", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Status     string `json:"status"`
+			Healthy    bool   `json:"healthy"`
+			StatusCode int    `json:"statusCode"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || !payload.Data.Healthy || payload.Data.Status != "Healthy" || payload.Data.StatusCode != http.StatusOK {
+		t.Fatalf("expected GET fallback to report healthy, got %+v", payload)
+	}
+	if getHits != 1 {
+		t.Fatalf("expected one GET fallback hit, got %d", getHits)
+	}
+}
+
+func TestGatewayRouteHealthCheckReportsUnreachable(t *testing.T) {
+	st := store.NewSeedStore()
+	draft := st.CreateRoute("/api/v1/down/**", "http://127.0.0.1:1", "100/min")
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"id":"` + draft.ID + `","timeoutMs":100}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/health-check", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Status     string `json:"status"`
+			Healthy    bool   `json:"healthy"`
+			StatusCode int    `json:"statusCode"`
+			Error      string `json:"error"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Healthy || payload.Data.Status != "Unreachable" || payload.Data.StatusCode != 0 || payload.Data.Error == "" {
+		t.Fatalf("expected unreachable route health, got %+v", payload)
+	}
+}
+
+func TestGatewayRouteHealthCheckReportsInvalidUpstream(t *testing.T) {
+	st := store.NewSeedStore()
+	draft := st.CreateRoute("/api/v1/invalid/**", "gateway-api", "100/min")
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"id":"` + draft.ID + `","timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/health-check", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Status  string `json:"status"`
+			Healthy bool   `json:"healthy"`
+			Error   string `json:"error"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Healthy || payload.Data.Status != "Invalid" || !strings.Contains(payload.Data.Error, "upstream must start") {
+		t.Fatalf("expected invalid upstream health, got %+v", payload)
+	}
+}
+
 func TestInvokeLLMUsesModelRoute(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())
