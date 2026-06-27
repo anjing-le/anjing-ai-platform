@@ -210,7 +210,7 @@ export const consoleServiceMap = [
     entry: "计费与配额",
     owner: "billing-service",
     scope: "套餐、配额、用量统计、预算告警",
-    apis: ["/api/billing/plans", "/api/billing/usage", "/api/billing/budget-alerts"],
+    apis: ["/api/billing/plans", "/api/billing/usage", "/api/billing/usage-events", "/api/billing/budget-alerts"],
   },
   {
     id: "docs",

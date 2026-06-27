@@ -84,6 +84,14 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 		t.Fatalf("expected skill binding publish to be allowed, got %d", skillPublishAllowedRec.Code)
 	}
 
+	usageEventAllowed := httptest.NewRequest(http.MethodPost, "/api/billing/usage-events", nil)
+	usageEventAllowed.Header.Set("Authorization", "Bearer developer-test-token")
+	usageEventAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(usageEventAllowedRec, usageEventAllowed)
+	if usageEventAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected usage event write to be allowed, got %d", usageEventAllowedRec.Code)
+	}
+
 	denied := httptest.NewRequest(http.MethodPost, "/api/billing/plans", nil)
 	denied.Header.Set("Authorization", "Bearer developer-test-token")
 	deniedRec := httptest.NewRecorder()

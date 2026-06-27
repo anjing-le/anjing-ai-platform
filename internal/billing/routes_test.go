@@ -92,3 +92,57 @@ func TestResolveBudgetAlert(t *testing.T) {
 		t.Fatalf("expected resolved alert, got %+v", payload)
 	}
 }
+
+func TestRecordUsageEventIsIdempotent(t *testing.T) {
+	st := store.NewSeedStore()
+	initialUsageCount := len(st.ListUsage())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"eventId":"usage_evt_route","project":"customer-service-agent","tokens":"1280","skillCalls":"2","cost":"$0.0026"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/billing/usage-events", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var created struct {
+		Success bool              `json:"success"`
+		Data    store.UsageRecord `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&created); err != nil {
+		t.Fatalf("decode create response: %v", err)
+	}
+	if !created.Success || created.Data.ID != "usage_evt_route" || created.Data.Status != "Normal" {
+		t.Fatalf("expected created usage event, got %+v", created)
+	}
+
+	retryBody := bytes.NewBufferString(`{"eventId":"usage_evt_route","project":"customer-service-agent","tokens":"9999","skillCalls":"9","cost":"$9.9999"}`)
+	retryReq := httptest.NewRequest(http.MethodPost, "/api/billing/usage-events", retryBody)
+	retryReq.Header.Set("Content-Type", "application/json")
+	retryRec := httptest.NewRecorder()
+
+	mux.ServeHTTP(retryRec, retryReq)
+
+	if retryRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", retryRec.Code, retryRec.Body.String())
+	}
+
+	var retried struct {
+		Success bool              `json:"success"`
+		Data    store.UsageRecord `json:"data"`
+	}
+	if err := json.NewDecoder(retryRec.Body).Decode(&retried); err != nil {
+		t.Fatalf("decode retry response: %v", err)
+	}
+	if !retried.Success || retried.Data.Tokens != "1280" || retried.Data.SkillCalls != "2" {
+		t.Fatalf("expected original usage event on retry, got %+v", retried)
+	}
+	if got := len(st.ListUsage()); got != initialUsageCount+1 {
+		t.Fatalf("expected one new usage record, got %d records from initial %d", got, initialUsageCount)
+	}
+}

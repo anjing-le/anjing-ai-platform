@@ -64,6 +64,7 @@ x-anjing-service-boundaries:
     apiGroups:
       - /api/billing/plans
       - /api/billing/usage
+      - /api/billing/usage-events
       - /api/billing/budget-alerts
   - consoleEntry: docs
     label: 帮助文档
@@ -975,6 +976,47 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/billing/usage-events:
+    post:
+      tags: [billing]
+      operationId: recordUsageEvent
+      summary: Record an idempotent usage event.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordUsageEventRequest"
+      responses:
+        "201":
+          description: Usage event created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/UsageRecord"
+        "200":
+          description: Existing usage event returned for an idempotent retry.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/UsageRecord"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/billing/budget-alerts:
     get:
       tags: [billing]
@@ -1747,6 +1789,27 @@ components:
       properties:
         id:
           type: string
+    RecordUsageEventRequest:
+      type: object
+      required: [eventId, project]
+      properties:
+        eventId:
+          type: string
+          description: Idempotency key supplied by the caller.
+        project:
+          type: string
+        tokens:
+          type: string
+          default: "0"
+        skillCalls:
+          type: string
+          default: "0"
+        cost:
+          type: string
+          default: "$0.0000"
+        status:
+          type: string
+          default: Normal
     UsageRecord:
       type: object
       required: [id, project, tokens, skillCalls, cost, status, updatedAt]

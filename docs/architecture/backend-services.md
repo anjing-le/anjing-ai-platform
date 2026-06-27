@@ -18,7 +18,7 @@
 | 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
 | 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/llm/invoke` |
-| 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/budget-alerts` |
+| 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
 ## V1：Go command 边界 + 简单部署
@@ -155,6 +155,8 @@ internal/ops/
 - 账单聚合
 - 幂等结算
 
+用量事件的 V1 写入口是 `POST /api/billing/usage-events`。调用方必须传入稳定的 `eventId`，服务端按 `eventId` 做幂等：首次写入返回新用量记录，重复提交返回已存在记录，不重复入账。
+
 ### `ops-api`
 
 - 运营总览
@@ -270,6 +272,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/billing/plans`
 - `POST /api/billing/plans/activate`
 - `GET /api/billing/usage`
+- `POST /api/billing/usage-events`
 - `GET /api/billing/budget-alerts`
 - `POST /api/billing/budget-alerts/resolve`
 

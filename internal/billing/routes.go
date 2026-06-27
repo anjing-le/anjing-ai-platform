@@ -27,6 +27,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/billing/plans", plansHandler(repos.Plans))
 	mux.HandleFunc("/api/billing/plans/activate", activatePlanHandler(repos.Plans))
 	mux.HandleFunc("/api/billing/usage", usageHandler(repos.Usage))
+	mux.HandleFunc("/api/billing/usage-events", usageEventsHandler(repos.Usage))
 	mux.HandleFunc("/api/billing/budget-alerts", budgetAlertsHandler(repos.BudgetAlerts))
 	mux.HandleFunc("/api/billing/budget-alerts/resolve", resolveBudgetAlertHandler(repos.BudgetAlerts))
 }
@@ -124,6 +125,55 @@ func usageHandler(usage UsageRepository) http.HandlerFunc {
 			return
 		}
 		httpjson.OK(w, items)
+	}
+}
+
+func usageEventsHandler(usage UsageRepository) http.HandlerFunc {
+	type recordUsageEventRequest struct {
+		EventID    string `json:"eventId"`
+		Project    string `json:"project"`
+		Tokens     string `json:"tokens"`
+		SkillCalls string `json:"skillCalls"`
+		Cost       string `json:"cost"`
+		Status     string `json:"status"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req recordUsageEventRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if req.EventID == "" {
+			httpjson.BadRequest(w, "eventId is required")
+			return
+		}
+		if req.Project == "" {
+			httpjson.BadRequest(w, "project is required")
+			return
+		}
+
+		item, created, err := usage.RecordUsageEvent(r.Context(), RecordUsageEventInput{
+			EventID:    req.EventID,
+			Project:    req.Project,
+			Tokens:     req.Tokens,
+			SkillCalls: req.SkillCalls,
+			Cost:       req.Cost,
+			Status:     req.Status,
+		})
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if created {
+			httpjson.Created(w, item)
+			return
+		}
+		httpjson.OK(w, item)
 	}
 }
 

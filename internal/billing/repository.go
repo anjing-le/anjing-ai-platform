@@ -16,6 +16,15 @@ type CreatePlanInput struct {
 	TokenPerDay string
 }
 
+type RecordUsageEventInput struct {
+	EventID    string
+	Project    string
+	Tokens     string
+	SkillCalls string
+	Cost       string
+	Status     string
+}
+
 type PlanRepository interface {
 	ListPlans(ctx context.Context) ([]store.BillingPlan, error)
 	CreatePlan(ctx context.Context, input CreatePlanInput) (store.BillingPlan, error)
@@ -24,6 +33,7 @@ type PlanRepository interface {
 
 type UsageRepository interface {
 	ListUsage(ctx context.Context) ([]store.UsageRecord, error)
+	RecordUsageEvent(ctx context.Context, input RecordUsageEventInput) (store.UsageRecord, bool, error)
 }
 
 type BudgetAlertRepository interface {
@@ -76,6 +86,12 @@ func NewMemoryUsageRepository(st *store.Store) MemoryUsageRepository {
 
 func (repo MemoryUsageRepository) ListUsage(context.Context) ([]store.UsageRecord, error) {
 	return repo.store.ListUsage(), nil
+}
+
+func (repo MemoryUsageRepository) RecordUsageEvent(_ context.Context, input RecordUsageEventInput) (store.UsageRecord, bool, error) {
+	input = normalizeUsageEventInput(input)
+	item, created := repo.store.RecordUsageEvent(input.EventID, input.Project, input.Tokens, input.SkillCalls, input.Cost, input.Status)
+	return item, created, nil
 }
 
 type MemoryBudgetAlertRepository struct {
@@ -232,6 +248,81 @@ func (repo PostgresUsageRepository) ListUsage(ctx context.Context) ([]store.Usag
 	}
 
 	return items, nil
+}
+
+func (repo PostgresUsageRepository) RecordUsageEvent(ctx context.Context, input RecordUsageEventInput) (store.UsageRecord, bool, error) {
+	input = normalizeUsageEventInput(input)
+
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.UsageRecord{}, false, fmt.Errorf("begin record usage event: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
+		insert into usage_records(id, project, tokens, skill_calls, cost, status)
+		values($1, $2, $3, $4, $5, $6)
+		on conflict (id) do nothing
+		returning id, project, tokens, skill_calls, cost, status, updated_at
+	`, input.EventID, input.Project, input.Tokens, input.SkillCalls, input.Cost, input.Status)
+	if err != nil {
+		return store.UsageRecord{}, false, fmt.Errorf("insert usage event: %w", err)
+	}
+
+	item, err := pgx.CollectOneRow(rows, scanUsageRecord)
+	rows.Close()
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			existingRows, queryErr := tx.Query(ctx, `
+				select id, project, tokens, skill_calls, cost, status, updated_at
+				from usage_records
+				where id = $1
+			`, input.EventID)
+			if queryErr != nil {
+				return store.UsageRecord{}, false, fmt.Errorf("query existing usage event: %w", queryErr)
+			}
+			defer existingRows.Close()
+
+			item, queryErr = pgx.CollectOneRow(existingRows, scanUsageRecord)
+			if queryErr != nil {
+				return store.UsageRecord{}, false, fmt.Errorf("collect existing usage event: %w", queryErr)
+			}
+			if commitErr := tx.Commit(ctx); commitErr != nil {
+				return store.UsageRecord{}, false, fmt.Errorf("commit existing usage event lookup: %w", commitErr)
+			}
+			return item, false, nil
+		}
+		return store.UsageRecord{}, false, fmt.Errorf("collect inserted usage event: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "计费与配额", "record usage event", item.Project, "Success", nextID("req")); err != nil {
+		return store.UsageRecord{}, false, fmt.Errorf("insert usage event audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.UsageRecord{}, false, fmt.Errorf("commit usage event: %w", err)
+	}
+
+	return item, true, nil
+}
+
+func normalizeUsageEventInput(input RecordUsageEventInput) RecordUsageEventInput {
+	if input.Tokens == "" {
+		input.Tokens = "0"
+	}
+	if input.SkillCalls == "" {
+		input.SkillCalls = "0"
+	}
+	if input.Cost == "" {
+		input.Cost = "$0.0000"
+	}
+	if input.Status == "" {
+		input.Status = "Normal"
+	}
+	return input
 }
 
 func scanUsageRecord(row pgx.CollectableRow) (store.UsageRecord, error) {

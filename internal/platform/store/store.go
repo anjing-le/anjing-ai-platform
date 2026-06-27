@@ -729,6 +729,42 @@ func (s *Store) ListUsage() []UsageRecord {
 	return append([]UsageRecord(nil), s.usageRecords...)
 }
 
+func (s *Store) RecordUsageEvent(eventID, project, tokens, skillCalls, cost, status string) (UsageRecord, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, item := range s.usageRecords {
+		if item.ID == eventID {
+			return item, false
+		}
+	}
+
+	if tokens == "" {
+		tokens = "0"
+	}
+	if skillCalls == "" {
+		skillCalls = "0"
+	}
+	if cost == "" {
+		cost = "$0.0000"
+	}
+	if status == "" {
+		status = "Normal"
+	}
+
+	item := UsageRecord{
+		ID:         eventID,
+		Project:    project,
+		Tokens:     tokens,
+		SkillCalls: skillCalls,
+		Cost:       cost,
+		Status:     status,
+		UpdatedAt:  nowLabel(),
+	}
+	s.usageRecords = append([]UsageRecord{item}, s.usageRecords...)
+	s.addAuditLocked("计费与配额", "record usage event", project, "Success")
+	return item, true
+}
+
 func (s *Store) ListBudgetAlerts() []BudgetAlert {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
