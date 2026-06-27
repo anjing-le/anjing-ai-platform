@@ -86,6 +86,23 @@ func TestApplicationsCanBeCreatedAndListed(t *testing.T) {
 	if !rotated.Success || rotated.Data.APIKey == created.Data.APIKey {
 		t.Fatalf("expected rotated api key, got %+v", rotated)
 	}
+	apiKeys := st.ListAPIKeys()
+	var rotatedKey store.APIKey
+	var oldKey store.APIKey
+	for _, item := range apiKeys {
+		if item.Name == rotated.Data.APIKey {
+			rotatedKey = item
+		}
+		if item.Name == created.Data.APIKey {
+			oldKey = item
+		}
+	}
+	if rotatedKey.MaskedPreview == "" || rotatedKey.RotatedAt == "" {
+		t.Fatalf("expected rotated api key metadata, got %+v", rotatedKey)
+	}
+	if oldKey.Status != "Rotated" || oldKey.RotatedAt == "" {
+		t.Fatalf("expected old api key to be marked rotated, got %+v", oldKey)
+	}
 
 	listReq := httptest.NewRequest(http.MethodGet, "/api/control/applications", nil)
 	listRec := httptest.NewRecorder()
@@ -189,6 +206,18 @@ func TestCredentialCanBeRotated(t *testing.T) {
 	if !rotated.Success || rotated.Data.Ref == credentials[0].Ref || rotated.Data.Status != "Active" {
 		t.Fatalf("expected rotated credential, got %+v", rotated)
 	}
+	if rotated.Data.MaskedPreview == "" || rotated.Data.RotatedAt == "" {
+		t.Fatalf("expected rotated credential metadata, got %+v", rotated.Data)
+	}
+	var oldCredential store.Credential
+	for _, item := range st.ListCredentials() {
+		if item.ID == credentials[0].ID {
+			oldCredential = item
+		}
+	}
+	if oldCredential.Status != "Rotated" || oldCredential.RotatedAt == "" {
+		t.Fatalf("expected old credential lifecycle metadata, got %+v", oldCredential)
+	}
 }
 
 func TestAPIKeyCanBeRevoked(t *testing.T) {
@@ -221,6 +250,9 @@ func TestAPIKeyCanBeRevoked(t *testing.T) {
 	}
 	if !revoked.Success || revoked.Data.Status != "Revoked" {
 		t.Fatalf("expected revoked api key, got %+v", revoked)
+	}
+	if revoked.Data.MaskedPreview == "" || revoked.Data.RevokedAt == "" {
+		t.Fatalf("expected revoked api key metadata, got %+v", revoked.Data)
 	}
 }
 

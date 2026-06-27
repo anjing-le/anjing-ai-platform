@@ -315,7 +315,7 @@ for (const actionLabel of [
   "无法启用套餐 ${plan.name}，需要管理员权限",
   "处理 ${alert.project} 的预算告警",
   "激活用户 ${user.email}",
-  "撤销 API Key ${apiKey.name}",
+  "撤销 API Key ${keyLabel}",
   "轮换凭据 ${credential.ref}",
 ]) {
   if (!appSource.includes(actionLabel)) {

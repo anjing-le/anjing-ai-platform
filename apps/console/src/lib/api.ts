@@ -87,6 +87,10 @@ export interface APIKey {
   scope: string;
   expiresAt: string;
   status: string;
+  maskedPreview: string;
+  lastUsedAt: string;
+  rotatedAt: string;
+  revokedAt: string;
 }
 
 export interface Credential {
@@ -97,6 +101,7 @@ export interface Credential {
   expiresAt: string;
   status: string;
   maskedPreview: string;
+  rotatedAt: string;
 }
 
 export interface GatewayRoute {

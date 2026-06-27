@@ -62,12 +62,16 @@ type RolePolicy struct {
 }
 
 type APIKey struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Project   string `json:"project"`
-	Scope     string `json:"scope"`
-	ExpiresAt string `json:"expiresAt"`
-	Status    string `json:"status"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Project       string `json:"project"`
+	Scope         string `json:"scope"`
+	ExpiresAt     string `json:"expiresAt"`
+	Status        string `json:"status"`
+	MaskedPreview string `json:"maskedPreview"`
+	LastUsedAt    string `json:"lastUsedAt"`
+	RotatedAt     string `json:"rotatedAt"`
+	RevokedAt     string `json:"revokedAt"`
 }
 
 type Credential struct {
@@ -78,6 +82,7 @@ type Credential struct {
 	ExpiresAt     string `json:"expiresAt"`
 	Status        string `json:"status"`
 	MaskedPreview string `json:"maskedPreview"`
+	RotatedAt     string `json:"rotatedAt"`
 }
 
 type GatewayRoute struct {
@@ -232,8 +237,8 @@ func NewSeedStore() *Store {
 			{ID: "role_operator", Name: "Operator", VisibleEntries: "overview,quota", ConfigScope: "runtime policy", Restriction: "no developer-owned route schema", Status: "Active"},
 		},
 		apiKeys: []APIKey{
-			{ID: "key_customer", Name: "ak_live_customer", Project: "customer-service-agent", Scope: "llm:chat skill:invoke", ExpiresAt: "2026-09-01", Status: "Active"},
-			{ID: "key_knowledge", Name: "ak_live_knowledge", Project: "knowledge-rag", Scope: "llm:embedding skill:read", ExpiresAt: "2026-08-15", Status: "Active"},
+			{ID: "key_customer", Name: "ak_live_customer", Project: "customer-service-agent", Scope: "llm:chat skill:invoke", ExpiresAt: "2026-09-01", Status: "Active", MaskedPreview: MaskSecretPreview("ak_live_customer"), LastUsedAt: now},
+			{ID: "key_knowledge", Name: "ak_live_knowledge", Project: "knowledge-rag", Scope: "llm:embedding skill:read", ExpiresAt: "2026-08-15", Status: "Active", MaskedPreview: MaskSecretPreview("ak_live_knowledge"), LastUsedAt: now},
 		},
 		credentials: []Credential{
 			{ID: "cred_openai", Ref: "cred.openai.default", Purpose: "LLM provider", Scope: "Gateway / Model", ExpiresAt: "2026-07-01", Status: "Active", MaskedPreview: "sk-****-4f2a"},
@@ -355,12 +360,13 @@ func (s *Store) CreateApplication(name, owner, environment, defaultRoute, plan s
 	}
 	s.applications = append([]Application{app}, s.applications...)
 	s.apiKeys = append([]APIKey{{
-		ID:        nextID("key"),
-		Name:      apiKey,
-		Project:   name,
-		Scope:     "llm:chat skill:invoke",
-		ExpiresAt: "",
-		Status:    "Provisioning",
+		ID:            nextID("key"),
+		Name:          apiKey,
+		Project:       name,
+		Scope:         "llm:chat skill:invoke",
+		ExpiresAt:     "",
+		Status:        "Provisioning",
+		MaskedPreview: MaskSecretPreview(apiKey),
 	}}, s.apiKeys...)
 	s.todos = append([]OpsTodo{{
 		ID:        nextID("todo"),
@@ -394,6 +400,7 @@ func (s *Store) ActivateApplication(id string) (Application, bool) {
 			if s.apiKeys[keyIndex].Project == s.applications[index].Name ||
 				s.apiKeys[keyIndex].Name == s.applications[index].APIKey {
 				s.apiKeys[keyIndex].Status = "Active"
+				s.apiKeys[keyIndex].LastUsedAt = nowLabel()
 			}
 		}
 		s.requestLogs = append([]RequestLog{{
@@ -418,22 +425,27 @@ func (s *Store) RotateApplicationKey(id string) (Application, bool) {
 			continue
 		}
 
+		now := time.Now().UTC()
+		rotatedAt := now.Format(time.RFC3339)
 		oldKey := s.applications[index].APIKey
-		newKey := oldKey + "_rot_" + time.Now().UTC().Format("20060102150405")
+		newKey := oldKey + "_rot_" + now.Format("20060102150405")
 		s.applications[index].APIKey = newKey
 		for keyIndex := range s.apiKeys {
 			if s.apiKeys[keyIndex].Project == s.applications[index].Name ||
 				s.apiKeys[keyIndex].Name == oldKey {
 				s.apiKeys[keyIndex].Status = "Rotated"
+				s.apiKeys[keyIndex].RotatedAt = rotatedAt
 			}
 		}
 		s.apiKeys = append([]APIKey{{
-			ID:        nextID("key"),
-			Name:      newKey,
-			Project:   s.applications[index].Name,
-			Scope:     "llm:chat skill:invoke",
-			ExpiresAt: "",
-			Status:    "Active",
+			ID:            nextID("key"),
+			Name:          newKey,
+			Project:       s.applications[index].Name,
+			Scope:         "llm:chat skill:invoke",
+			ExpiresAt:     "",
+			Status:        "Active",
+			MaskedPreview: MaskSecretPreview(newKey),
+			RotatedAt:     rotatedAt,
 		}}, s.apiKeys...)
 		s.addAuditLocked("用户与权限", "rotate api key", s.applications[index].Name, "Success")
 		return s.applications[index], true
@@ -462,6 +474,7 @@ func (s *Store) RevokeAPIKey(id string) (APIKey, bool) {
 		}
 
 		s.apiKeys[index].Status = "Revoked"
+		s.apiKeys[index].RevokedAt = time.Now().UTC().Format(time.RFC3339)
 		s.addAuditLocked("用户与权限", "revoke api key", s.apiKeys[index].Name, "Success")
 		return s.apiKeys[index], true
 	}
@@ -482,9 +495,12 @@ func (s *Store) RotateCredential(id string) (Credential, bool) {
 			continue
 		}
 
+		now := time.Now().UTC()
+		rotatedAt := now.Format(time.RFC3339)
 		old := s.credentials[index]
-		newRef := old.Ref + ".rot." + time.Now().UTC().Format("20060102150405")
+		newRef := old.Ref + ".rot." + now.Format("20060102150405")
 		s.credentials[index].Status = "Rotated"
+		s.credentials[index].RotatedAt = rotatedAt
 		credential := Credential{
 			ID:            nextID("cred"),
 			Ref:           newRef,
@@ -492,7 +508,8 @@ func (s *Store) RotateCredential(id string) (Credential, bool) {
 			Scope:         old.Scope,
 			ExpiresAt:     old.ExpiresAt,
 			Status:        "Active",
-			MaskedPreview: "sk-****-rot",
+			MaskedPreview: MaskSecretPreview("sk_live_" + newRef),
+			RotatedAt:     rotatedAt,
 		}
 		s.credentials = append([]Credential{credential}, s.credentials...)
 		s.addAuditLocked("用户与权限", "rotate credential", old.Ref, "Success")
@@ -833,6 +850,33 @@ func estimateMockCost(tokens int) string {
 
 func nowLabel() string {
 	return time.Now().UTC().Format(time.RFC3339)
+}
+
+func MaskSecretPreview(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+
+	prefix := trimmed
+	for _, separator := range []string{"_", "-", "."} {
+		if index := strings.Index(trimmed, separator); index > 0 {
+			prefix = trimmed[:index]
+			break
+		}
+	}
+	if len(prefix) > 4 {
+		prefix = prefix[:4]
+	}
+	if prefix == "" {
+		prefix = "key"
+	}
+
+	suffix := trimmed
+	if len(suffix) > 4 {
+		suffix = suffix[len(suffix)-4:]
+	}
+	return prefix + "-****-" + suffix
 }
 
 func nextID(prefix string) string {

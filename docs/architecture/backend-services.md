@@ -244,6 +244,8 @@ go run ./cmd/console-web      # :1818
 - `GET /api/control/credentials`
 - `POST /api/control/credentials/rotate`
 
+控制台列表优先展示 `maskedPreview`、最近使用时间、轮换时间和吊销时间等安全元数据，密钥和凭据的生命周期动作同步写入审计事件。
+
 ### `gateway-api`
 
 - `GET /api/gateway/healthz`

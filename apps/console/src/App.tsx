@@ -1831,10 +1831,10 @@ function ModulePage({
       return {
         eyebrow: "API Key",
         title: "密钥列表",
-        columns: ["名称", "项目", "授权范围", "到期时间", "状态"],
+        columns: ["密钥", "项目", "授权范围", "最近使用", "状态"],
         rows: (snapshot?.apiKeys || []).map((key) => ({
           id: key.id,
-          cells: [key.name, key.project, key.scope, key.expiresAt || "未设置", key.status],
+          cells: [key.maskedPreview || key.name, key.project, key.scope, key.lastUsedAt || "暂无调用", key.status],
           status: key.status,
           tone: toneForStatus(key.status),
         })),
@@ -1845,14 +1845,14 @@ function ModulePage({
       return {
         eyebrow: "凭据",
         title: "凭据引用",
-        columns: ["引用", "用途", "绑定范围", "到期时间", "状态"],
+        columns: ["引用", "用途", "脱敏预览", "轮换时间", "状态"],
         rows: (snapshot?.credentials || []).map((credential) => ({
           id: credential.id,
           cells: [
             credential.ref,
             credential.purpose,
-            credential.scope,
-            credential.expiresAt || "未设置",
+            credential.maskedPreview || "未配置",
+            credential.rotatedAt || "未轮换",
             credential.status,
           ],
           status: credential.status,
@@ -3854,25 +3854,30 @@ function APIKeyPanel({
   }
 
   const canRevoke = role === "admin";
+  const keyLabel = apiKey.maskedPreview || apiKey.name;
+  const lifecycleValue = apiKey.revokedAt || apiKey.rotatedAt || apiKey.expiresAt || "未设置";
+  const lifecycleNote = apiKey.revokedAt ? "吊销时间" : apiKey.rotatedAt ? "轮换时间" : "到期时间";
   const checks = [
     { label: "项目", value: apiKey.project, note: "项目归属", tone: "neutral" },
     { label: "授权范围", value: apiKey.scope, note: "API Key scope", tone: "neutral" },
-    { label: "到期时间", value: apiKey.expiresAt || "未设置", note: "密钥有效期", tone: "watch" },
+    { label: "到期时间", value: apiKey.expiresAt || "未设置", note: "失效控制", tone: "neutral" },
+    { label: "最近使用", value: apiKey.lastUsedAt || "暂无调用", note: "调用审计", tone: "neutral" },
+    { label: "生命周期", value: lifecycleValue, note: lifecycleNote, tone: "watch" },
   ] as const;
   const revokeLabel = !canRevoke
-    ? `无法撤销 API Key ${apiKey.name}，需要管理员权限`
+    ? `无法撤销 API Key ${keyLabel}，需要管理员权限`
     : apiKey.status === "Revoked"
-      ? `API Key ${apiKey.name} 已撤销`
+      ? `API Key ${keyLabel} 已撤销`
       : revoking
-        ? `正在撤销 API Key ${apiKey.name}`
-        : `撤销 API Key ${apiKey.name}`;
+        ? `正在撤销 API Key ${keyLabel}`
+        : `撤销 API Key ${keyLabel}`;
 
   return (
     <Panel eyebrow="API Key" title="密钥详情">
       <div className="api-key-summary">
         <div>
           <span>当前密钥</span>
-          <strong>{apiKey.name}</strong>
+          <strong>{keyLabel}</strong>
           <p>{canRevoke ? "管理员可撤销密钥" : "当前角色只读 API Key"}</p>
         </div>
         <StatusBadge tone={toneForStatus(apiKey.status)}>{apiKey.status}</StatusBadge>
@@ -3927,10 +3932,12 @@ function CredentialRefPanel({
   }
 
   const canRotate = role === "admin";
+  const credentialPreview = credential.maskedPreview || "未配置";
   const checks = [
     { label: "用途", value: credential.purpose, note: "凭据用途", tone: "neutral" },
     { label: "绑定范围", value: credential.scope, note: "credential scope", tone: "neutral" },
-    { label: "脱敏预览", value: credential.maskedPreview, note: "脱敏展示", tone: "watch" },
+    { label: "脱敏预览", value: credentialPreview, note: "安全展示", tone: "watch" },
+    { label: "轮换时间", value: credential.rotatedAt || "未轮换", note: "生命周期", tone: "neutral" },
   ] as const;
   const rotateLabel = !canRotate
     ? `无法轮换凭据 ${credential.ref}，需要管理员权限`

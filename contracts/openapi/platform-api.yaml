@@ -1423,7 +1423,7 @@ components:
           type: string
     APIKey:
       type: object
-      required: [id, name, project, scope, expiresAt, status]
+      required: [id, name, project, scope, expiresAt, status, maskedPreview, lastUsedAt, rotatedAt, revokedAt]
       properties:
         id:
           type: string
@@ -1437,6 +1437,14 @@ components:
           type: string
         status:
           type: string
+        maskedPreview:
+          type: string
+        lastUsedAt:
+          type: string
+        rotatedAt:
+          type: string
+        revokedAt:
+          type: string
     RevokeAPIKeyRequest:
       type: object
       required: [id]
@@ -1445,7 +1453,7 @@ components:
           type: string
     Credential:
       type: object
-      required: [id, ref, purpose, scope, expiresAt, status, maskedPreview]
+      required: [id, ref, purpose, scope, expiresAt, status, maskedPreview, rotatedAt]
       properties:
         id:
           type: string
@@ -1460,6 +1468,8 @@ components:
         status:
           type: string
         maskedPreview:
+          type: string
+        rotatedAt:
           type: string
     RotateCredentialRequest:
       type: object

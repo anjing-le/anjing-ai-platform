@@ -2,6 +2,7 @@ package control
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -360,10 +361,10 @@ func (repo PostgresApplicationRepository) CreateApplication(ctx context.Context,
 	}
 
 	_, err = tx.Exec(ctx, `
-		insert into api_keys(id, name, project, scope, status)
-		values($1, $2, $3, $4, $5)
+		insert into api_keys(id, name, project, scope, status, masked_preview)
+		values($1, $2, $3, $4, $5, $6)
 		on conflict (id) do nothing
-	`, nextID("key"), app.APIKey, app.Name, "llm:chat skill:invoke", app.Status)
+	`, nextID("key"), app.APIKey, app.Name, "llm:chat skill:invoke", app.Status, store.MaskSecretPreview(app.APIKey))
 	if err != nil {
 		return store.Application{}, fmt.Errorf("insert application api key: %w", err)
 	}
@@ -418,7 +419,7 @@ func (repo PostgresApplicationRepository) ActivateApplication(ctx context.Contex
 
 	_, err = tx.Exec(ctx, `
 		update api_keys
-		set status = 'Active'
+		set status = 'Active', last_used_at = now()
 		where project = $1 or name = $2
 	`, app.Name, app.APIKey)
 	if err != nil {
@@ -501,7 +502,7 @@ func (repo PostgresApplicationRepository) RotateApplicationKey(ctx context.Conte
 
 	_, err = tx.Exec(ctx, `
 		update api_keys
-		set status = 'Rotated'
+		set status = 'Rotated', rotated_at = now()
 		where project = $1 or name = $2
 	`, app.Name, oldKey)
 	if err != nil {
@@ -509,9 +510,9 @@ func (repo PostgresApplicationRepository) RotateApplicationKey(ctx context.Conte
 	}
 
 	_, err = tx.Exec(ctx, `
-		insert into api_keys(id, name, project, scope, status)
-		values($1, $2, $3, $4, $5)
-	`, nextID("key"), app.APIKey, app.Name, "llm:chat skill:invoke", "Active")
+		insert into api_keys(id, name, project, scope, status, masked_preview, rotated_at)
+		values($1, $2, $3, $4, $5, $6, now())
+	`, nextID("key"), app.APIKey, app.Name, "llm:chat skill:invoke", "Active", store.MaskSecretPreview(app.APIKey))
 	if err != nil {
 		return store.Application{}, false, fmt.Errorf("insert rotated application api key: %w", err)
 	}
@@ -595,7 +596,16 @@ func NewPostgresAPIKeyRepository(pool *pgxpool.Pool) PostgresAPIKeyRepository {
 
 func (repo PostgresAPIKeyRepository) ListAPIKeys(ctx context.Context) ([]store.APIKey, error) {
 	rows, err := repo.pool.Query(ctx, `
-		select id, name, project, scope, coalesce(expires_at::text, ''), status
+		select id,
+			name,
+			project,
+			scope,
+			coalesce(expires_at::text, ''),
+			status,
+			coalesce(masked_preview, ''),
+			last_used_at,
+			rotated_at,
+			revoked_at
 		from api_keys
 		order by created_at desc
 	`)
@@ -613,11 +623,26 @@ func (repo PostgresAPIKeyRepository) ListAPIKeys(ctx context.Context) ([]store.A
 }
 
 func (repo PostgresAPIKeyRepository) RevokeAPIKey(ctx context.Context, id string) (store.APIKey, bool, error) {
-	rows, err := repo.pool.Query(ctx, `
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.APIKey{}, false, fmt.Errorf("begin revoke api key: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
 		update api_keys
-		set status = 'Revoked'
+		set status = 'Revoked', revoked_at = coalesce(revoked_at, now())
 		where id = $1
-		returning id, name, project, scope, coalesce(expires_at::text, ''), status
+		returning id,
+			name,
+			project,
+			scope,
+			coalesce(expires_at::text, ''),
+			status,
+			coalesce(masked_preview, ''),
+			last_used_at,
+			rotated_at,
+			revoked_at
 	`, id)
 	if err != nil {
 		return store.APIKey{}, false, fmt.Errorf("revoke api key: %w", err)
@@ -631,15 +656,44 @@ func (repo PostgresAPIKeyRepository) RevokeAPIKey(ctx context.Context, id string
 		}
 		return store.APIKey{}, false, fmt.Errorf("collect revoked api key: %w", err)
 	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "用户与权限", "revoke api key", key.Name, "Success", nextID("req")); err != nil {
+		return store.APIKey{}, false, fmt.Errorf("insert api key revoke audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.APIKey{}, false, fmt.Errorf("commit revoke api key: %w", err)
+	}
 
 	return key, true, nil
 }
 
 func scanAPIKey(row pgx.CollectableRow) (store.APIKey, error) {
 	var item store.APIKey
-	if err := row.Scan(&item.ID, &item.Name, &item.Project, &item.Scope, &item.ExpiresAt, &item.Status); err != nil {
+	var lastUsedAt sql.NullTime
+	var rotatedAt sql.NullTime
+	var revokedAt sql.NullTime
+	if err := row.Scan(
+		&item.ID,
+		&item.Name,
+		&item.Project,
+		&item.Scope,
+		&item.ExpiresAt,
+		&item.Status,
+		&item.MaskedPreview,
+		&lastUsedAt,
+		&rotatedAt,
+		&revokedAt,
+	); err != nil {
 		return store.APIKey{}, err
 	}
+	item.LastUsedAt = formatNullTime(lastUsedAt)
+	item.RotatedAt = formatNullTime(rotatedAt)
+	item.RevokedAt = formatNullTime(revokedAt)
 	return item, nil
 }
 
@@ -653,7 +707,7 @@ func NewPostgresCredentialRepository(pool *pgxpool.Pool) PostgresCredentialRepos
 
 func (repo PostgresCredentialRepository) ListCredentials(ctx context.Context) ([]store.Credential, error) {
 	rows, err := repo.pool.Query(ctx, `
-		select id, ref, purpose, scope, coalesce(expires_at::text, ''), status, masked_preview
+		select id, ref, purpose, scope, coalesce(expires_at::text, ''), status, masked_preview, rotated_at
 		from credentials
 		order by ref asc
 	`)
@@ -678,7 +732,7 @@ func (repo PostgresCredentialRepository) RotateCredential(ctx context.Context, i
 	defer tx.Rollback(ctx)
 
 	rows, err := tx.Query(ctx, `
-		select id, ref, purpose, scope, coalesce(expires_at::text, ''), status, masked_preview
+		select id, ref, purpose, scope, coalesce(expires_at::text, ''), status, masked_preview, rotated_at
 		from credentials
 		where id = $1
 	`, id)
@@ -698,28 +752,38 @@ func (repo PostgresCredentialRepository) RotateCredential(ctx context.Context, i
 
 	_, err = tx.Exec(ctx, `
 		update credentials
-		set status = 'Rotated'
+		set status = 'Rotated', rotated_at = now()
 		where id = $1
 	`, id)
 	if err != nil {
 		return store.Credential{}, false, fmt.Errorf("mark credential rotated: %w", err)
 	}
 
+	now := time.Now().UTC()
+	newRef := fmt.Sprintf("%s.rot.%d", old.Ref, now.Unix())
 	credential := store.Credential{
-		ID:            fmt.Sprintf("cred_%d", time.Now().UnixNano()),
-		Ref:           fmt.Sprintf("%s.rot.%d", old.Ref, time.Now().Unix()),
+		ID:            fmt.Sprintf("cred_%d", now.UnixNano()),
+		Ref:           newRef,
 		Purpose:       old.Purpose,
 		Scope:         old.Scope,
 		ExpiresAt:     old.ExpiresAt,
 		Status:        "Active",
-		MaskedPreview: "sk-****-rot",
+		MaskedPreview: store.MaskSecretPreview("sk_live_" + newRef),
+		RotatedAt:     now.Format(time.RFC3339),
 	}
 
 	if _, err := tx.Exec(ctx, `
-		insert into credentials(id, ref, purpose, scope, expires_at, status, masked_preview)
-		values($1, $2, $3, $4, nullif($5, '')::date, $6, $7)
-	`, credential.ID, credential.Ref, credential.Purpose, credential.Scope, credential.ExpiresAt, credential.Status, credential.MaskedPreview); err != nil {
+		insert into credentials(id, ref, purpose, scope, expires_at, status, masked_preview, rotated_at)
+		values($1, $2, $3, $4, nullif($5, '')::date, $6, $7, $8)
+	`, credential.ID, credential.Ref, credential.Purpose, credential.Scope, credential.ExpiresAt, credential.Status, credential.MaskedPreview, now); err != nil {
 		return store.Credential{}, false, fmt.Errorf("insert rotated credential: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "用户与权限", "rotate credential", old.Ref, "Success", nextID("req")); err != nil {
+		return store.Credential{}, false, fmt.Errorf("insert credential rotation audit: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -731,10 +795,19 @@ func (repo PostgresCredentialRepository) RotateCredential(ctx context.Context, i
 
 func scanCredential(row pgx.CollectableRow) (store.Credential, error) {
 	var item store.Credential
-	if err := row.Scan(&item.ID, &item.Ref, &item.Purpose, &item.Scope, &item.ExpiresAt, &item.Status, &item.MaskedPreview); err != nil {
+	var rotatedAt sql.NullTime
+	if err := row.Scan(&item.ID, &item.Ref, &item.Purpose, &item.Scope, &item.ExpiresAt, &item.Status, &item.MaskedPreview, &rotatedAt); err != nil {
 		return store.Credential{}, err
 	}
+	item.RotatedAt = formatNullTime(rotatedAt)
 	return item, nil
+}
+
+func formatNullTime(value sql.NullTime) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.Time.UTC().Format(time.RFC3339)
 }
 
 func nextID(prefix string) string {
