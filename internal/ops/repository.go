@@ -3,6 +3,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
@@ -21,6 +22,14 @@ type HealthRepository interface {
 
 type AuditRepository interface {
 	ListAudit(ctx context.Context) ([]store.AuditEvent, error)
+	QueryAudit(ctx context.Context, query AuditQuery) ([]store.AuditEvent, error)
+}
+
+type AuditQuery struct {
+	Q      string
+	Module string
+	Status string
+	Limit  int
 }
 
 type SnapshotRepository interface {
@@ -82,6 +91,10 @@ func NewMemoryAuditRepository(st *store.Store) MemoryAuditRepository {
 
 func (repo MemoryAuditRepository) ListAudit(context.Context) ([]store.AuditEvent, error) {
 	return repo.store.ListAudit(), nil
+}
+
+func (repo MemoryAuditRepository) QueryAudit(_ context.Context, query AuditQuery) ([]store.AuditEvent, error) {
+	return filterAuditEvents(repo.store.ListAudit(), query), nil
 }
 
 type MemorySnapshotRepository struct {
@@ -218,11 +231,39 @@ func NewPostgresAuditRepository(pool *pgxpool.Pool) PostgresAuditRepository {
 }
 
 func (repo PostgresAuditRepository) ListAudit(ctx context.Context) ([]store.AuditEvent, error) {
-	rows, err := repo.pool.Query(ctx, `
+	return repo.QueryAudit(ctx, AuditQuery{})
+}
+
+func (repo PostgresAuditRepository) QueryAudit(ctx context.Context, query AuditQuery) ([]store.AuditEvent, error) {
+	sql := `
 		select id, event_time, module, action, object, status, request_id
 		from audit_events
-		order by event_time desc
-	`)
+	`
+	args := make([]any, 0, 4)
+	clauses := make([]string, 0, 3)
+	addArg := func(value any) string {
+		args = append(args, value)
+		return fmt.Sprintf("$%d", len(args))
+	}
+	if query.Q != "" {
+		placeholder := addArg("%" + query.Q + "%")
+		clauses = append(clauses, "(action ilike "+placeholder+" or object ilike "+placeholder+" or request_id ilike "+placeholder+")")
+	}
+	if query.Module != "" {
+		clauses = append(clauses, "lower(module) = lower("+addArg(query.Module)+")")
+	}
+	if query.Status != "" {
+		clauses = append(clauses, "lower(status) = lower("+addArg(query.Status)+")")
+	}
+	if len(clauses) > 0 {
+		sql += " where " + strings.Join(clauses, " and ")
+	}
+	sql += " order by event_time desc"
+	if query.Limit > 0 {
+		sql += " limit " + addArg(query.Limit)
+	}
+
+	rows, err := repo.pool.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query audit events: %w", err)
 	}
@@ -234,6 +275,33 @@ func (repo PostgresAuditRepository) ListAudit(ctx context.Context) ([]store.Audi
 	}
 
 	return items, nil
+}
+
+func filterAuditEvents(items []store.AuditEvent, query AuditQuery) []store.AuditEvent {
+	filtered := make([]store.AuditEvent, 0, len(items))
+	for _, item := range items {
+		if query.Module != "" && !strings.EqualFold(item.Module, query.Module) {
+			continue
+		}
+		if query.Status != "" && !strings.EqualFold(item.Status, query.Status) {
+			continue
+		}
+		if query.Q != "" && !auditEventMatches(item, query.Q) {
+			continue
+		}
+		filtered = append(filtered, item)
+		if query.Limit > 0 && len(filtered) >= query.Limit {
+			break
+		}
+	}
+	return filtered
+}
+
+func auditEventMatches(item store.AuditEvent, query string) bool {
+	needle := strings.ToLower(query)
+	return strings.Contains(strings.ToLower(item.Action), needle) ||
+		strings.Contains(strings.ToLower(item.Object), needle) ||
+		strings.Contains(strings.ToLower(item.RequestID), needle)
 }
 
 func scanAuditEvent(row pgx.CollectableRow) (store.AuditEvent, error) {

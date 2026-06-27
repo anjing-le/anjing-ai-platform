@@ -261,6 +261,8 @@ go run ./cmd/console-web      # :1818
 - `GET /api/gateway/request-logs`
 - `POST /api/gateway/llm/invoke`
 
+`GET /api/gateway/request-logs` 支持 `q`、`consumer`、`status` 和 `limit` 查询参数，用于控制台按调用方、状态和关键词查看近期请求链路。
+
 ### `billing-service`
 
 - `GET /api/billing/healthz`
@@ -280,6 +282,8 @@ go run ./cmd/console-web      # :1818
 - `POST /api/ops/todos/resolve`
 - `GET /api/ops/service-health`
 - `GET /api/ops/audit-events`
+
+`GET /api/ops/audit-events` 支持 `q`、`module`、`status` 和 `limit` 查询参数，用于控制台按模块、状态和操作对象追踪审计记录。
 
 ## 后台首页聚合策略
 

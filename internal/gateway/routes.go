@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -300,13 +301,34 @@ func requestLogsHandler(requestLogs RequestLogRepository) http.HandlerFunc {
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
 			return
 		}
-		items, err := requestLogs.ListRequestLogs(r.Context())
+		items, err := requestLogs.QueryRequestLogs(r.Context(), requestLogQueryFromRequest(r))
 		if err != nil {
 			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
 			return
 		}
 		httpjson.OK(w, items)
 	}
+}
+
+func requestLogQueryFromRequest(r *http.Request) RequestLogQuery {
+	values := r.URL.Query()
+	return RequestLogQuery{
+		Q:        strings.TrimSpace(values.Get("q")),
+		Consumer: strings.TrimSpace(values.Get("consumer")),
+		Status:   strings.TrimSpace(values.Get("status")),
+		Limit:    parseListLimit(values.Get("limit")),
+	}
+}
+
+func parseListLimit(value string) int {
+	limit, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || limit <= 0 {
+		return 0
+	}
+	if limit > 500 {
+		return 500
+	}
+	return limit
 }
 
 func llmInvokeHandler(modelRoutes ModelRouteRepository, recorder InvocationRecorder) http.HandlerFunc {

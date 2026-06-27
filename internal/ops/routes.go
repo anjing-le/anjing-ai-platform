@@ -3,6 +3,8 @@ package ops
 import (
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
@@ -149,11 +151,32 @@ func auditHandler(audit AuditRepository) http.HandlerFunc {
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
 			return
 		}
-		items, err := audit.ListAudit(r.Context())
+		items, err := audit.QueryAudit(r.Context(), auditQueryFromRequest(r))
 		if err != nil {
 			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
 			return
 		}
 		httpjson.OK(w, items)
 	}
+}
+
+func auditQueryFromRequest(r *http.Request) AuditQuery {
+	values := r.URL.Query()
+	return AuditQuery{
+		Q:      strings.TrimSpace(values.Get("q")),
+		Module: strings.TrimSpace(values.Get("module")),
+		Status: strings.TrimSpace(values.Get("status")),
+		Limit:  parseListLimit(values.Get("limit")),
+	}
+}
+
+func parseListLimit(value string) int {
+	limit, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || limit <= 0 {
+		return 0
+	}
+	if limit > 500 {
+		return 500
+	}
+	return limit
 }

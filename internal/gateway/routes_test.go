@@ -113,6 +113,35 @@ func TestInvokeLLMUsesModelRoute(t *testing.T) {
 	}
 }
 
+func TestRequestLogsCanBeFiltered(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/gateway/request-logs?q=chat&consumer=customer-service-agent&status=success&limit=1", nil)
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool               `json:"success"`
+		Data    []store.RequestLog `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || len(payload.Data) != 1 {
+		t.Fatalf("expected one filtered request log, got %+v", payload)
+	}
+	if payload.Data[0].Consumer != "customer-service-agent" || payload.Data[0].Status != "Success" {
+		t.Fatalf("unexpected request log: %+v", payload.Data[0])
+	}
+}
+
 func TestCreateModelRouteAddsDraftAlias(t *testing.T) {
 	st := store.NewSeedStore()
 	mux := http.NewServeMux()

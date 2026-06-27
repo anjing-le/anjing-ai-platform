@@ -779,6 +779,29 @@ paths:
       operationId: listRequestLogs
       summary: List request logs.
       x-anjing-roles: [Administrator, Developer, Operator]
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Match request, consumer or result text.
+        - in: query
+          name: consumer
+          schema:
+            type: string
+          description: Filter by exact consumer name.
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by exact request status.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+          description: Maximum number of request logs to return.
       responses:
         "200":
           description: Request logs returned.
@@ -1147,6 +1170,29 @@ paths:
       operationId: listAuditEvents
       summary: List audit events.
       x-anjing-roles: [Administrator, Developer, Operator]
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Match action, object or request id text.
+        - in: query
+          name: module
+          schema:
+            type: string
+          description: Filter by exact platform module.
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by exact audit status.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+          description: Maximum number of audit events to return.
       responses:
         "200":
           description: Audit events returned.

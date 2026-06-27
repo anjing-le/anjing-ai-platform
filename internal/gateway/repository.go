@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
@@ -39,6 +40,13 @@ type LLMInvocationInput struct {
 	Status      string
 }
 
+type RequestLogQuery struct {
+	Q        string
+	Consumer string
+	Status   string
+	Limit    int
+}
+
 type RouteRepository interface {
 	ListRoutes(ctx context.Context) ([]store.GatewayRoute, error)
 	CreateRoute(ctx context.Context, input CreateRouteInput) (store.GatewayRoute, error)
@@ -59,6 +67,7 @@ type SkillRepository interface {
 
 type RequestLogRepository interface {
 	ListRequestLogs(ctx context.Context) ([]store.RequestLog, error)
+	QueryRequestLogs(ctx context.Context, query RequestLogQuery) ([]store.RequestLog, error)
 }
 
 type InvocationRecorder interface {
@@ -156,6 +165,10 @@ func NewMemoryRequestLogRepository(st *store.Store) MemoryRequestLogRepository {
 
 func (repo MemoryRequestLogRepository) ListRequestLogs(context.Context) ([]store.RequestLog, error) {
 	return repo.store.ListRequestLogs(), nil
+}
+
+func (repo MemoryRequestLogRepository) QueryRequestLogs(_ context.Context, query RequestLogQuery) ([]store.RequestLog, error) {
+	return filterRequestLogs(repo.store.ListRequestLogs(), query), nil
 }
 
 type MemoryInvocationRecorder struct {
@@ -559,11 +572,39 @@ func NewPostgresRequestLogRepository(pool *pgxpool.Pool) PostgresRequestLogRepos
 }
 
 func (repo PostgresRequestLogRepository) ListRequestLogs(ctx context.Context) ([]store.RequestLog, error) {
-	rows, err := repo.pool.Query(ctx, `
+	return repo.QueryRequestLogs(ctx, RequestLogQuery{})
+}
+
+func (repo PostgresRequestLogRepository) QueryRequestLogs(ctx context.Context, query RequestLogQuery) ([]store.RequestLog, error) {
+	sql := `
 		select id, request, consumer, latency, result, status, created_at
 		from request_logs
-		order by created_at desc
-	`)
+	`
+	args := make([]any, 0, 4)
+	clauses := make([]string, 0, 3)
+	addArg := func(value any) string {
+		args = append(args, value)
+		return fmt.Sprintf("$%d", len(args))
+	}
+	if query.Q != "" {
+		placeholder := addArg("%" + query.Q + "%")
+		clauses = append(clauses, "(request ilike "+placeholder+" or consumer ilike "+placeholder+" or result ilike "+placeholder+")")
+	}
+	if query.Consumer != "" {
+		clauses = append(clauses, "lower(consumer) = lower("+addArg(query.Consumer)+")")
+	}
+	if query.Status != "" {
+		clauses = append(clauses, "lower(status) = lower("+addArg(query.Status)+")")
+	}
+	if len(clauses) > 0 {
+		sql += " where " + strings.Join(clauses, " and ")
+	}
+	sql += " order by created_at desc"
+	if query.Limit > 0 {
+		sql += " limit " + addArg(query.Limit)
+	}
+
+	rows, err := repo.pool.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query request logs: %w", err)
 	}
@@ -575,6 +616,33 @@ func (repo PostgresRequestLogRepository) ListRequestLogs(ctx context.Context) ([
 	}
 
 	return items, nil
+}
+
+func filterRequestLogs(items []store.RequestLog, query RequestLogQuery) []store.RequestLog {
+	filtered := make([]store.RequestLog, 0, len(items))
+	for _, item := range items {
+		if query.Consumer != "" && !strings.EqualFold(item.Consumer, query.Consumer) {
+			continue
+		}
+		if query.Status != "" && !strings.EqualFold(item.Status, query.Status) {
+			continue
+		}
+		if query.Q != "" && !requestLogMatches(item, query.Q) {
+			continue
+		}
+		filtered = append(filtered, item)
+		if query.Limit > 0 && len(filtered) >= query.Limit {
+			break
+		}
+	}
+	return filtered
+}
+
+func requestLogMatches(item store.RequestLog, query string) bool {
+	needle := strings.ToLower(query)
+	return strings.Contains(strings.ToLower(item.Request), needle) ||
+		strings.Contains(strings.ToLower(item.Consumer), needle) ||
+		strings.Contains(strings.ToLower(item.Result), needle)
 }
 
 type PostgresInvocationRecorder struct {

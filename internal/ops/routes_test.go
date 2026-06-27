@@ -110,6 +110,35 @@ func TestPlatformSnapshotIncludesConsoleData(t *testing.T) {
 	}
 }
 
+func TestAuditEventsCanBeFiltered(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/ops/audit-events?q=skill&module=%E7%BD%91%E5%85%B3%E4%B8%8E%E6%A8%A1%E5%9E%8B&status=success&limit=1", nil)
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool               `json:"success"`
+		Data    []store.AuditEvent `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || len(payload.Data) != 1 {
+		t.Fatalf("expected one filtered audit event, got %+v", payload)
+	}
+	if payload.Data[0].Module != "网关与模型" || payload.Data[0].Status != "Success" {
+		t.Fatalf("unexpected audit event: %+v", payload.Data[0])
+	}
+}
+
 func requestDashboard(t *testing.T, mux *http.ServeMux) struct {
 	Success bool               `json:"success"`
 	Data    store.OpsDashboard `json:"data"`
