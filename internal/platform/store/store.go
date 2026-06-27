@@ -872,8 +872,18 @@ func (s *Store) RecordUsageEvent(eventID, project, tokens, skillCalls, cost, sta
 		UpdatedAt:  nowLabel(),
 	}
 	s.usageRecords = append([]UsageRecord{item}, s.usageRecords...)
+	s.reconcileBudgetAlertsLocked(project)
 	s.addAuditLocked("计费与配额", "record usage event", project, "Success")
 	return item, true
+}
+
+func (s *Store) reconcileBudgetAlertsLocked(project string) {
+	for index := range s.budgetAlerts {
+		if !sameProject(s.budgetAlerts[index].Project, project) {
+			continue
+		}
+		s.budgetAlerts[index] = ReconcileBudgetAlertFromUsage(s.budgetAlerts[index], s.usageRecords)
+	}
 }
 
 func (s *Store) ListBudgetAlerts() []BudgetAlert {
@@ -1083,6 +1093,49 @@ func BuildBillingInvoiceSummaries(usage []UsageRecord, alerts []BudgetAlert) []B
 	}
 
 	return summaries
+}
+
+func ReconcileBudgetAlertFromUsage(alert BudgetAlert, usage []UsageRecord) BudgetAlert {
+	total := 0.0
+	for _, record := range usage {
+		if sameProject(record.Project, alert.Project) {
+			total += parseCurrency(record.Cost)
+		}
+	}
+	alert.Current = formatCurrency(total)
+	alert.Status = budgetAlertStatus(total, alert.Budget, alert.Threshold)
+	return alert
+}
+
+func sameProject(left, right string) bool {
+	return strings.EqualFold(strings.TrimSpace(left), strings.TrimSpace(right))
+}
+
+func budgetAlertStatus(current float64, budget, threshold string) string {
+	budgetValue := parseCurrency(budget)
+	thresholdValue := parsePercent(threshold)
+	if budgetValue <= 0 || thresholdValue <= 0 {
+		return "Normal"
+	}
+	if current >= budgetValue*(thresholdValue/100) {
+		return "Warning"
+	}
+	return "Normal"
+}
+
+func parsePercent(value string) float64 {
+	normalized := strings.TrimSpace(strings.TrimSuffix(value, "%"))
+	if normalized == "" {
+		return 0
+	}
+	number, err := strconv.ParseFloat(normalized, 64)
+	if err != nil {
+		return 0
+	}
+	if number > 0 && number <= 1 {
+		return number * 100
+	}
+	return number
 }
 
 func parseScaledNumber(value string) float64 {

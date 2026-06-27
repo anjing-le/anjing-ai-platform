@@ -232,7 +232,7 @@ V1 先采用 DVSkyFolding 风格的 Go 服务边界，前端后台已经收敛�
 | `operations` | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events`, `/api/ops/audit-events/export` |
 | `access` | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
 | `gateway` | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/llm/invoke`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export` |
-| `billing` | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/budget-alerts` |
+| `billing` | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/invoices`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | `docs` | `console-web` + 对应业务 API | `/`, `/api/*` |
 
 暂不把 `llm`、`skill`、`credential`、`audit` 做成独立后台入口。它们先作为能力被合并进 `gateway`、`access` 和 `operations`，等真实业务边界稳定后再拆。

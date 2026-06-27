@@ -1132,6 +1132,10 @@ paths:
       tags: [billing]
       operationId: recordUsageEvent
       summary: Record an idempotent usage event.
+      description: |
+        Creates a usage record once per `eventId`. New events also reconcile the
+        matching project's budget alert by refreshing `current` and threshold
+        status from accumulated usage cost.
       x-anjing-roles: [Administrator, Developer]
       requestBody:
         required: true
@@ -2099,6 +2103,7 @@ components:
         cost:
           type: string
           default: "$0.0000"
+          description: Usage cost for this event. Currency-like values such as `$1.25` are supported.
         status:
           type: string
           default: Normal
@@ -2166,8 +2171,10 @@ components:
           type: string
         current:
           type: string
+          description: Current accumulated usage cost for the project.
         threshold:
           type: string
+          description: Budget threshold percentage that turns the alert into Warning.
         status:
           type: string
     ResolveBudgetAlertRequest:

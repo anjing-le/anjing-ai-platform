@@ -155,7 +155,7 @@ internal/ops/
 - 账单聚合
 - 幂等结算
 
-用量事件的 V1 写入口是 `POST /api/billing/usage-events`。调用方必须传入稳定的 `eventId`，服务端按 `eventId` 做幂等：首次写入返回新用量记录，重复提交返回已存在记录，不重复入账。
+用量事件的 V1 写入口是 `POST /api/billing/usage-events`。调用方必须传入稳定的 `eventId`，服务端按 `eventId` 做幂等：首次写入返回新用量记录，重复提交返回已存在记录，不重复入账。新用量首次入账后会按项目累计成本，刷新对应预算告警的 `current` 和 `status`；达到阈值时进入 `Warning`。
 
 账单汇总的 V1 读入口是 `GET /api/billing/invoices`，由 `usage_records` 与 `budget_alerts` 派生，先不新增结算表，保持后台成本视图可用且可重算。
 

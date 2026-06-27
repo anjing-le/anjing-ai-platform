@@ -320,11 +320,61 @@ func (repo PostgresUsageRepository) RecordUsageEvent(ctx context.Context, input 
 		return store.UsageRecord{}, false, fmt.Errorf("insert usage event audit: %w", err)
 	}
 
+	if err := repo.reconcileBudgetAlerts(ctx, tx, item.Project); err != nil {
+		return store.UsageRecord{}, false, err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return store.UsageRecord{}, false, fmt.Errorf("commit usage event: %w", err)
 	}
 
 	return item, true, nil
+}
+
+func (repo PostgresUsageRepository) reconcileBudgetAlerts(ctx context.Context, tx pgx.Tx, project string) error {
+	usageRows, err := tx.Query(ctx, `
+		select id, project, tokens, skill_calls, cost, status, updated_at
+		from usage_records
+		where project = $1
+		order by updated_at desc
+	`, project)
+	if err != nil {
+		return fmt.Errorf("query usage records for budget reconciliation: %w", err)
+	}
+	defer usageRows.Close()
+
+	usage, err := pgx.CollectRows(usageRows, scanUsageRecord)
+	if err != nil {
+		return fmt.Errorf("collect usage records for budget reconciliation: %w", err)
+	}
+
+	alertRows, err := tx.Query(ctx, `
+		select id, project, budget, current, threshold, status
+		from budget_alerts
+		where project = $1
+	`, project)
+	if err != nil {
+		return fmt.Errorf("query budget alerts for reconciliation: %w", err)
+	}
+	defer alertRows.Close()
+
+	alerts, err := pgx.CollectRows(alertRows, scanBudgetAlert)
+	if err != nil {
+		return fmt.Errorf("collect budget alerts for reconciliation: %w", err)
+	}
+
+	for _, alert := range alerts {
+		reconciled := store.ReconcileBudgetAlertFromUsage(alert, usage)
+		if _, err := tx.Exec(ctx, `
+			update budget_alerts
+			set current = $1, status = $2
+			where id = $3
+		`, reconciled.Current, reconciled.Status, reconciled.ID); err != nil {
+			return fmt.Errorf("update budget alert after usage event: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func normalizeUsageEventInput(input RecordUsageEventInput) RecordUsageEventInput {

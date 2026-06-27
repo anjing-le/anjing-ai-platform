@@ -187,3 +187,52 @@ func TestRecordUsageEventIsIdempotent(t *testing.T) {
 		t.Fatalf("expected one new usage record, got %d records from initial %d", got, initialUsageCount)
 	}
 }
+
+func TestRecordUsageEventRefreshesBudgetAlert(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"eventId":"usage_evt_budget_warning","project":"customer-service-agent","tokens":"1000","skillCalls":"1","cost":"$50"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/billing/usage-events", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	alert := budgetAlertForProject(t, st.ListBudgetAlerts(), "customer-service-agent")
+	if alert.Current != "$291" || alert.Status != "Warning" {
+		t.Fatalf("expected refreshed warning budget alert, got %+v", alert)
+	}
+
+	retryBody := bytes.NewBufferString(`{"eventId":"usage_evt_budget_warning","project":"customer-service-agent","tokens":"1000","skillCalls":"1","cost":"$500"}`)
+	retryReq := httptest.NewRequest(http.MethodPost, "/api/billing/usage-events", retryBody)
+	retryReq.Header.Set("Content-Type", "application/json")
+	retryRec := httptest.NewRecorder()
+
+	mux.ServeHTTP(retryRec, retryReq)
+
+	if retryRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", retryRec.Code, retryRec.Body.String())
+	}
+
+	alert = budgetAlertForProject(t, st.ListBudgetAlerts(), "customer-service-agent")
+	if alert.Current != "$291" || alert.Status != "Warning" {
+		t.Fatalf("expected idempotent retry to keep budget alert unchanged, got %+v", alert)
+	}
+}
+
+func budgetAlertForProject(t *testing.T, alerts []store.BudgetAlert, project string) store.BudgetAlert {
+	t.Helper()
+	for _, alert := range alerts {
+		if alert.Project == project {
+			return alert
+		}
+	}
+	t.Fatalf("expected budget alert for project %q in %+v", project, alerts)
+	return store.BudgetAlert{}
+}
