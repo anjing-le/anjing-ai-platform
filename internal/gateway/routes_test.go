@@ -557,7 +557,8 @@ func TestCreateSkillBindingAddsDraftSkill(t *testing.T) {
 		"name":"summarize-ticket",
 		"protocol":"HTTP",
 		"route":"/api/v1/skills/summarize",
-		"timeout":"6s"
+		"timeout":"6s",
+		"schemaVersion":"0.2"
 	}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/gateway/skills", body)
 	req.Header.Set("Content-Type", "application/json")
@@ -576,7 +577,7 @@ func TestCreateSkillBindingAddsDraftSkill(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if !payload.Success || payload.Data.Name != "summarize-ticket" || payload.Data.Status != "Draft" {
+	if !payload.Success || payload.Data.Name != "summarize-ticket" || payload.Data.Status != "Draft" || payload.Data.SchemaVersion != "0.2" {
 		t.Fatalf("expected draft skill binding, got %+v", payload)
 	}
 
@@ -598,7 +599,7 @@ func TestCreateSkillBindingAddsDraftSkill(t *testing.T) {
 	if err := json.NewDecoder(publishRec.Body).Decode(&published); err != nil {
 		t.Fatalf("decode publish response: %v", err)
 	}
-	if !published.Success || published.Data.Status != "Published" || published.Data.Name != "summarize-ticket" {
+	if !published.Success || published.Data.Status != "Published" || published.Data.Name != "summarize-ticket" || published.Data.SchemaVersion != "0.2" {
 		t.Fatalf("expected published skill binding, got %+v", published)
 	}
 }
