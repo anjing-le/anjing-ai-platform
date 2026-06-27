@@ -32,6 +32,7 @@ type gatewayProxyRequest struct {
 	Retries          int               `json:"retries"`
 	Headers          map[string]string `json:"headers"`
 	Body             string            `json:"body"`
+	Stream           bool              `json:"stream,omitempty"`
 }
 
 type gatewayProxyResponse struct {
@@ -43,6 +44,7 @@ type gatewayProxyResponse struct {
 	DurationMS int64               `json:"durationMs"`
 	Headers    map[string][]string `json:"headers"`
 	Body       string              `json:"body"`
+	Streamed   bool                `json:"-"`
 }
 
 type resolvedProxyRoute struct {
@@ -118,6 +120,20 @@ func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, lim
 			httpjson.Fail(w, http.StatusTooManyRequests, "rate_limited", fmt.Sprintf("route limit %s exceeded", resolved.Limit))
 			return
 		}
+
+		if req.Stream {
+			result, err := streamGatewayProxy(r.Context(), w, req)
+			status := proxyLogStatus(result, err)
+			if logErr := recordProxyRequest(r.Context(), recorder, req, result, status); logErr != nil && !result.Streamed {
+				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", logErr.Error())
+				return
+			}
+			if err != nil && !result.Streamed {
+				httpjson.Fail(w, http.StatusBadGateway, "upstream_unavailable", err.Error())
+			}
+			return
+		}
+
 		result, err := executeGatewayProxy(r.Context(), req)
 		status := proxyLogStatus(result, err)
 		if logErr := recordProxyRequest(r.Context(), recorder, req, result, status); logErr != nil {
@@ -186,22 +202,9 @@ func executeGatewayProxy(ctx context.Context, req gatewayProxyRequest) (gatewayP
 }
 
 func sendGatewayProxyAttempt(ctx context.Context, client http.Client, req gatewayProxyRequest, upstream string) (gatewayProxyResponse, error) {
-	target, err := buildProxyURL(upstream, req.Route)
+	httpReq, err := newGatewayProxyHTTPRequest(ctx, req, upstream)
 	if err != nil {
 		return gatewayProxyResponse{Route: req.Route, Upstream: upstream, Headers: map[string][]string{}}, err
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, req.Method, target, strings.NewReader(req.Body))
-	if err != nil {
-		return gatewayProxyResponse{Route: req.Route, Upstream: upstream, Headers: map[string][]string{}}, err
-	}
-	for key, value := range req.Headers {
-		if isForwardHeaderAllowed(key) {
-			httpReq.Header.Set(key, value)
-		}
-	}
-	if req.Body != "" && httpReq.Header.Get("Content-Type") == "" {
-		httpReq.Header.Set("Content-Type", "application/json")
 	}
 
 	resp, err := client.Do(httpReq)
@@ -222,6 +225,130 @@ func sendGatewayProxyAttempt(ctx context.Context, client http.Client, req gatewa
 		Headers:    cloneHeader(resp.Header),
 		Body:       string(body),
 	}, nil
+}
+
+func streamGatewayProxy(ctx context.Context, w http.ResponseWriter, req gatewayProxyRequest) (gatewayProxyResponse, error) {
+	started := time.Now()
+	timeout := normalizeProxyTimeout(req.TimeoutMS)
+	retries := normalizeProxyRetries(req.Retries)
+	client := http.Client{Timeout: timeout}
+	upstreams := []string{req.Upstream}
+	if strings.TrimSpace(req.FallbackUpstream) != "" {
+		upstreams = append(upstreams, strings.TrimSpace(req.FallbackUpstream))
+	}
+
+	var result gatewayProxyResponse
+	var lastErr error
+	attempts := 0
+	for index, upstream := range upstreams {
+		attemptLimit := retries + 1
+		if index > 0 {
+			attemptLimit = 1
+		}
+		for attempt := 0; attempt < attemptLimit; attempt++ {
+			attempts++
+			response := gatewayProxyResponse{
+				Route:    req.Route,
+				Upstream: upstream,
+				Attempts: attempts,
+				Fallback: index > 0,
+				Headers:  map[string][]string{},
+			}
+			httpReq, err := newGatewayProxyHTTPRequest(ctx, req, upstream)
+			if err != nil {
+				response.DurationMS = time.Since(started).Milliseconds()
+				result = response
+				lastErr = err
+				continue
+			}
+			resp, err := client.Do(httpReq)
+			if err != nil {
+				response.DurationMS = time.Since(started).Milliseconds()
+				result = response
+				lastErr = err
+				continue
+			}
+
+			response.StatusCode = resp.StatusCode
+			response.Headers = cloneHeader(resp.Header)
+			result = response
+			if resp.StatusCode >= http.StatusInternalServerError {
+				_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxProxyResponseBodyBytes))
+				_ = resp.Body.Close()
+				result.DurationMS = time.Since(started).Milliseconds()
+				lastErr = fmt.Errorf("upstream returned %d", resp.StatusCode)
+				continue
+			}
+
+			err = copyGatewayProxyStream(w, resp)
+			result.DurationMS = time.Since(started).Milliseconds()
+			result.Streamed = true
+			if err != nil {
+				return result, err
+			}
+			return result, nil
+		}
+	}
+
+	if result.Route == "" {
+		result = gatewayProxyResponse{
+			Route:      req.Route,
+			Upstream:   req.Upstream,
+			Attempts:   attempts,
+			DurationMS: time.Since(started).Milliseconds(),
+			Headers:    map[string][]string{},
+		}
+	}
+	if lastErr == nil {
+		lastErr = errors.New("upstream request failed")
+	}
+	return result, lastErr
+}
+
+func newGatewayProxyHTTPRequest(ctx context.Context, req gatewayProxyRequest, upstream string) (*http.Request, error) {
+	target, err := buildProxyURL(upstream, req.Route)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, req.Method, target, strings.NewReader(req.Body))
+	if err != nil {
+		return nil, err
+	}
+	for key, value := range req.Headers {
+		if isForwardHeaderAllowed(key) {
+			httpReq.Header.Set(key, value)
+		}
+	}
+	if req.Body != "" && httpReq.Header.Get("Content-Type") == "" {
+		httpReq.Header.Set("Content-Type", "application/json")
+	}
+	return httpReq, nil
+}
+
+func copyGatewayProxyStream(w http.ResponseWriter, resp *http.Response) error {
+	defer resp.Body.Close()
+
+	copyProxyResponseHeaders(w.Header(), resp.Header)
+	w.WriteHeader(resp.StatusCode)
+	if _, err := io.Copy(w, resp.Body); err != nil {
+		return err
+	}
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+	return nil
+}
+
+func copyProxyResponseHeaders(dst http.Header, src http.Header) {
+	for key, values := range src {
+		if !isForwardHeaderAllowed(key) {
+			continue
+		}
+		for _, value := range values {
+			dst.Add(key, value)
+		}
+	}
 }
 
 func resolveProxyRoute(ctx context.Context, routes RouteRepository, route string, upstreamOverride string) (resolvedProxyRoute, error) {

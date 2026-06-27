@@ -942,7 +942,8 @@ paths:
       description: >
         Executes the V1 gateway runtime path with timeout, bounded retries,
         optional fallback upstream, published route rate limits and request log
-        recording. Streaming remains on the V1.2 backlog.
+        recording. When request `stream` is true, the endpoint returns the
+        upstream response stream directly instead of the JSON envelope.
       x-anjing-roles: [Administrator, User, Developer]
       requestBody:
         required: true
@@ -962,6 +963,10 @@ paths:
                     properties:
                       data:
                         $ref: "#/components/schemas/GatewayProxyResponse"
+            text/event-stream:
+              schema:
+                type: string
+                description: Direct upstream stream when request stream is true.
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1945,6 +1950,10 @@ components:
             type: string
         body:
           type: string
+        stream:
+          type: boolean
+          default: false
+          description: When true, the proxy streams the upstream response directly instead of wrapping it in a JSON envelope.
     GatewayProxyResponse:
       type: object
       required: [route, upstream, statusCode, attempts, fallback, durationMs, headers, body]

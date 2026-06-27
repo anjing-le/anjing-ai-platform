@@ -472,6 +472,61 @@ func TestProxyGatewayResolvesPublishedRoute(t *testing.T) {
 	}
 }
 
+func TestProxyGatewayStreamsUpstreamResponse(t *testing.T) {
+	st := store.NewSeedStore()
+	initialLogs := len(st.ListRequestLogs())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		if r.URL.Path != "/api/v1/events" {
+			t.Errorf("expected stream route path, got %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("X-Upstream-Trace", "stream-test")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("event: delta\n"))
+		_, _ = w.Write([]byte("data: first\n\n"))
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+		_, _ = w.Write([]byte("event: done\n"))
+		_, _ = w.Write([]byte("data: ok\n\n"))
+	}))
+	defer upstream.Close()
+
+	body := bytes.NewBufferString(`{"route":"/api/v1/events","method":"GET","upstream":"` + upstream.URL + `","stream":true,"timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Header().Get("Content-Type"), "text/event-stream") {
+		t.Fatalf("expected text/event-stream content type, got %q", rec.Header().Get("Content-Type"))
+	}
+	if rec.Header().Get("X-Upstream-Trace") != "stream-test" {
+		t.Fatalf("expected upstream trace header to be forwarded")
+	}
+	bodyText := rec.Body.String()
+	for _, expected := range []string{"event: delta", "data: first", "event: done", "data: ok"} {
+		if !strings.Contains(bodyText, expected) {
+			t.Fatalf("expected stream body to contain %q, got %q", expected, bodyText)
+		}
+	}
+
+	logs := st.ListRequestLogs()
+	if len(logs) != initialLogs+1 || logs[0].Request != "GET /api/v1/events" || logs[0].Status != "Success" || logs[0].Result != "200" {
+		t.Fatalf("expected successful stream request log, got %+v", logs)
+	}
+}
+
 func TestProxyGatewayEnforcesPublishedRouteLimit(t *testing.T) {
 	st := store.NewSeedStore()
 	hits := 0
