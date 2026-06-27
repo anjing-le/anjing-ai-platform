@@ -2,14 +2,30 @@ package gateway
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
+
+type recordingRouteLimiter struct {
+	decision     RateLimitDecision
+	calls        int
+	routePattern string
+	limitValue   string
+}
+
+func (limiter *recordingRouteLimiter) Allow(_ context.Context, routePattern string, limitValue string) RateLimitDecision {
+	limiter.calls++
+	limiter.routePattern = routePattern
+	limiter.limitValue = limitValue
+	return limiter.decision
+}
 
 func TestCreateRouteAddsRoute(t *testing.T) {
 	st := store.NewSeedStore()
@@ -579,6 +595,72 @@ func TestProxyGatewayEnforcesPublishedRouteLimit(t *testing.T) {
 	}
 	if logs[1].Status != "Success" || logs[1].Result != "200" {
 		t.Fatalf("expected first request log to be successful, got %+v", logs[1])
+	}
+}
+
+func TestProxyGatewayUsesInjectedRouteLimiter(t *testing.T) {
+	st := store.NewSeedStore()
+	hits := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`ok`))
+	}))
+	defer upstream.Close()
+
+	draft := st.CreateRoute("/api/v1/injected/**", upstream.URL, "100/min")
+	if _, ok := st.PublishRoute(draft.ID); !ok {
+		t.Fatalf("expected route to publish")
+	}
+
+	limiter := &recordingRouteLimiter{
+		decision: RateLimitDecision{Allowed: false, RetryAfter: 2 * time.Second},
+	}
+	mux := http.NewServeMux()
+	RegisterWithRepositoriesAndOptions(mux, st, NewMemoryRepositories(st), Options{RateLimiter: limiter})
+
+	body := bytes.NewBufferString(`{"route":"/api/v1/injected/ping","method":"GET","timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected injected limiter to deny request, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec.Header().Get("Retry-After") != "2" {
+		t.Fatalf("expected Retry-After 2, got %q", rec.Header().Get("Retry-After"))
+	}
+	if limiter.calls != 1 || limiter.routePattern != "/api/v1/injected/**" || limiter.limitValue != "100/min" {
+		t.Fatalf("expected limiter to receive published route metadata, got %+v", limiter)
+	}
+	if hits != 0 {
+		t.Fatalf("expected denied request not to hit upstream, got %d hits", hits)
+	}
+}
+
+func TestRedisRouteLimiterFallsBackWhenRedisUnavailable(t *testing.T) {
+	fallback := &recordingRouteLimiter{
+		decision: RateLimitDecision{Allowed: false, RetryAfter: 3 * time.Second},
+	}
+	limiter, err := NewRedisRouteLimiter(RedisRouteLimiterConfig{
+		Addr:     "127.0.0.1:0",
+		Timeout:  10 * time.Millisecond,
+		Fallback: fallback,
+	})
+	if err != nil {
+		t.Fatalf("create redis limiter: %v", err)
+	}
+	defer limiter.Close()
+
+	decision := limiter.Allow(context.Background(), "/api/v1/redis/**", "1/min")
+
+	if decision.Allowed || decision.RetryAfter != 3*time.Second {
+		t.Fatalf("expected fallback decision, got %+v", decision)
+	}
+	if fallback.calls != 1 || fallback.routePattern != "/api/v1/redis/**" || fallback.limitValue != "1/min" {
+		t.Fatalf("expected fallback limiter to be called with route metadata, got %+v", fallback)
 	}
 }
 

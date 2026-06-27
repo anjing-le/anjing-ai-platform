@@ -1,11 +1,21 @@
 package gateway
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
+
+type RouteLimiter interface {
+	Allow(ctx context.Context, routePattern string, limitValue string) RateLimitDecision
+}
+
+type RateLimitDecision struct {
+	Allowed    bool
+	RetryAfter time.Duration
+}
 
 type gatewayRouteLimiter struct {
 	mu      sync.Mutex
@@ -18,14 +28,13 @@ type gatewayRateLimitBucket struct {
 	count       int
 }
 
-type gatewayRateLimitDecision struct {
-	Allowed    bool
-	RetryAfter time.Duration
-}
-
 type gatewayRateLimitConfig struct {
 	Limit  int
 	Window time.Duration
+}
+
+func NewMemoryRouteLimiter() RouteLimiter {
+	return newGatewayRouteLimiter(time.Now)
 }
 
 func newGatewayRouteLimiter(now func() time.Time) *gatewayRouteLimiter {
@@ -38,10 +47,10 @@ func newGatewayRouteLimiter(now func() time.Time) *gatewayRouteLimiter {
 	}
 }
 
-func (limiter *gatewayRouteLimiter) Allow(routePattern string, limitValue string) gatewayRateLimitDecision {
+func (limiter *gatewayRouteLimiter) Allow(_ context.Context, routePattern string, limitValue string) RateLimitDecision {
 	config, ok := parseGatewayRateLimit(limitValue)
 	if limiter == nil || strings.TrimSpace(routePattern) == "" || !ok {
-		return gatewayRateLimitDecision{Allowed: true}
+		return RateLimitDecision{Allowed: true}
 	}
 
 	now := limiter.now()
@@ -61,12 +70,12 @@ func (limiter *gatewayRouteLimiter) Allow(routePattern string, limitValue string
 			retryAfter = time.Second
 		}
 		limiter.buckets[key] = bucket
-		return gatewayRateLimitDecision{Allowed: false, RetryAfter: retryAfter}
+		return RateLimitDecision{Allowed: false, RetryAfter: retryAfter}
 	}
 
 	bucket.count++
 	limiter.buckets[key] = bucket
-	return gatewayRateLimitDecision{Allowed: true}
+	return RateLimitDecision{Allowed: true}
 }
 
 func parseGatewayRateLimit(value string) (gatewayRateLimitConfig, bool) {

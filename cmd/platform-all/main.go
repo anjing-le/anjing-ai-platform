@@ -21,10 +21,27 @@ func main() {
 	logger := service.NewLogger()
 	st := store.NewSeedStore()
 	sessions := service.NewSessionManager()
+	limiter, closeLimiter, err := gateway.NewRouteLimiter(gateway.LimiterRuntimeConfig{
+		Backend:       cfg.RateLimitBackend,
+		RedisAddr:     cfg.RedisAddr,
+		RedisPassword: cfg.RedisPassword,
+		RedisDB:       cfg.RedisDB,
+	})
+	if err != nil {
+		service.Fatal(logger, "configure gateway rate limiter failed", err)
+	}
+	defer func() {
+		if err := closeLimiter(); err != nil {
+			logger.Error("close gateway rate limiter failed", "error", err)
+		}
+	}()
+	gatewayOptions := gateway.Options{RateLimiter: limiter}
 	controlRegister := func(mux *http.ServeMux, st *store.Store) {
 		control.RegisterWithOptions(mux, st, control.Options{Sessions: sessions})
 	}
-	gatewayRegister := gateway.Register
+	gatewayRegister := func(mux *http.ServeMux, st *store.Store) {
+		gateway.RegisterWithOptions(mux, st, gatewayOptions)
+	}
 	billingRegister := billing.Register
 	opsRegister := ops.Register
 
@@ -51,7 +68,7 @@ func main() {
 		gatewayRepos.Invocations = gateway.NewPostgresInvocationRecorder(pool)
 		gatewayRepos.ProxyRequests = gateway.NewPostgresProxyRecorder(pool)
 		gatewayRegister = func(mux *http.ServeMux, st *store.Store) {
-			gateway.RegisterWithRepositories(mux, st, gatewayRepos)
+			gateway.RegisterWithRepositoriesAndOptions(mux, st, gatewayRepos, gatewayOptions)
 		}
 		billingRepos := billing.NewMemoryRepositories(st)
 		billingRepos.Plans = billing.NewPostgresPlanRepository(pool)

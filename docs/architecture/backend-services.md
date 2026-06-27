@@ -227,9 +227,9 @@ V1 的默认交付形态仍然是 `platform-all` + 统一后台，不因为模�
 
 ## V2：按真实压力增强
 
-只有出现真实压力或明确瓶颈后，再引入：
+只有出现真实压力或明确瓶颈后，再扩大引入：
 
-- Redis：高频 API Key / rate limit / session cache
+- Redis：当前仅作为网关 route limit 的可选分布式后端，后续再扩展到高频 API Key / session cache
 - ClickHouse：高吞吐请求日志和分析
 - MQ：异步计量、审计、通知
 - Prometheus：运行指标
@@ -239,7 +239,7 @@ V1 的默认交付形态仍然是 `platform-all` + 统一后台，不因为模�
 
 - 不再按 Java / Spring Boot 做新后端。
 - 不把所有能力设计成一个巨大 `platform-api` 概念。
-- 不为了“像微服务”而提前增加 Redis、MQ、ClickHouse、Kubernetes。
+- 不为了“像微服务”而提前扩大 Redis、MQ、ClickHouse、Kubernetes 的使用范围。
 - 不把 PostgreSQL 塞进应用镜像，数据库始终独立部署。
 
 当前阶段的核心判断：代码边界按 Go command 拆清楚，部署复杂度先保持低。
@@ -302,7 +302,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/llm/invoke`
 - `POST /api/gateway/llm/stream`
 
-`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、按已发布 route 的 `limit` 做轻量内存限流、`timeout`、有限 `retry`、`fallback`、请求日志和审计记录；当请求设置 `stream: true` 时，网关会直接透传上游流式响应。Redis 分布式限流和更完整的上游治理保留到后续迭代。
+`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、按已发布 route 的 `limit` 做固定窗口限流、`timeout`、有限 `retry`、`fallback`、请求日志和审计记录；当请求设置 `stream: true` 时，网关会直接透传上游流式响应。默认限流后端是进程内内存，适合本地轻启动；设置 `ANJING_RATE_LIMIT_BACKEND=redis` 和 `ANJING_REDIS_ADDR` 后，可用 Redis 做多实例共享计数，Redis 不可用时会回退到本机限流。更完整的上游治理保留到后续迭代。
 
 `POST /api/gateway/llm/invoke` 已提供 V1 可替换 provider adapter 最小闭环：解析 Active 模型别名、按 primary/fallback 尝试模型、返回是否走兜底、估算 token、写入请求日志、审计和成功用量记录。
 

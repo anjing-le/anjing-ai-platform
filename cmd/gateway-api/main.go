@@ -16,7 +16,24 @@ func main() {
 	logger := service.NewLogger()
 	st := store.NewSeedStore()
 	sessions := service.NewSessionManager()
-	gatewayRegister := gateway.Register
+	limiter, closeLimiter, err := gateway.NewRouteLimiter(gateway.LimiterRuntimeConfig{
+		Backend:       cfg.RateLimitBackend,
+		RedisAddr:     cfg.RedisAddr,
+		RedisPassword: cfg.RedisPassword,
+		RedisDB:       cfg.RedisDB,
+	})
+	if err != nil {
+		service.Fatal(logger, "configure gateway rate limiter failed", err)
+	}
+	defer func() {
+		if err := closeLimiter(); err != nil {
+			logger.Error("close gateway rate limiter failed", "error", err)
+		}
+	}()
+	gatewayOptions := gateway.Options{RateLimiter: limiter}
+	gatewayRegister := func(mux *http.ServeMux, st *store.Store) {
+		gateway.RegisterWithOptions(mux, st, gatewayOptions)
+	}
 
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
@@ -32,7 +49,7 @@ func main() {
 		repos.Invocations = gateway.NewPostgresInvocationRecorder(pool)
 		repos.ProxyRequests = gateway.NewPostgresProxyRecorder(pool)
 		gatewayRegister = func(mux *http.ServeMux, st *store.Store) {
-			gateway.RegisterWithRepositories(mux, st, repos)
+			gateway.RegisterWithRepositoriesAndOptions(mux, st, repos, gatewayOptions)
 		}
 	}
 

@@ -54,11 +54,13 @@ type resolvedProxyRoute struct {
 }
 
 func proxyHandler(routes RouteRepository, recorder ProxyRecorder) http.HandlerFunc {
-	limiter := newGatewayRouteLimiter(time.Now)
-	return proxyHandlerWithLimiter(routes, recorder, limiter)
+	return proxyHandlerWithLimiter(routes, recorder, NewMemoryRouteLimiter())
 }
 
-func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, limiter *gatewayRouteLimiter) http.HandlerFunc {
+func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, limiter RouteLimiter) http.HandlerFunc {
+	if limiter == nil {
+		limiter = NewMemoryRouteLimiter()
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodPost) {
 			return
@@ -101,7 +103,7 @@ func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, lim
 
 		req.Method = method
 		req.Upstream = resolved.Upstream
-		if decision := limiter.Allow(resolved.RoutePattern, resolved.Limit); !decision.Allowed {
+		if decision := limiter.Allow(r.Context(), resolved.RoutePattern, resolved.Limit); !decision.Allowed {
 			retryAfter := int(decision.RetryAfter.Seconds())
 			if retryAfter < 1 {
 				retryAfter = 1

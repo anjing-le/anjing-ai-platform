@@ -16,6 +16,15 @@ services:
       timeout: 3s
       retries: 20
 
+  redis:
+    image: redis:7-alpine
+    container_name: anjing-ai-platform-image-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   migrate:
     build:
       context: ../..
@@ -51,10 +60,14 @@ services:
       ANJING_DATABASE_URL: postgres://anjing:anjing@postgres:5432/anjing_ai_platform?sslmode=disable
       ANJING_ADDR: :18080
       ANJING_CONSOLE_DIST: /app/apps/console/dist
+      ANJING_RATE_LIMIT_BACKEND: redis
+      ANJING_REDIS_ADDR: redis:6379
     ports:
       - "18080:18080"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully

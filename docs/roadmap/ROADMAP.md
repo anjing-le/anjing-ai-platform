@@ -39,7 +39,8 @@
 - [x] 为网关增加真实上游代理、超时、重试和 fallback 最小闭环。
 - [x] 为网关增加已发布 route 运行时限流。
 - [x] 为网关增加流式响应最小闭环。
-- [ ] 为网关增加 Redis 分布式限流和更完整的上游治理。
+- [x] 为网关增加 Redis 分布式限流最小闭环和本机 fallback。
+- [ ] 为网关增加更完整的上游治理。
 - [x] 为 LLM 调用增加 provider adapter、模型路由策略和 token 用量计量最小闭环。
 - [x] 为 LLM 调用增加 SSE 流式输出最小闭环。
 - [ ] 为 LLM 调用接入真实 provider SDK、provider-native stream 和精确 token 计量。
@@ -59,7 +60,7 @@
 - [ ] 保持统一后台不变，按运行压力把 command 拆成独立容器。
 - [ ] 网关链路独立扩容，优先服务模型调用、Skill 调用和请求日志。
 - [ ] 计量、审计和通知从同步写入演进到异步事件。
-- [ ] 引入 Redis 处理高频 API Key 校验、限流或 session cache。
+- [ ] 扩展 Redis 到高频 API Key 校验、session cache 和更完整的限流观测。
 - [ ] 引入 ClickHouse 或同类分析库承接高吞吐请求日志。
 - [ ] 接入 Prometheus 指标和告警规则。
 

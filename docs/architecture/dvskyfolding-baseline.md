@@ -53,4 +53,4 @@ V1 不做复杂微服务，但也不把所有运行面塞进一个巨大进程�
 - 暂不引入 Spring Boot。
 - 暂不引入 H2 / MySQL 作为默认数据库。
 - 暂不引入 ORM、代码生成和复杂依赖注入。
-- 暂不引入 Redis、ClickHouse、MQ、Kubernetes，除非真实压力证明需要。
+- 默认不依赖 Redis、ClickHouse、MQ、Kubernetes；Redis 仅作为网关 route limit 的可选分布式后端，除非真实压力证明需要，不扩大到更多运行面。

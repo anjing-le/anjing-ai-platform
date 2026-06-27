@@ -11,17 +11,34 @@ import (
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
 
+type Options struct {
+	RateLimiter RouteLimiter
+}
+
 func Register(mux *http.ServeMux, st *store.Store) {
-	RegisterWithRepositories(mux, st, NewMemoryRepositories(st))
+	RegisterWithOptions(mux, st, Options{})
+}
+
+func RegisterWithOptions(mux *http.ServeMux, st *store.Store, options Options) {
+	RegisterWithRepositoriesAndOptions(mux, st, NewMemoryRepositories(st), options)
 }
 
 func RegisterWithRoutes(mux *http.ServeMux, st *store.Store, routes RouteRepository) {
 	repos := NewMemoryRepositories(st)
 	repos.Routes = routes
-	RegisterWithRepositories(mux, st, repos)
+	RegisterWithRepositoriesAndOptions(mux, st, repos, Options{})
 }
 
 func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Repositories) {
+	RegisterWithRepositoriesAndOptions(mux, st, repos, Options{})
+}
+
+func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, repos Repositories, options Options) {
+	limiter := options.RateLimiter
+	if limiter == nil {
+		limiter = NewMemoryRouteLimiter()
+	}
+
 	mux.HandleFunc("/api/gateway/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
 			return
@@ -38,7 +55,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/gateway/request-logs", requestLogsHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/request-logs/export", requestLogsExportHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/request-logs/retention/purge", requestLogsRetentionPurgeHandler(repos.RequestLogs))
-	mux.HandleFunc("/api/gateway/proxy", proxyHandler(repos.Routes, repos.ProxyRequests))
+	mux.HandleFunc("/api/gateway/proxy", proxyHandlerWithLimiter(repos.Routes, repos.ProxyRequests, limiter))
 	mux.HandleFunc("/api/gateway/llm/invoke", llmInvokeHandler(repos.ModelRoutes, repos.Invocations))
 	mux.HandleFunc("/api/gateway/llm/stream", llmStreamHandler(repos.ModelRoutes, repos.Invocations))
 }
