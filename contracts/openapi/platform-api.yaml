@@ -862,6 +862,46 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/request-logs/export:
+    get:
+      tags: [gateway]
+      operationId: exportRequestLogs
+      summary: Export request logs as CSV.
+      x-anjing-roles: [Administrator, Developer, Operator]
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Match request, consumer or result text.
+        - in: query
+          name: consumer
+          schema:
+            type: string
+          description: Filter by exact consumer name.
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by exact request status.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+          description: Maximum number of request logs to export. Defaults to 500.
+      responses:
+        "200":
+          description: Request logs CSV returned.
+          content:
+            text/csv:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/gateway/proxy:
     post:
       tags: [gateway]
@@ -1360,6 +1400,46 @@ paths:
                         type: array
                         items:
                           $ref: "#/components/schemas/AuditEvent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/ops/audit-events/export:
+    get:
+      tags: [operations]
+      operationId: exportAuditEvents
+      summary: Export audit events as CSV.
+      x-anjing-roles: [Administrator, Developer, Operator]
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: Match action, object or request id text.
+        - in: query
+          name: module
+          schema:
+            type: string
+          description: Filter by exact platform module.
+        - in: query
+          name: status
+          schema:
+            type: string
+          description: Filter by exact audit status.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+          description: Maximum number of audit events to export. Defaults to 500.
+      responses:
+        "200":
+          description: Audit events CSV returned.
+          content:
+            text/csv:
+              schema:
+                type: string
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":

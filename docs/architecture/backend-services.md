@@ -15,9 +15,9 @@
 
 | 后台入口 | 合并能力 | 后端归属 | API 分组 |
 | --- | --- | --- | --- |
-| 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events` |
+| 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events`, `/api/ops/audit-events/export` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
-| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke` |
+| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export` |
 | 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/invoices`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
@@ -264,6 +264,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/skills/publish`
 - `POST /api/gateway/skills/invoke`
 - `GET /api/gateway/request-logs`
+- `GET /api/gateway/request-logs/export`
 - `POST /api/gateway/proxy`
 - `POST /api/gateway/llm/invoke`
 
@@ -273,7 +274,7 @@ go run ./cmd/console-web      # :1818
 
 `POST /api/gateway/skills/invoke` 已提供 V1 可替换 Skill adapter 最小闭环：按名称解析 Published Skill 绑定、执行调用、返回协议/路由/输出摘要，写入请求日志、审计和成功 Skill call 用量记录；schema 校验、版本管理和真实 HTTP/MCP 适配保留到后续迭代。
 
-`GET /api/gateway/request-logs` 支持 `q`、`consumer`、`status` 和 `limit` 查询参数，用于控制台按调用方、状态和关键词查看近期请求链路。
+`GET /api/gateway/request-logs` 支持 `q`、`consumer`、`status` 和 `limit` 查询参数，用于控制台按调用方、状态和关键词查看近期请求链路。`GET /api/gateway/request-logs/export` 复用同一套查询参数导出 CSV，默认最多导出 500 条。
 
 ### `billing-service`
 
@@ -296,8 +297,9 @@ go run ./cmd/console-web      # :1818
 - `POST /api/ops/todos/resolve`
 - `GET /api/ops/service-health`
 - `GET /api/ops/audit-events`
+- `GET /api/ops/audit-events/export`
 
-`GET /api/ops/audit-events` 支持 `q`、`module`、`status` 和 `limit` 查询参数，用于控制台按模块、状态和操作对象追踪审计记录。
+`GET /api/ops/audit-events` 支持 `q`、`module`、`status` 和 `limit` 查询参数，用于控制台按模块、状态和操作对象追踪审计记录。`GET /api/ops/audit-events/export` 复用同一套查询参数导出 CSV，默认最多导出 500 条。
 
 ## 后台首页聚合策略
 

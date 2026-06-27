@@ -221,6 +221,7 @@ func allowOperator(method, path string) bool {
 	if method == http.MethodGet {
 		return strings.HasPrefix(path, "/api/ops/") ||
 			path == "/api/gateway/request-logs" ||
+			path == "/api/gateway/request-logs/export" ||
 			strings.HasPrefix(path, "/api/billing/")
 	}
 

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/csvexport"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
@@ -34,6 +35,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/gateway/skills/publish", publishSkillBindingHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skills/invoke", skillInvokeHandler(repos.Skills, repos.Invocations))
 	mux.HandleFunc("/api/gateway/request-logs", requestLogsHandler(repos.RequestLogs))
+	mux.HandleFunc("/api/gateway/request-logs/export", requestLogsExportHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/proxy", proxyHandler(repos.Routes, repos.ProxyRequests))
 	mux.HandleFunc("/api/gateway/llm/invoke", llmInvokeHandler(repos.ModelRoutes, repos.Invocations))
 }
@@ -307,6 +309,50 @@ func requestLogsHandler(requestLogs RequestLogRepository) http.HandlerFunc {
 			return
 		}
 		httpjson.OK(w, items)
+	}
+}
+
+func requestLogsExportHandler(requestLogs RequestLogRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodGet) {
+			return
+		}
+
+		query := requestLogQueryFromRequest(r)
+		if query.Limit == 0 {
+			query.Limit = 500
+		}
+		items, err := requestLogs.QueryRequestLogs(r.Context(), query)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+
+		rows := make([][]string, 0, len(items))
+		for _, item := range items {
+			rows = append(rows, []string{
+				item.ID,
+				item.Request,
+				item.Consumer,
+				item.Latency,
+				item.Result,
+				item.Status,
+				item.CreatedAt,
+			})
+		}
+
+		if err := csvexport.Write(w, "gateway-request-logs.csv", []string{
+			"id",
+			"request",
+			"consumer",
+			"latency",
+			"result",
+			"status",
+			"createdAt",
+		}, rows); err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
 	}
 }
 

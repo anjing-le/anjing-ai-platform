@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/csvexport"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
@@ -53,6 +54,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/ops/todos/resolve", resolveTodoHandler(repos.Todos))
 	mux.HandleFunc("/api/ops/service-health", healthHandler(repos.Health))
 	mux.HandleFunc("/api/ops/audit-events", auditHandler(repos.Audit))
+	mux.HandleFunc("/api/ops/audit-events/export", auditExportHandler(repos.Audit))
 }
 
 func dashboardWithRepositories(r *http.Request, st *store.Store, repos Repositories) (store.OpsDashboard, error) {
@@ -157,6 +159,50 @@ func auditHandler(audit AuditRepository) http.HandlerFunc {
 			return
 		}
 		httpjson.OK(w, items)
+	}
+}
+
+func auditExportHandler(audit AuditRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodGet) {
+			return
+		}
+
+		query := auditQueryFromRequest(r)
+		if query.Limit == 0 {
+			query.Limit = 500
+		}
+		items, err := audit.QueryAudit(r.Context(), query)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+
+		rows := make([][]string, 0, len(items))
+		for _, item := range items {
+			rows = append(rows, []string{
+				item.ID,
+				item.Time,
+				item.Module,
+				item.Action,
+				item.Object,
+				item.Status,
+				item.RequestID,
+			})
+		}
+
+		if err := csvexport.Write(w, "audit-events.csv", []string{
+			"id",
+			"time",
+			"module",
+			"action",
+			"object",
+			"status",
+			"requestId",
+		}, rows); err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
 	}
 }
 

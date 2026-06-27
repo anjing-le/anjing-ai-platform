@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
@@ -136,6 +137,31 @@ func TestAuditEventsCanBeFiltered(t *testing.T) {
 	}
 	if payload.Data[0].Module != "网关与模型" || payload.Data[0].Status != "Success" {
 		t.Fatalf("unexpected audit event: %+v", payload.Data[0])
+	}
+}
+
+func TestAuditEventsCanBeExported(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/ops/audit-events/export?q=skill&limit=1", nil)
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if contentType := rec.Header().Get("Content-Type"); !strings.Contains(contentType, "text/csv") {
+		t.Fatalf("expected csv response, got %q", contentType)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "id,time,module,action,object,status,requestId") {
+		t.Fatalf("expected audit csv header, got %q", body)
+	}
+	if !strings.Contains(body, "skill") || !strings.Contains(body, "Success") {
+		t.Fatalf("expected filtered audit content, got %q", body)
 	}
 }
 

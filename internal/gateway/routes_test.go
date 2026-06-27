@@ -243,6 +243,31 @@ func TestRequestLogsCanBeFiltered(t *testing.T) {
 	}
 }
 
+func TestRequestLogsCanBeExported(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/gateway/request-logs/export?q=chat&limit=1", nil)
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if contentType := rec.Header().Get("Content-Type"); !strings.Contains(contentType, "text/csv") {
+		t.Fatalf("expected csv response, got %q", contentType)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "id,request,consumer,latency,result,status,createdAt") {
+		t.Fatalf("expected request log csv header, got %q", body)
+	}
+	if !strings.Contains(body, "customer-service-agent") || !strings.Contains(body, "POST /llm/chat") {
+		t.Fatalf("expected filtered request log content, got %q", body)
+	}
+}
+
 func TestProxyGatewayRetriesAndFallsBack(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())
