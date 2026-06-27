@@ -35,6 +35,24 @@ type gatewayRouteHealthCheckResponse struct {
 	Error      string `json:"error,omitempty"`
 }
 
+type gatewayRoutePreflightCheck struct {
+	Name     string `json:"name"`
+	Status   string `json:"status"`
+	Severity string `json:"severity"`
+	Message  string `json:"message"`
+}
+
+type gatewayRoutePreflightResponse struct {
+	ID        string                           `json:"id"`
+	Route     string                           `json:"route"`
+	Upstream  string                           `json:"upstream"`
+	Status    string                           `json:"status"`
+	Ready     bool                             `json:"ready"`
+	CheckedAt string                           `json:"checkedAt"`
+	Checks    []gatewayRoutePreflightCheck     `json:"checks"`
+	Health    *gatewayRouteHealthCheckResponse `json:"health,omitempty"`
+}
+
 func Register(mux *http.ServeMux, st *store.Store) {
 	RegisterWithOptions(mux, st, Options{})
 }
@@ -72,6 +90,7 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 	mux.HandleFunc("/api/gateway/routes", routesHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/routes/publish", publishRouteHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/routes/health-check", routeHealthCheckHandler(repos.Routes))
+	mux.HandleFunc("/api/gateway/routes/preflight", routePreflightHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/model-routes", modelRoutesHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/model-routes/publish", publishModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/skills", skillsHandler(repos.Skills))
@@ -207,6 +226,46 @@ func routeHealthCheckHandler(routes RouteRepository) http.HandlerFunc {
 	}
 }
 
+func routePreflightHandler(routes RouteRepository) http.HandlerFunc {
+	type preflightRouteRequest struct {
+		ID        string `json:"id"`
+		TimeoutMS int    `json:"timeoutMs"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req preflightRouteRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		req.ID = strings.TrimSpace(req.ID)
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+		if req.TimeoutMS < 0 {
+			httpjson.BadRequest(w, "timeoutMs must be greater than or equal to 0")
+			return
+		}
+
+		route, ok, err := findGatewayRoute(r.Context(), routes, req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "route not found")
+			return
+		}
+
+		httpjson.OK(w, preflightGatewayRoute(r.Context(), route, normalizeRouteHealthTimeout(req.TimeoutMS)))
+	}
+}
+
 func findGatewayRoute(ctx context.Context, routes RouteRepository, id string) (store.GatewayRoute, bool, error) {
 	items, err := routes.ListRoutes(ctx)
 	if err != nil {
@@ -218,6 +277,124 @@ func findGatewayRoute(ctx context.Context, routes RouteRepository, id string) (s
 		}
 	}
 	return store.GatewayRoute{}, false, nil
+}
+
+func preflightGatewayRoute(ctx context.Context, route store.GatewayRoute, timeout time.Duration) gatewayRoutePreflightResponse {
+	health := checkGatewayRouteHealth(ctx, route, timeout)
+	checks := []gatewayRoutePreflightCheck{
+		checkGatewayRoutePattern(route.Route),
+		checkGatewayRouteAuth(route.Auth),
+		checkGatewayRouteLimit(route.Limit),
+		checkGatewayRouteStatus(route.Status),
+		checkGatewayRouteUpstream(health),
+	}
+	status := summarizeGatewayRoutePreflight(checks)
+
+	return gatewayRoutePreflightResponse{
+		ID:        route.ID,
+		Route:     route.Route,
+		Upstream:  route.Upstream,
+		Status:    status,
+		Ready:     status != "Block",
+		CheckedAt: health.CheckedAt,
+		Checks:    checks,
+		Health:    &health,
+	}
+}
+
+func checkGatewayRoutePattern(pattern string) gatewayRoutePreflightCheck {
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		return blockGatewayRouteCheck("route", "route is required")
+	}
+	if !strings.HasPrefix(pattern, "/") {
+		return blockGatewayRouteCheck("route", "route must start with /")
+	}
+	if strings.ContainsAny(pattern, " \t\r\n") {
+		return blockGatewayRouteCheck("route", "route must not contain whitespace")
+	}
+	return passGatewayRouteCheck("route", "route pattern is ready")
+}
+
+func checkGatewayRouteAuth(auth string) gatewayRoutePreflightCheck {
+	auth = strings.TrimSpace(auth)
+	if auth == "" {
+		return warnGatewayRouteCheck("auth", "auth policy is not set")
+	}
+	switch strings.ToLower(auth) {
+	case "api key", "bearer", "oauth", "none":
+		return passGatewayRouteCheck("auth", "auth policy is recognized")
+	default:
+		return warnGatewayRouteCheck("auth", "auth policy should be reviewed")
+	}
+}
+
+func checkGatewayRouteLimit(limit string) gatewayRoutePreflightCheck {
+	limit = strings.TrimSpace(limit)
+	if limit == "" {
+		return warnGatewayRouteCheck("limit", "rate limit is not set")
+	}
+	switch strings.ToLower(limit) {
+	case "none", "unlimited":
+		return warnGatewayRouteCheck("limit", "unlimited route should be reviewed before publish")
+	}
+	if _, ok := parseGatewayRateLimit(limit); !ok {
+		return blockGatewayRouteCheck("limit", "rate limit must use formats like 600/min")
+	}
+	return passGatewayRouteCheck("limit", "rate limit is valid")
+}
+
+func checkGatewayRouteStatus(status string) gatewayRoutePreflightCheck {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "active":
+		return passGatewayRouteCheck("lifecycle", "route is active")
+	case "draft":
+		return warnGatewayRouteCheck("lifecycle", "route is draft and can be published after review")
+	default:
+		return warnGatewayRouteCheck("lifecycle", "route lifecycle status should be reviewed")
+	}
+}
+
+func checkGatewayRouteUpstream(health gatewayRouteHealthCheckResponse) gatewayRoutePreflightCheck {
+	switch health.Status {
+	case "Healthy":
+		return passGatewayRouteCheck("upstream", "upstream probe is healthy")
+	case "Degraded":
+		return warnGatewayRouteCheck("upstream", "upstream responded with a server error")
+	case "Invalid":
+		return blockGatewayRouteCheck("upstream", "upstream is invalid: "+health.Error)
+	default:
+		message := "upstream is unreachable"
+		if health.Error != "" {
+			message += ": " + health.Error
+		}
+		return blockGatewayRouteCheck("upstream", message)
+	}
+}
+
+func summarizeGatewayRoutePreflight(checks []gatewayRoutePreflightCheck) string {
+	status := "Pass"
+	for _, check := range checks {
+		switch check.Status {
+		case "Block":
+			return "Block"
+		case "Warn":
+			status = "Warn"
+		}
+	}
+	return status
+}
+
+func passGatewayRouteCheck(name, message string) gatewayRoutePreflightCheck {
+	return gatewayRoutePreflightCheck{Name: name, Status: "Pass", Severity: "info", Message: message}
+}
+
+func warnGatewayRouteCheck(name, message string) gatewayRoutePreflightCheck {
+	return gatewayRoutePreflightCheck{Name: name, Status: "Warn", Severity: "warning", Message: message}
+}
+
+func blockGatewayRouteCheck(name, message string) gatewayRoutePreflightCheck {
+	return gatewayRoutePreflightCheck{Name: name, Status: "Block", Severity: "critical", Message: message}
 }
 
 func checkGatewayRouteHealth(ctx context.Context, route store.GatewayRoute, timeout time.Duration) gatewayRouteHealthCheckResponse {

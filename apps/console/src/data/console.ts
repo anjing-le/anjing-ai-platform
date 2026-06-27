@@ -206,6 +206,7 @@ export const consoleServiceMap = [
     apis: [
       "/api/gateway/routes",
       "/api/gateway/routes/health-check",
+      "/api/gateway/routes/preflight",
       "/api/gateway/model-routes",
       "/api/gateway/proxy",
       "/api/gateway/llm/invoke",

@@ -60,6 +60,14 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 		t.Fatalf("expected gateway route health check to be allowed, got %d", healthCheckAllowedRec.Code)
 	}
 
+	preflightAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/preflight", nil)
+	preflightAllowed.Header.Set("Authorization", "Bearer developer-test-token")
+	preflightAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(preflightAllowedRec, preflightAllowed)
+	if preflightAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected gateway route preflight to be allowed, got %d", preflightAllowedRec.Code)
+	}
+
 	modelRouteAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/model-routes", nil)
 	modelRouteAllowed.Header.Set("Authorization", "Bearer developer-test-token")
 	modelRouteAllowedRec := httptest.NewRecorder()
@@ -249,6 +257,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler.ServeHTTP(healthCheckDeniedRec, healthCheckDenied)
 	if healthCheckDeniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected gateway route health check to be forbidden for operator, got %d", healthCheckDeniedRec.Code)
+	}
+
+	preflightDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/preflight", nil)
+	preflightDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	preflightDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(preflightDeniedRec, preflightDenied)
+	if preflightDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected gateway route preflight to be forbidden for operator, got %d", preflightDeniedRec.Code)
 	}
 
 	modelRouteDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/model-routes", nil)

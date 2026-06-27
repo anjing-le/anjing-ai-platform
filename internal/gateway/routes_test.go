@@ -251,6 +251,172 @@ func TestGatewayRouteHealthCheckReportsInvalidUpstream(t *testing.T) {
 	}
 }
 
+func TestGatewayRoutePreflightPassesHealthyPublishedRoute(t *testing.T) {
+	st := store.NewSeedStore()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodHead {
+			t.Errorf("expected HEAD, got %s", r.Method)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstream.Close()
+
+	draft := st.CreateRoute("/api/v1/preflight/**", upstream.URL, "100/min")
+	if _, ok := st.PublishRoute(draft.ID); !ok {
+		t.Fatalf("expected route to publish")
+	}
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"id":"` + draft.ID + `","timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/preflight", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+			Ready  bool   `json:"ready"`
+			Checks []struct {
+				Name   string `json:"name"`
+				Status string `json:"status"`
+			} `json:"checks"`
+			Health struct {
+				Status  string `json:"status"`
+				Healthy bool   `json:"healthy"`
+			} `json:"health"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.ID != draft.ID || payload.Data.Status != "Pass" || !payload.Data.Ready {
+		t.Fatalf("expected passing preflight, got %+v", payload)
+	}
+	if !payload.Data.Health.Healthy || payload.Data.Health.Status != "Healthy" {
+		t.Fatalf("expected healthy preflight probe, got %+v", payload.Data.Health)
+	}
+	if len(payload.Data.Checks) != 5 {
+		t.Fatalf("expected five checks, got %+v", payload.Data.Checks)
+	}
+	for _, check := range payload.Data.Checks {
+		if check.Status != "Pass" {
+			t.Fatalf("expected all checks to pass, got %+v", payload.Data.Checks)
+		}
+	}
+}
+
+func TestGatewayRoutePreflightWarnsDraftButRemainsReady(t *testing.T) {
+	st := store.NewSeedStore()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	draft := st.CreateRoute("/api/v1/draft/**", upstream.URL, "100/min")
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"id":"` + draft.ID + `","timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/preflight", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Status string `json:"status"`
+			Ready  bool   `json:"ready"`
+			Checks []struct {
+				Name   string `json:"name"`
+				Status string `json:"status"`
+			} `json:"checks"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Status != "Warn" || !payload.Data.Ready {
+		t.Fatalf("expected draft preflight warning without block, got %+v", payload)
+	}
+	foundLifecycleWarning := false
+	for _, check := range payload.Data.Checks {
+		if check.Name == "lifecycle" && check.Status == "Warn" {
+			foundLifecycleWarning = true
+		}
+	}
+	if !foundLifecycleWarning {
+		t.Fatalf("expected lifecycle warning, got %+v", payload.Data.Checks)
+	}
+}
+
+func TestGatewayRoutePreflightBlocksInvalidUpstream(t *testing.T) {
+	st := store.NewSeedStore()
+	draft := st.CreateRoute("/api/v1/preflight-invalid/**", "gateway-api", "100/min")
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"id":"` + draft.ID + `","timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/preflight", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Status string `json:"status"`
+			Ready  bool   `json:"ready"`
+			Checks []struct {
+				Name    string `json:"name"`
+				Status  string `json:"status"`
+				Message string `json:"message"`
+			} `json:"checks"`
+			Health struct {
+				Status string `json:"status"`
+				Error  string `json:"error"`
+			} `json:"health"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Status != "Block" || payload.Data.Ready {
+		t.Fatalf("expected blocking preflight, got %+v", payload)
+	}
+	if payload.Data.Health.Status != "Invalid" || !strings.Contains(payload.Data.Health.Error, "upstream must start") {
+		t.Fatalf("expected invalid upstream health, got %+v", payload.Data.Health)
+	}
+	foundUpstreamBlock := false
+	for _, check := range payload.Data.Checks {
+		if check.Name == "upstream" && check.Status == "Block" && strings.Contains(check.Message, "upstream must start") {
+			foundUpstreamBlock = true
+		}
+	}
+	if !foundUpstreamBlock {
+		t.Fatalf("expected upstream block check, got %+v", payload.Data.Checks)
+	}
+}
+
 func TestInvokeLLMUsesModelRoute(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())

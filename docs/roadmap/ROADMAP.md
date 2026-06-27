@@ -42,7 +42,8 @@
 - [x] 为网关增加 Redis 分布式限流最小闭环和本机 fallback。
 - [x] 为网关增加 route 级上游熔断和冷却治理最小闭环。
 - [x] 为网关增加 route 主动健康检查最小闭环。
-- [ ] 为网关增加负载策略和更细粒度治理。
+- [x] 为网关增加 route 发布前治理预检最小闭环。
+- [ ] 为网关增加多 upstream 负载策略和更细粒度治理。
 - [x] 为 LLM 调用增加 provider adapter、模型路由策略和 token 用量计量最小闭环。
 - [x] 为 LLM 调用增加 SSE 流式输出最小闭环。
 - [ ] 为 LLM 调用接入真实 provider SDK、provider-native stream 和精确 token 计量。

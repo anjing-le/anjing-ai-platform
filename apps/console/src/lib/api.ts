@@ -126,6 +126,24 @@ export interface GatewayRouteHealthCheck {
   error?: string;
 }
 
+export interface GatewayRoutePreflightCheck {
+  name: string;
+  status: "Pass" | "Warn" | "Block";
+  severity: "info" | "warning" | "critical";
+  message: string;
+}
+
+export interface GatewayRoutePreflight {
+  id: string;
+  route: string;
+  upstream: string;
+  status: "Pass" | "Warn" | "Block";
+  ready: boolean;
+  checkedAt: string;
+  checks: GatewayRoutePreflightCheck[];
+  health?: GatewayRouteHealthCheck;
+}
+
 export interface ModelRoute {
   id: string;
   alias: string;
@@ -485,6 +503,13 @@ export function publishRoute(id: string, role?: RoleId): Promise<GatewayRoute> {
 
 export function checkRouteHealth(id: string, role?: RoleId, timeoutMs = 1000): Promise<GatewayRouteHealthCheck> {
   return requestJson<GatewayRouteHealthCheck>("/api/gateway/routes/health-check", {
+    method: "POST",
+    body: JSON.stringify({ id, timeoutMs }),
+  }, role);
+}
+
+export function preflightRoute(id: string, role?: RoleId, timeoutMs = 1000): Promise<GatewayRoutePreflight> {
+  return requestJson<GatewayRoutePreflight>("/api/gateway/routes/preflight", {
     method: "POST",
     body: JSON.stringify({ id, timeoutMs }),
   }, role);

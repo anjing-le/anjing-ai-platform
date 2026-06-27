@@ -57,6 +57,7 @@ x-anjing-service-boundaries:
     apiGroups:
       - /api/gateway/routes
       - /api/gateway/routes/health-check
+      - /api/gateway/routes/preflight
       - /api/gateway/model-routes
       - /api/gateway/proxy
       - /api/gateway/llm/invoke
@@ -734,6 +735,39 @@ paths:
                     properties:
                       data:
                         $ref: "#/components/schemas/GatewayRouteHealthCheckResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/gateway/routes/preflight:
+    post:
+      tags: [gateway]
+      operationId: preflightGatewayRoute
+      summary: Run gateway route governance preflight checks.
+      description: Validates route shape, auth policy, rate limit, lifecycle state and upstream health without persisting the result.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GatewayRoutePreflightRequest"
+      responses:
+        "200":
+          description: Route preflight checks returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/GatewayRoutePreflightResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -2140,6 +2174,55 @@ components:
           type: string
         error:
           type: string
+    GatewayRoutePreflightRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        timeoutMs:
+          type: integer
+          minimum: 0
+          maximum: 5000
+          default: 1000
+    GatewayRoutePreflightCheck:
+      type: object
+      required: [name, status, severity, message]
+      properties:
+        name:
+          type: string
+          enum: [route, auth, limit, lifecycle, upstream]
+        status:
+          type: string
+          enum: [Pass, Warn, Block]
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        message:
+          type: string
+    GatewayRoutePreflightResponse:
+      type: object
+      required: [id, route, upstream, status, ready, checkedAt, checks]
+      properties:
+        id:
+          type: string
+        route:
+          type: string
+        upstream:
+          type: string
+        status:
+          type: string
+          enum: [Pass, Warn, Block]
+        ready:
+          type: boolean
+        checkedAt:
+          type: string
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/GatewayRoutePreflightCheck"
+        health:
+          $ref: "#/components/schemas/GatewayRouteHealthCheckResponse"
     GatewayProxyRequest:
       type: object
       required: [route]
