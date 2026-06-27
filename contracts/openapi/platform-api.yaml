@@ -59,6 +59,7 @@ x-anjing-service-boundaries:
       - /api/gateway/model-routes
       - /api/gateway/proxy
       - /api/gateway/llm/invoke
+      - /api/gateway/llm/stream
   - consoleEntry: billing
     label: 计费与配额
     owner: billing-service
@@ -1004,6 +1005,45 @@ paths:
                     properties:
                       data:
                         $ref: "#/components/schemas/LLMInvokeResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+  /api/gateway/llm/stream:
+    post:
+      tags: [gateway]
+      operationId: streamLLM
+      summary: Stream an LLM response through the model route gateway.
+      description: >
+        Provides the V1 streaming contract for LLM calls. The current
+        implementation uses the same replaceable provider adapter, active model
+        route resolution, primary/fallback selection, request logging and usage
+        recording as the JSON invocation endpoint, then emits Server-Sent Events
+        with meta, delta and done events. Real provider-native streaming can
+        replace the mock adapter without changing this API boundary.
+      x-anjing-roles: [Administrator, User, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LLMInvokeRequest"
+      responses:
+        "200":
+          description: LLM response stream.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: >
+                  Server-Sent Events. Emits event: meta, one or more event:
+                  delta frames, and event: done with final usage metadata.
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":

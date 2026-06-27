@@ -17,7 +17,7 @@
 | --- | --- | --- | --- |
 | 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events`, `/api/ops/audit-events/export`, `/api/ops/audit-events/retention/purge` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
-| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
+| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/llm/stream`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
 | 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/invoices`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
@@ -268,10 +268,13 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/request-logs/retention/purge`
 - `POST /api/gateway/proxy`
 - `POST /api/gateway/llm/invoke`
+- `POST /api/gateway/llm/stream`
 
 `POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、按已发布 route 的 `limit` 做轻量内存限流、`timeout`、有限 `retry`、`fallback`、请求日志和审计记录；流式响应、Redis 分布式限流和更完整的上游治理保留到后续迭代。
 
-`POST /api/gateway/llm/invoke` 已提供 V1 可替换 provider adapter 最小闭环：解析 Active 模型别名、按 primary/fallback 尝试模型、返回是否走兜底、估算 token、写入请求日志、审计和成功用量记录；真实 provider SDK、流式响应和精确 token 计量保留到后续迭代。
+`POST /api/gateway/llm/invoke` 已提供 V1 可替换 provider adapter 最小闭环：解析 Active 模型别名、按 primary/fallback 尝试模型、返回是否走兜底、估算 token、写入请求日志、审计和成功用量记录。
+
+`POST /api/gateway/llm/stream` 在同一套模型路由、fallback、审计和用量记录之上提供 SSE 最小流式输出契约：先发送 `meta`，再发送多个 `delta`，最后以 `done` 输出完成原因和用量。当前仍使用 mock provider adapter，真实 provider SDK、provider-native stream 和精确 token 计量保留到后续迭代。
 
 `POST /api/gateway/skills/invoke` 已提供 V1 可替换 Skill adapter 最小闭环：按名称解析 Published Skill 绑定，按 `schemaVersion` 校验内置 Skill 输入，执行调用、返回协议/路由/输出摘要，写入请求日志、审计和成功 Skill call 用量记录；更完整的 schema registry、版本管理和真实 HTTP/MCP 适配保留到后续迭代。
 

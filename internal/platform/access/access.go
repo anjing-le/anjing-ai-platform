@@ -181,6 +181,7 @@ func allowUser(method, path string) bool {
 			path == "/api/control/applications/rotate-key" ||
 			path == "/api/gateway/proxy" ||
 			path == "/api/gateway/llm/invoke" ||
+			path == "/api/gateway/llm/stream" ||
 			path == "/api/gateway/skills/invoke"
 	}
 
@@ -210,6 +211,7 @@ func allowDeveloper(method, path string) bool {
 			path == "/api/gateway/skills/publish" ||
 			path == "/api/gateway/proxy" ||
 			path == "/api/gateway/llm/invoke" ||
+			path == "/api/gateway/llm/stream" ||
 			path == "/api/gateway/skills/invoke" ||
 			path == "/api/billing/usage-events"
 	}

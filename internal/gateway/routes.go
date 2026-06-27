@@ -40,6 +40,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/gateway/request-logs/retention/purge", requestLogsRetentionPurgeHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/proxy", proxyHandler(repos.Routes, repos.ProxyRequests))
 	mux.HandleFunc("/api/gateway/llm/invoke", llmInvokeHandler(repos.ModelRoutes, repos.Invocations))
+	mux.HandleFunc("/api/gateway/llm/stream", llmStreamHandler(repos.ModelRoutes, repos.Invocations))
 }
 
 func routesHandler(routes RouteRepository) http.HandlerFunc {

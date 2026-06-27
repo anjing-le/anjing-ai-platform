@@ -275,6 +275,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 		t.Fatalf("expected gateway proxy to be forbidden for operator, got %d", proxyDeniedRec.Code)
 	}
 
+	llmStreamDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/llm/stream", nil)
+	llmStreamDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	llmStreamDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(llmStreamDeniedRec, llmStreamDenied)
+	if llmStreamDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected llm stream to be forbidden for operator, got %d", llmStreamDeniedRec.Code)
+	}
+
 	skillInvokeDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/invoke", nil)
 	skillInvokeDenied.Header.Set("Authorization", "Bearer operator-test-token")
 	skillInvokeDeniedRec := httptest.NewRecorder()
@@ -311,7 +319,7 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 func TestAPIKeyUsesUserRoleBoundary(t *testing.T) {
 	handler := Middleware(testConfig(), okHandler())
 
-	for _, path := range []string{"/api/gateway/llm/invoke", "/api/gateway/skills/invoke", "/api/gateway/proxy"} {
+	for _, path := range []string{"/api/gateway/llm/invoke", "/api/gateway/llm/stream", "/api/gateway/skills/invoke", "/api/gateway/proxy"} {
 		allowed := httptest.NewRequest(http.MethodPost, path, nil)
 		allowed.Header.Set("X-API-Key", "customer-test-key")
 		allowedRec := httptest.NewRecorder()

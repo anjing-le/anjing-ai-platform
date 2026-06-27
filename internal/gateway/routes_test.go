@@ -118,6 +118,40 @@ func TestInvokeLLMUsesModelRoute(t *testing.T) {
 	}
 }
 
+func TestStreamLLMUsesModelRoute(t *testing.T) {
+	st := store.NewSeedStore()
+	initialLogs := len(st.ListRequestLogs())
+	initialUsage := len(st.ListUsage())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"modelAlias":"chat-default","input":"帮我生成一个流式客服回复"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/llm/stream", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if contentType := rec.Header().Get("Content-Type"); !strings.Contains(contentType, "text/event-stream") {
+		t.Fatalf("expected text/event-stream content type, got %q", contentType)
+	}
+	bodyText := rec.Body.String()
+	for _, expected := range []string{"event: meta", "event: delta", "event: done", "Mock response routed"} {
+		if !strings.Contains(bodyText, expected) {
+			t.Fatalf("expected stream body to contain %q, got %s", expected, bodyText)
+		}
+	}
+	if logs := st.ListRequestLogs(); len(logs) != initialLogs+1 || logs[0].Consumer != "chat-default" || logs[0].Status != "Success" || logs[0].Result != "200" {
+		t.Fatalf("expected stream request log to be appended, got %+v", logs)
+	}
+	if usage := st.ListUsage(); len(usage) != initialUsage+1 || usage[0].Project != "chat-default" || usage[0].Tokens == "0" {
+		t.Fatalf("expected stream usage record to be appended, got %+v", usage)
+	}
+}
+
 func TestInvokeLLMFallsBackWhenPrimaryProviderFails(t *testing.T) {
 	st := store.NewSeedStore()
 	route := st.CreateModelRoute("fallback-demo", "LLM fallback", "gpt-unavailable", "claude-haiku")

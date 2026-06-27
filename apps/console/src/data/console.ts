@@ -203,7 +203,13 @@ export const consoleServiceMap = [
     entry: "网关与模型",
     owner: "gateway-api",
     scope: "API 路由、模型路由、Skill 调用、请求日志",
-    apis: ["/api/gateway/routes", "/api/gateway/model-routes", "/api/gateway/proxy", "/api/gateway/llm/invoke"],
+    apis: [
+      "/api/gateway/routes",
+      "/api/gateway/model-routes",
+      "/api/gateway/proxy",
+      "/api/gateway/llm/invoke",
+      "/api/gateway/llm/stream",
+    ],
   },
   {
     id: "billing",

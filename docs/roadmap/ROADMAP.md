@@ -38,7 +38,8 @@
 - [x] 为网关增加已发布 route 运行时限流。
 - [ ] 为网关增加流式响应和更完整的上游治理。
 - [x] 为 LLM 调用增加 provider adapter、模型路由策略和 token 用量计量最小闭环。
-- [ ] 为 LLM 调用接入真实 provider SDK、流式输出和精确 token 计量。
+- [x] 为 LLM 调用增加 SSE 流式输出最小闭环。
+- [ ] 为 LLM 调用接入真实 provider SDK、provider-native stream 和精确 token 计量。
 - [x] 为 Skill 增加 adapter、发布绑定、调用测试和 Skill call 用量计量最小闭环。
 - [x] 为 Skill 调用增加按 `schemaVersion` 的输入校验。
 - [ ] 为 Skill 增加 schema registry、版本管理、真实 HTTP/MCP 适配和治理策略。
