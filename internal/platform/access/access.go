@@ -246,7 +246,10 @@ func BearerToken(header string) string {
 }
 
 func isPublicAuthPath(path string) bool {
-	return path == "/api/control/auth/login"
+	return path == "/api/control/auth/login" ||
+		path == "/api/control/auth/oauth/providers" ||
+		path == "/api/control/auth/oauth/start" ||
+		path == "/api/control/auth/oauth/callback"
 }
 
 func isAuthenticatedAuthPath(method, path string) bool {

@@ -39,6 +39,7 @@ type Session struct {
 type tokenPayload struct {
 	Subject string      `json:"sub"`
 	Role    access.Role `json:"role"`
+	Method  string      `json:"method,omitempty"`
 	Issued  int64       `json:"iat"`
 	Expires int64       `json:"exp"`
 	ID      string      `json:"jti"`
@@ -65,6 +66,10 @@ func NewManager(secret string, ttl time.Duration) *Manager {
 }
 
 func (manager *Manager) Create(subject string, role access.Role) (Session, error) {
+	return manager.CreateWithMethod(subject, role, "session")
+}
+
+func (manager *Manager) CreateWithMethod(subject string, role access.Role, method string) (Session, error) {
 	subject = strings.TrimSpace(subject)
 	if subject == "" {
 		return Session{}, fmt.Errorf("subject is required")
@@ -72,11 +77,16 @@ func (manager *Manager) Create(subject string, role access.Role) (Session, error
 	if !validRole(role) {
 		return Session{}, fmt.Errorf("role is invalid")
 	}
+	method = strings.TrimSpace(method)
+	if method == "" {
+		method = "session"
+	}
 
 	now := manager.now().UTC()
 	payload := tokenPayload{
 		Subject: subject,
 		Role:    role,
+		Method:  method,
 		Issued:  now.Unix(),
 		Expires: now.Add(manager.ttl).Unix(),
 		ID:      nonce(),
@@ -165,12 +175,17 @@ func (manager *Manager) parse(token string) (tokenPayload, bool) {
 }
 
 func (manager *Manager) sessionFromPayload(token string, payload tokenPayload) Session {
+	method := strings.TrimSpace(payload.Method)
+	if method == "" {
+		method = "session"
+	}
+
 	return Session{
 		Token: token,
 		Principal: access.Principal{
 			Subject: payload.Subject,
 			Role:    payload.Role,
-			Method:  "session",
+			Method:  method,
 		},
 		ExpiresAt: time.Unix(payload.Expires, 0).UTC().Format(time.RFC3339),
 	}

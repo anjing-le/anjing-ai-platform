@@ -34,7 +34,7 @@ func authLoginHandler(users UserRepository, sessions *session.Manager) http.Hand
 			return
 		}
 
-		created, err := sessions.Create(principal.Subject, principal.Role)
+		created, err := sessions.CreateWithMethod(principal.Subject, principal.Role, principal.Method)
 		if err != nil {
 			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
 			return

@@ -33,6 +33,26 @@ func TestManagerCreatesValidSession(t *testing.T) {
 	}
 }
 
+func TestManagerPreservesSessionMethod(t *testing.T) {
+	manager := NewManager("test-secret", time.Hour)
+
+	created, err := manager.CreateWithMethod("oauth-user@anjing.ai", access.RoleUser, "oauth")
+	if err != nil {
+		t.Fatalf("create oauth session: %v", err)
+	}
+	if created.Principal.Method != "oauth" {
+		t.Fatalf("expected created principal method oauth, got %+v", created.Principal)
+	}
+
+	principal, ok := manager.Principal(created.Token)
+	if !ok {
+		t.Fatal("expected oauth token to validate")
+	}
+	if principal.Method != "oauth" || principal.Subject != "oauth-user@anjing.ai" {
+		t.Fatalf("unexpected oauth principal from token: %+v", principal)
+	}
+}
+
 func TestManagerRejectsTamperedExpiredAndRevokedTokens(t *testing.T) {
 	now := time.Date(2026, 6, 27, 12, 0, 0, 0, time.UTC)
 	manager := NewManager("test-secret", time.Hour)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	neturl "net/url"
 	"testing"
 	"time"
 
@@ -331,5 +332,157 @@ func TestAuthSessionLifecycle(t *testing.T) {
 
 	if expiredRec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected revoked session to return 401, got %d", expiredRec.Code)
+	}
+}
+
+func TestOAuthAuthorizationCodeFlowCreatesSession(t *testing.T) {
+	st := store.NewSeedStore()
+	sessions := session.NewManager("test-secret", time.Hour)
+	states := NewOAuthStateStore()
+	mux := http.NewServeMux()
+	RegisterWithOptions(mux, st, Options{
+		Sessions:    sessions,
+		OAuthStates: states,
+		OAuthProviders: map[string]OAuthProvider{
+			"github": {
+				Name:             "github",
+				AuthorizationURL: "https://github.com/login/oauth/authorize",
+				ClientID:         "anjing-client",
+				RedirectURI:      "https://console.anjing.ai/oauth/callback",
+				Scopes:           []string{"read:user", "user:email", "read:user"},
+				DefaultRole:      access.RoleDeveloper,
+				Enabled:          true,
+			},
+		},
+	})
+	handler := access.Middleware(access.Config{
+		Mode:        access.ModeEnforced,
+		BearerToken: map[string]access.Principal{},
+		APIKey:      map[string]access.Principal{},
+		Session:     sessions.Principal,
+	}, mux)
+
+	providersReq := httptest.NewRequest(http.MethodGet, "/api/control/auth/oauth/providers", nil)
+	providersRec := httptest.NewRecorder()
+	handler.ServeHTTP(providersRec, providersReq)
+
+	if providersRec.Code != http.StatusOK {
+		t.Fatalf("expected providers 200, got %d: %s", providersRec.Code, providersRec.Body.String())
+	}
+	var providers struct {
+		Success bool                   `json:"success"`
+		Data    []OAuthProviderSummary `json:"data"`
+	}
+	if err := json.Unmarshal(providersRec.Body.Bytes(), &providers); err != nil {
+		t.Fatalf("decode providers response: %v", err)
+	}
+	if !providers.Success || len(providers.Data) != 1 || providers.Data[0].Name != "github" || !providers.Data[0].Enabled {
+		t.Fatalf("unexpected providers response: %+v", providers)
+	}
+	if len(providers.Data[0].Scopes) != 2 {
+		t.Fatalf("expected normalized provider scopes, got %+v", providers.Data[0].Scopes)
+	}
+
+	startReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/control/auth/oauth/start",
+		bytes.NewBufferString(`{"provider":"github","redirectTo":"/console"}`),
+	)
+	startReq.Header.Set("Content-Type", "application/json")
+	startRec := httptest.NewRecorder()
+	handler.ServeHTTP(startRec, startReq)
+
+	if startRec.Code != http.StatusOK {
+		t.Fatalf("expected oauth start 200, got %d: %s", startRec.Code, startRec.Body.String())
+	}
+	var started struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Provider         string `json:"provider"`
+			AuthorizationURL string `json:"authorizationUrl"`
+			State            string `json:"state"`
+			ExpiresAt        string `json:"expiresAt"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(startRec.Body.Bytes(), &started); err != nil {
+		t.Fatalf("decode start response: %v", err)
+	}
+	if !started.Success || started.Data.Provider != "github" || started.Data.State == "" {
+		t.Fatalf("unexpected start response: %+v", started)
+	}
+	parsed, err := neturl.Parse(started.Data.AuthorizationURL)
+	if err != nil {
+		t.Fatalf("parse authorization url: %v", err)
+	}
+	if parsed.Host != "github.com" || parsed.Path != "/login/oauth/authorize" {
+		t.Fatalf("unexpected authorization endpoint: %s", started.Data.AuthorizationURL)
+	}
+	query := parsed.Query()
+	if query.Get("response_type") != "code" ||
+		query.Get("client_id") != "anjing-client" ||
+		query.Get("redirect_uri") != "https://console.anjing.ai/oauth/callback" ||
+		query.Get("scope") != "read:user user:email" ||
+		query.Get("state") != started.Data.State {
+		t.Fatalf("unexpected authorization query: %v", query)
+	}
+
+	callbackReq := httptest.NewRequest(
+		http.MethodGet,
+		"/api/control/auth/oauth/callback?provider=github&state="+neturl.QueryEscape(started.Data.State)+"&code=oauth-code&email=dev-api%40anjing.ai",
+		nil,
+	)
+	callbackRec := httptest.NewRecorder()
+	handler.ServeHTTP(callbackRec, callbackReq)
+
+	if callbackRec.Code != http.StatusOK {
+		t.Fatalf("expected oauth callback 200, got %d: %s", callbackRec.Code, callbackRec.Body.String())
+	}
+	var callback struct {
+		Success bool            `json:"success"`
+		Data    session.Session `json:"data"`
+	}
+	if err := json.Unmarshal(callbackRec.Body.Bytes(), &callback); err != nil {
+		t.Fatalf("decode callback response: %v", err)
+	}
+	if !callback.Success ||
+		callback.Data.Token == "" ||
+		callback.Data.Principal.Subject != "dev-api@anjing.ai" ||
+		callback.Data.Principal.Role != access.RoleDeveloper ||
+		callback.Data.Principal.Method != "oauth" {
+		t.Fatalf("unexpected callback response: %+v", callback)
+	}
+
+	sessionReq := httptest.NewRequest(http.MethodGet, "/api/control/auth/session", nil)
+	sessionReq.Header.Set("Authorization", "Bearer "+callback.Data.Token)
+	sessionRec := httptest.NewRecorder()
+	handler.ServeHTTP(sessionRec, sessionReq)
+
+	if sessionRec.Code != http.StatusOK {
+		t.Fatalf("expected oauth session 200, got %d: %s", sessionRec.Code, sessionRec.Body.String())
+	}
+	var current struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Authenticated bool             `json:"authenticated"`
+			Principal     access.Principal `json:"principal"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(sessionRec.Body.Bytes(), &current); err != nil {
+		t.Fatalf("decode oauth session response: %v", err)
+	}
+	if !current.Success || !current.Data.Authenticated || current.Data.Principal.Method != "oauth" {
+		t.Fatalf("unexpected oauth session response: %+v", current)
+	}
+
+	replayReq := httptest.NewRequest(
+		http.MethodGet,
+		"/api/control/auth/oauth/callback?provider=github&state="+neturl.QueryEscape(started.Data.State)+"&code=oauth-code&email=dev-api%40anjing.ai",
+		nil,
+	)
+	replayRec := httptest.NewRecorder()
+	handler.ServeHTTP(replayRec, replayReq)
+
+	if replayRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected consumed oauth state to return 401, got %d: %s", replayRec.Code, replayRec.Body.String())
 	}
 }

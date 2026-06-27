@@ -75,7 +75,7 @@ internal/platform/
 
 ## V1 访问控制
 
-默认开发模式为 `ANJING_AUTH_MODE=permissive`，便于控制台和接口快速联调。设置 `ANJING_AUTH_MODE=enforced` 后，所有 `/api/**` 业务接口都会进入访问控制；`/healthz`、各服务 `/api/*/healthz` 和 `POST /api/control/auth/login` 保持公开。
+默认开发模式为 `ANJING_AUTH_MODE=permissive`，便于控制台和接口快速联调。设置 `ANJING_AUTH_MODE=enforced` 后，所有 `/api/**` 业务接口都会进入访问控制；`/healthz`、各服务 `/api/*/healthz`、`POST /api/control/auth/login` 以及 OAuth 的 provider / start / callback 入口保持公开。
 
 角色边界先按后台信息架构落地：
 
@@ -86,12 +86,35 @@ internal/platform/
 | `Developer` | 运营只读、网关与模型配置、API Key / credentialRef 只读、计费只读、LLM 调用 |
 | `Operator` | 运营处理、服务健康、审计、计费只读、日志导出和保留清理；不看网关配置 |
 
-V1.2 已具备本地 passwordless login、签名 session token、session 查询和 logout 闭环。登录优先匹配 seed 用户邮箱；开发态也可以在请求体中指定角色来生成本地 session。多 command 拆分启动时，用相同的 `ANJING_SESSION_SECRET` 共享 session 签名密钥。
+V1.2 已具备本地 passwordless login、签名 session token、session 查询、logout 和 provider-agnostic OAuth2 authorization code flow 最小闭环。登录优先匹配 seed 用户邮箱；开发态也可以在请求体中指定角色来生成本地 session。多 command 拆分启动时，用相同的 `ANJING_SESSION_SECRET` 共享 session 签名密钥。OAuth callback 当前用 `email` query 作为 provider userinfo exchange 占位，后续再接真实 token exchange、userinfo 和外部 IdP 账号同步。
 
 ```bash
 curl -X POST http://localhost:18080/api/control/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"lin.chen@anjing.ai"}'
+```
+
+OAuth provider 可用环境变量配置：
+
+```bash
+ANJING_OAUTH_PROVIDER=github
+ANJING_OAUTH_AUTHORIZATION_URL=https://github.com/login/oauth/authorize
+ANJING_OAUTH_CLIENT_ID=anjing-client
+ANJING_OAUTH_REDIRECT_URI=http://localhost:5173/oauth/callback
+ANJING_OAUTH_SCOPES="read:user user:email"
+ANJING_OAUTH_DEFAULT_ROLE=Developer
+```
+
+最小 OAuth start / callback 链路：
+
+```bash
+curl -X POST http://localhost:18080/api/control/auth/oauth/start \
+  -H 'Content-Type: application/json' \
+  -d '{"provider":"github","redirectTo":"/console"}'
+```
+
+```bash
+curl "http://localhost:18080/api/control/auth/oauth/callback?provider=github&state=<state>&code=<code>&email=dev-api@anjing.ai"
 ```
 
 Demo bearer token 仍作为控制台开发兜底：

@@ -10,7 +10,9 @@ import (
 )
 
 type Options struct {
-	Sessions *session.Manager
+	Sessions       *session.Manager
+	OAuthProviders map[string]OAuthProvider
+	OAuthStates    *OAuthStateStore
 }
 
 func Register(mux *http.ServeMux, st *store.Store) {
@@ -36,6 +38,14 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 	if sessions == nil {
 		sessions = session.NewManagerFromEnv(12 * time.Hour)
 	}
+	oauthProviders := normalizeOAuthProviders(options.OAuthProviders)
+	if len(oauthProviders) == 0 {
+		oauthProviders = OAuthProvidersFromEnv()
+	}
+	oauthStates := options.OAuthStates
+	if oauthStates == nil {
+		oauthStates = NewOAuthStateStore()
+	}
 
 	mux.HandleFunc("/api/control/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
@@ -44,6 +54,9 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 		httpjson.OK(w, map[string]string{"service": "control-api", "status": "ok"})
 	})
 	mux.HandleFunc("/api/control/auth/login", authLoginHandler(repos.Users, sessions))
+	mux.HandleFunc("/api/control/auth/oauth/providers", authOAuthProvidersHandler(oauthProviders))
+	mux.HandleFunc("/api/control/auth/oauth/start", authOAuthStartHandler(oauthProviders, oauthStates))
+	mux.HandleFunc("/api/control/auth/oauth/callback", authOAuthCallbackHandler(repos.Users, sessions, oauthProviders, oauthStates))
 	mux.HandleFunc("/api/control/auth/session", authSessionHandler())
 	mux.HandleFunc("/api/control/auth/logout", authLogoutHandler(sessions))
 	mux.HandleFunc("/api/control/users", usersHandler(repos.Users))

@@ -382,6 +382,30 @@ func TestLoginPathIsPublicInEnforcedMode(t *testing.T) {
 	}
 }
 
+func TestOAuthPathsArePublicInEnforcedMode(t *testing.T) {
+	handler := Middleware(testConfig(), okHandler())
+
+	paths := []struct {
+		method string
+		path   string
+	}{
+		{method: http.MethodGet, path: "/api/control/auth/oauth/providers"},
+		{method: http.MethodPost, path: "/api/control/auth/oauth/start"},
+		{method: http.MethodGet, path: "/api/control/auth/oauth/callback"},
+	}
+
+	for _, item := range paths {
+		req := httptest.NewRequest(item.method, item.path, nil)
+		rec := httptest.NewRecorder()
+
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected public oauth path %s %s, got %d", item.method, item.path, rec.Code)
+		}
+	}
+}
+
 func testConfig() Config {
 	return Config{
 		Mode: ModeEnforced,
