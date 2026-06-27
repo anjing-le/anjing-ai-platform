@@ -1,9 +1,12 @@
 import {
   ArrowRight,
+  ArrowDownUp,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   CircleAlert,
   Copy,
+  Download,
   RefreshCw,
   Search,
 } from "lucide-react";
@@ -66,6 +69,12 @@ import type {
 } from "./types";
 
 type ApiState = "loading" | "live" | "fallback";
+type TableSortDirection = "asc" | "desc";
+
+interface TableSortState {
+  columnIndex: number;
+  direction: TableSortDirection;
+}
 
 type ConfirmIntentType =
   | "application-key-rotate"
@@ -96,6 +105,38 @@ function formatSyncTime(date: Date) {
     second: "2-digit",
     hour12: false,
   }).format(date);
+}
+
+const tableSortCollator = new Intl.Collator("zh-CN", {
+  numeric: true,
+  sensitivity: "base",
+});
+
+const tablePageSizes = [5, 10, 20];
+
+function compareTableCell(a: string, b: string, direction: TableSortDirection) {
+  const result = tableSortCollator.compare(a, b);
+  return direction === "asc" ? result : -result;
+}
+
+function escapeCsvCell(value: string) {
+  const normalized = value.replace(/\r?\n/g, " ");
+
+  if (/[",\n]/.test(normalized)) {
+    return `"${normalized.replace(/"/g, '""')}"`;
+  }
+
+  return normalized;
+}
+
+function buildTableCsv(columns: string[], rows: TableRow[]) {
+  return [columns, ...rows.map((row) => row.cells)]
+    .map((cells) => cells.map((cell) => escapeCsvCell(cell)).join(","))
+    .join("\n");
+}
+
+function tableExportFilename(pageId: ConsoleRoute, tabIndex: number) {
+  return `anjing-${pageId}-view-${tabIndex + 1}.csv`;
 }
 
 const routeHash: Record<ConsoleRoute, string> = {
@@ -1691,6 +1732,10 @@ function ModulePage({
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("全部状态");
+  const [sort, setSort] = useState<TableSortState>({ columnIndex: 0, direction: "asc" });
+  const [pageSize, setPageSize] = useState(10);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [exportState, setExportState] = useState<"idle" | "success" | "error">("idle");
   const [selectedRowId, setSelectedRowId] = useState("");
   const [activeTab, setActiveTab] = useState(page.tabs[0] || "");
   const activeTabIndex = Math.max(0, page.tabs.indexOf(activeTab));
@@ -1726,12 +1771,16 @@ function ModulePage({
     setActiveTab(page.tabs[0] || "");
     setQuery("");
     setStatus("全部状态");
+    setSort({ columnIndex: 0, direction: "asc" });
+    setPageIndex(0);
     setSelectedRowId("");
   }, [page.id, page.tabs]);
 
   useEffect(() => {
     setQuery("");
     setStatus("全部状态");
+    setSort({ columnIndex: 0, direction: "asc" });
+    setPageIndex(0);
     setSelectedRowId("");
   }, [activeTab]);
 
@@ -1981,13 +2030,46 @@ function ModulePage({
     [tableView.rows],
   );
 
-  const rows = tableView.rows.filter((row) => {
-    const searchableText = [...row.cells, displayStatus(row.status), nextStepForStatus(row.status)].join(" ").toLowerCase();
-    const matchesQuery = searchableText.includes(query.toLowerCase());
-    const matchesStatus = status === "全部状态" || row.status === status;
-    return matchesQuery && matchesStatus;
-  });
+  const rows = useMemo(
+    () =>
+      tableView.rows.filter((row) => {
+        const searchableText = [...row.cells, displayStatus(row.status), nextStepForStatus(row.status)].join(" ").toLowerCase();
+        const matchesQuery = searchableText.includes(query.toLowerCase());
+        const matchesStatus = status === "全部状态" || row.status === status;
+        return matchesQuery && matchesStatus;
+      }),
+    [query, status, tableView.rows],
+  );
   const filtersActive = query.trim() !== "" || status !== "全部状态";
+  const sortColumnIndex = Math.min(sort.columnIndex, Math.max(tableView.columns.length - 1, 0));
+  const sortedRows = useMemo(
+    () =>
+      [...rows].sort((first, second) => {
+        const firstValue = first.cells[sortColumnIndex] || "";
+        const secondValue = second.cells[sortColumnIndex] || "";
+        return compareTableCell(firstValue, secondValue, sort.direction);
+      }),
+    [rows, sort.direction, sortColumnIndex],
+  );
+  const pageCount = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const safePageIndex = Math.min(pageIndex, pageCount - 1);
+  const currentPageRows = useMemo(
+    () => sortedRows.slice(safePageIndex * pageSize, safePageIndex * pageSize + pageSize),
+    [pageSize, safePageIndex, sortedRows],
+  );
+  const pageStart = sortedRows.length ? safePageIndex * pageSize + 1 : 0;
+  const pageEnd = Math.min(sortedRows.length, safePageIndex * pageSize + pageSize);
+  const exportLabel = exportState === "success" ? "已导出" : exportState === "error" ? "导出失败" : "导出";
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [pageSize, query, sort.direction, sortColumnIndex, status]);
+
+  useEffect(() => {
+    if (pageIndex !== safePageIndex) {
+      setPageIndex(safePageIndex);
+    }
+  }, [pageIndex, safePageIndex]);
 
   const selectedApplication = useMemo(() => {
     if (page.id !== "docs" || !snapshot?.applications?.length) {
@@ -2113,7 +2195,7 @@ function ModulePage({
 
   const selectableTable =
     page.id === "overview" || page.id === "iam" || page.id === "docs" || page.id === "gateway" || page.id === "quota";
-  const selectedGenericRow = rows.find((row) => row.id === selectedRowId) || rows[0];
+  const selectedGenericRow = sortedRows.find((row) => row.id === selectedRowId) || currentPageRows[0] || sortedRows[0];
   const primaryAllowed = canRunPrimaryAction(role, page.id);
   const primaryHint = primaryActionHint(role, page.id);
   let selectedTableRowId: string | undefined;
@@ -2161,20 +2243,62 @@ function ModulePage({
   }
 
   useEffect(() => {
-    if (!rows.length) {
+    if (!sortedRows.length) {
       setSelectedRowId("");
       return;
     }
 
-    const stillVisible = rows.some((row) => row.id === selectedRowId);
+    const stillVisible = sortedRows.some((row) => row.id === selectedRowId);
     if (!stillVisible) {
-      setSelectedRowId(rows[0].id);
+      setSelectedRowId(currentPageRows[0]?.id || sortedRows[0].id);
+      return;
     }
-  }, [rows, selectedRowId]);
+
+    if (currentPageRows.length && !currentPageRows.some((row) => row.id === selectedRowId)) {
+      setSelectedRowId(currentPageRows[0].id);
+    }
+  }, [currentPageRows, selectedRowId, sortedRows]);
 
   async function handleSelectedUserActivate(id: string) {
     await onUserActivate(id);
     setSelectedRowId(id);
+  }
+
+  function handleTableSort(columnIndex: number) {
+    setSort((current) => ({
+      columnIndex,
+      direction: current.columnIndex === columnIndex && current.direction === "asc" ? "desc" : "asc",
+    }));
+    setPageIndex(0);
+  }
+
+  function handlePageSizeChange(nextPageSize: number) {
+    setPageSize(nextPageSize);
+    setPageIndex(0);
+  }
+
+  function handleTableExport() {
+    if (!sortedRows.length) {
+      return;
+    }
+
+    try {
+      const csv = buildTableCsv(tableView.columns, sortedRows);
+      const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = tableExportFilename(page.id, activeTabIndex);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+      setExportState("success");
+    } catch {
+      setExportState("error");
+    }
+
+    window.setTimeout(() => setExportState("idle"), 1800);
   }
 
   return (
@@ -2238,21 +2362,21 @@ function ModulePage({
         primaryAllowed={primaryAllowed}
         primaryHint={primaryHint}
         recordCount={tableView.rows.length}
-        visibleCount={rows.length}
+        visibleCount={sortedRows.length}
       />
 
       <ModuleFocusBar
         activeTab={activeTab}
         recordCount={tableView.rows.length}
         steps={moduleWorkflows[page.id]}
-        visibleCount={rows.length}
+        visibleCount={sortedRows.length}
       />
 
       <ModuleSummaryStrip
         activeTab={activeTab}
         metrics={page.metrics}
         recordCount={tableView.rows.length}
-        visibleCount={rows.length}
+        visibleCount={sortedRows.length}
       />
 
       <section
@@ -2280,6 +2404,36 @@ function ModulePage({
                   </option>
                 ))}
               </select>
+              <select
+                aria-label={`${page.title} 排序字段`}
+                onChange={(event) => handleTableSort(Number(event.target.value))}
+                value={sortColumnIndex}
+              >
+                {tableView.columns.map((column, index) => (
+                  <option key={column} value={index}>
+                    按{column}
+                  </option>
+                ))}
+              </select>
+              <button
+                aria-label={`${page.title} 表格排序方向：${sort.direction === "asc" ? "升序" : "降序"}`}
+                className="text-command"
+                onClick={() => handleTableSort(sortColumnIndex)}
+                type="button"
+              >
+                <ArrowDownUp aria-hidden="true" size={14} />
+                {sort.direction === "asc" ? "升序" : "降序"}
+              </button>
+              <button
+                aria-label={`导出${page.title} ${tableView.title} CSV，共 ${sortedRows.length} 条记录`}
+                className="text-command"
+                disabled={!sortedRows.length}
+                onClick={handleTableExport}
+                type="button"
+              >
+                <Download aria-hidden="true" size={14} />
+                {exportLabel}
+              </button>
               {filtersActive ? (
                 <button
                   aria-label={`清空${page.title}表格筛选`}
@@ -2294,7 +2448,7 @@ function ModulePage({
                 </button>
               ) : null}
               <span className="table-result-count">
-                {rows.length} / {tableView.rows.length} 条记录
+                {sortedRows.length} / {tableView.rows.length} 条记录
               </span>
             </div>
           </div>
@@ -2306,8 +2460,20 @@ function ModulePage({
             }
             emptyTitle={filtersActive ? "当前筛选没有结果" : "暂无模块记录"}
             onRowSelect={selectableTable ? setSelectedRowId : undefined}
-            rows={rows}
+            onSort={handleTableSort}
+            rows={currentPageRows}
             selectedRowId={selectedTableRowId}
+            sort={{ columnIndex: sortColumnIndex, direction: sort.direction }}
+          />
+          <TablePagination
+            onPageChange={setPageIndex}
+            onPageSizeChange={handlePageSizeChange}
+            pageCount={pageCount}
+            pageEnd={pageEnd}
+            pageIndex={safePageIndex}
+            pageSize={pageSize}
+            pageStart={pageStart}
+            rowCount={sortedRows.length}
           />
         </Panel>
 
@@ -2316,7 +2482,7 @@ function ModulePage({
             activeTab={activeTab}
             pageTitle={page.title}
             rows={tableView.rows}
-            visibleRows={rows}
+            visibleRows={sortedRows}
           />
           {page.id === "overview" ? (
             <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
@@ -3869,24 +4035,45 @@ function DataTable({
   emptyDescription,
   emptyTitle,
   onRowSelect,
+  onSort,
   rows,
   selectedRowId,
+  sort,
 }: {
   ariaLabel: string;
   columns: string[];
   emptyDescription: string;
   emptyTitle: string;
   onRowSelect?: (id: string) => void;
+  onSort: (columnIndex: number) => void;
   rows: TableRow[];
   selectedRowId?: string;
+  sort: TableSortState;
 }) {
   return (
     <div className="table-wrap">
       <table aria-label={ariaLabel}>
         <thead>
           <tr>
-            {columns.map((column) => (
-              <th key={column}>{column}</th>
+            {columns.map((column, index) => (
+              <th
+                aria-sort={
+                  sort.columnIndex === index ? (sort.direction === "asc" ? "ascending" : "descending") : "none"
+                }
+                key={column}
+              >
+                <button
+                  aria-label={`${column} 排序，当前${
+                    sort.columnIndex === index ? (sort.direction === "asc" ? "升序" : "降序") : "未排序"
+                  }`}
+                  className={sort.columnIndex === index ? "table-sort-button is-active" : "table-sort-button"}
+                  onClick={() => onSort(index)}
+                  type="button"
+                >
+                  <span>{column}</span>
+                  <ArrowDownUp aria-hidden="true" size={13} />
+                </button>
+              </th>
             ))}
           </tr>
         </thead>
@@ -3937,6 +4124,74 @@ function DataTable({
           ) : null}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function TablePagination({
+  onPageChange,
+  onPageSizeChange,
+  pageCount,
+  pageEnd,
+  pageIndex,
+  pageSize,
+  pageStart,
+  rowCount,
+}: {
+  onPageChange: (pageIndex: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  pageCount: number;
+  pageEnd: number;
+  pageIndex: number;
+  pageSize: number;
+  pageStart: number;
+  rowCount: number;
+}) {
+  const previousDisabled = pageIndex <= 0 || rowCount === 0;
+  const nextDisabled = pageIndex >= pageCount - 1 || rowCount === 0;
+
+  return (
+    <div aria-label="表格分页" className="table-pagination">
+      <p className="table-pagination__summary" role="status">
+        {rowCount ? `第 ${pageStart}-${pageEnd} 条，共 ${rowCount} 条` : "没有符合条件的记录"}
+      </p>
+      <div className="table-pagination__controls">
+        <label>
+          <span>每页</span>
+          <select
+            aria-label="每页记录数"
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            value={pageSize}
+          >
+            {tablePageSizes.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          aria-label="上一页"
+          className="pagination-button"
+          disabled={previousDisabled}
+          onClick={() => onPageChange(Math.max(0, pageIndex - 1))}
+          type="button"
+        >
+          <ChevronLeft aria-hidden="true" size={15} />
+        </button>
+        <span aria-label={`当前第 ${pageIndex + 1} 页，共 ${pageCount} 页`} className="table-pagination__page">
+          {pageIndex + 1} / {pageCount}
+        </span>
+        <button
+          aria-label="下一页"
+          className="pagination-button"
+          disabled={nextDisabled}
+          onClick={() => onPageChange(Math.min(pageCount - 1, pageIndex + 1))}
+          type="button"
+        >
+          <ChevronRight aria-hidden="true" size={15} />
+        </button>
+      </div>
     </div>
   );
 }

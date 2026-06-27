@@ -454,6 +454,34 @@ if (!appSource.includes("table-result-count") || !appSource.includes("tableView.
   errors.push("Console data tables must show filtered row counts.");
 }
 
+if (
+  !appSource.includes("function buildTableCsv") ||
+  !appSource.includes("function tableExportFilename") ||
+  !appSource.includes("aria-label={`导出${page.title} ${tableView.title} CSV，共 ${sortedRows.length} 条记录`}") ||
+  !appSource.includes('<Download aria-hidden="true" size={14} />')
+) {
+  errors.push("Console data tables must support localized CSV export for the current filtered view.");
+}
+
+if (
+  !appSource.includes('aria-sort=') ||
+  !appSource.includes('className={sort.columnIndex === index ? "table-sort-button is-active" : "table-sort-button"}') ||
+  !appSource.includes('<ArrowDownUp aria-hidden="true" size={13} />') ||
+  !styleSource.includes(".table-sort-button")
+) {
+  errors.push("Console data table headers must expose accessible sortable controls.");
+}
+
+if (
+  !appSource.includes("function TablePagination") ||
+  !appSource.includes('aria-label="表格分页"') ||
+  !appSource.includes("tablePageSizes") ||
+  !appSource.includes("pageCount") ||
+  !styleSource.includes(".table-pagination")
+) {
+  errors.push("Console data tables must provide reusable pagination controls.");
+}
+
 if (!appSource.includes("const searchableText = [...row.cells, displayStatus(row.status), nextStepForStatus(row.status)].join(\" \").toLowerCase()")) {
   errors.push("Console table search must include localized status and next-step text.");
 }
