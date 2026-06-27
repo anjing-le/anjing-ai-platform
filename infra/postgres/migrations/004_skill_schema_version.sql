@@ -1,0 +1,2 @@
+ALTER TABLE skill_bindings
+  ADD COLUMN IF NOT EXISTS schema_version TEXT NOT NULL DEFAULT '0.1';

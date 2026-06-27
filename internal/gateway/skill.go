@@ -76,6 +76,10 @@ func skillInvokeHandler(skills SkillRepository, recorder InvocationRecorder) htt
 			httpjson.NotFound(w, "published skill binding not found")
 			return
 		}
+		if err := validateSkillInput(skill, req.Input); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
 
 		result, record, err := executeSkillInvocation(r.Context(), skill, req, adapter)
 		if record.ID != "" && recorder != nil {

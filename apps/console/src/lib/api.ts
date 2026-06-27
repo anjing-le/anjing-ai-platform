@@ -130,6 +130,7 @@ export interface SkillBinding {
   protocol: string;
   route: string;
   timeout: string;
+  schemaVersion: string;
   status: string;
   updatedAt: string;
 }
@@ -302,6 +303,7 @@ export interface CreateSkillBindingInput {
   protocol: string;
   route: string;
   timeout: string;
+  schemaVersion?: string;
 }
 
 export interface CreatePlanInput {

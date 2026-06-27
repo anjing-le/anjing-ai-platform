@@ -656,6 +656,45 @@ func TestInvokeSkillUsesPublishedBinding(t *testing.T) {
 	}
 }
 
+func TestInvokeSkillRejectsInvalidInputSchema(t *testing.T) {
+	st := store.NewSeedStore()
+	initialLogs := len(st.ListRequestLogs())
+	initialUsage := len(st.ListUsage())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"name":"search-knowledge","input":{"text":"退款政策"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/invoke", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Error   struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Success || payload.Error.Code != "bad_request" || !strings.Contains(payload.Error.Message, "input.query") {
+		t.Fatalf("expected schema validation error, got %+v", payload)
+	}
+	if logs := st.ListRequestLogs(); len(logs) != initialLogs {
+		t.Fatalf("expected invalid skill input not to append logs, got %+v", logs)
+	}
+	if usage := st.ListUsage(); len(usage) != initialUsage {
+		t.Fatalf("expected invalid skill input not to append usage, got %+v", usage)
+	}
+}
+
 func TestInvokeSkillRejectsDraftBinding(t *testing.T) {
 	st := store.NewSeedStore()
 	mux := http.NewServeMux()

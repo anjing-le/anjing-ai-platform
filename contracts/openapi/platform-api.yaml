@@ -783,9 +783,10 @@ paths:
       summary: Invoke a published skill binding.
       description: >
         V1 resolves a Published skill binding by name and executes it through a
-        replaceable adapter. The endpoint records request logs and successful
-        skill-call usage so the console can validate integration flow before
-        real Skill provider protocols are wired in.
+        replaceable adapter. Built-in bindings validate input against the
+        declared schemaVersion before dispatch. The endpoint records request
+        logs and successful skill-call usage so the console can validate
+        integration flow before real Skill provider protocols are wired in.
       x-anjing-roles: [Administrator, User, Developer]
       requestBody:
         required: true
@@ -1971,7 +1972,7 @@ components:
           type: string
     SkillBinding:
       type: object
-      required: [id, name, protocol, route, timeout, status, updatedAt]
+      required: [id, name, protocol, route, timeout, schemaVersion, status, updatedAt]
       properties:
         id:
           type: string
@@ -1983,6 +1984,9 @@ components:
           type: string
         timeout:
           type: string
+        schemaVersion:
+          type: string
+          description: Version of the skill input schema used by the gateway validator.
         status:
           type: string
         updatedAt:
@@ -2004,6 +2008,9 @@ components:
         timeout:
           type: string
           default: 8s
+        schemaVersion:
+          type: string
+          default: "0.1"
     PublishSkillBindingRequest:
       type: object
       required: [id]
@@ -2019,6 +2026,10 @@ components:
           examples: [search-knowledge]
         input:
           type: object
+          description: >
+            Input object validated by known skill schemas. For example,
+            search-knowledge@0.1 requires `query`, while generate-image@0.2
+            requires `prompt`.
           additionalProperties: true
     SkillUsage:
       type: object

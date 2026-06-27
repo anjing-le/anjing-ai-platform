@@ -26,10 +26,11 @@ type CreateModelRouteInput struct {
 }
 
 type CreateSkillBindingInput struct {
-	Name     string
-	Protocol string
-	Route    string
-	Timeout  string
+	Name          string
+	Protocol      string
+	Route         string
+	Timeout       string
+	SchemaVersion string
 }
 
 type LLMInvocationInput struct {
@@ -175,7 +176,7 @@ func (repo MemorySkillRepository) ListSkills(context.Context) ([]store.SkillBind
 }
 
 func (repo MemorySkillRepository) CreateSkillBinding(_ context.Context, input CreateSkillBindingInput) (store.SkillBinding, error) {
-	return repo.store.CreateSkillBinding(input.Name, input.Protocol, input.Route, input.Timeout), nil
+	return repo.store.CreateSkillBinding(input.Name, input.Protocol, input.Route, input.Timeout, input.SchemaVersion), nil
 }
 
 func (repo MemorySkillRepository) PublishSkillBinding(_ context.Context, id string) (store.SkillBinding, bool, error) {
@@ -514,7 +515,7 @@ func NewPostgresSkillRepository(pool *pgxpool.Pool) PostgresSkillRepository {
 
 func (repo PostgresSkillRepository) ListSkills(ctx context.Context) ([]store.SkillBinding, error) {
 	rows, err := repo.pool.Query(ctx, `
-		select id, name, protocol, route, timeout, status, updated_at
+		select id, name, protocol, route, timeout, schema_version, status, updated_at
 		from skill_bindings
 		order by updated_at desc
 	`)
@@ -533,12 +534,16 @@ func (repo PostgresSkillRepository) ListSkills(ctx context.Context) ([]store.Ski
 
 func (repo PostgresSkillRepository) CreateSkillBinding(ctx context.Context, input CreateSkillBindingInput) (store.SkillBinding, error) {
 	item := store.SkillBinding{
-		ID:       nextID("skill"),
-		Name:     input.Name,
-		Protocol: input.Protocol,
-		Route:    input.Route,
-		Timeout:  input.Timeout,
-		Status:   "Draft",
+		ID:            nextID("skill"),
+		Name:          input.Name,
+		Protocol:      input.Protocol,
+		Route:         input.Route,
+		Timeout:       input.Timeout,
+		SchemaVersion: input.SchemaVersion,
+		Status:        "Draft",
+	}
+	if item.SchemaVersion == "" {
+		item.SchemaVersion = "0.1"
 	}
 
 	tx, err := repo.pool.Begin(ctx)
@@ -549,10 +554,10 @@ func (repo PostgresSkillRepository) CreateSkillBinding(ctx context.Context, inpu
 
 	var updatedAt time.Time
 	if err := tx.QueryRow(ctx, `
-		insert into skill_bindings(id, name, protocol, route, timeout, status)
-		values($1, $2, $3, $4, $5, $6)
+		insert into skill_bindings(id, name, protocol, route, timeout, schema_version, status)
+		values($1, $2, $3, $4, $5, $6, $7)
 		returning updated_at
-	`, item.ID, item.Name, item.Protocol, item.Route, item.Timeout, item.Status).Scan(&updatedAt); err != nil {
+	`, item.ID, item.Name, item.Protocol, item.Route, item.Timeout, item.SchemaVersion, item.Status).Scan(&updatedAt); err != nil {
 		return store.SkillBinding{}, fmt.Errorf("insert skill binding: %w", err)
 	}
 
@@ -582,7 +587,7 @@ func (repo PostgresSkillRepository) PublishSkillBinding(ctx context.Context, id 
 		update skill_bindings
 		set status = 'Published', updated_at = now()
 		where id = $1
-		returning id, name, protocol, route, timeout, status, updated_at
+		returning id, name, protocol, route, timeout, schema_version, status, updated_at
 	`, id)
 	if err != nil {
 		return store.SkillBinding{}, false, fmt.Errorf("publish skill binding: %w", err)
@@ -622,7 +627,7 @@ func (repo PostgresSkillRepository) PublishSkillBinding(ctx context.Context, id 
 func scanSkillBinding(row pgx.CollectableRow) (store.SkillBinding, error) {
 	var item store.SkillBinding
 	var updatedAt time.Time
-	if err := row.Scan(&item.ID, &item.Name, &item.Protocol, &item.Route, &item.Timeout, &item.Status, &updatedAt); err != nil {
+	if err := row.Scan(&item.ID, &item.Name, &item.Protocol, &item.Route, &item.Timeout, &item.SchemaVersion, &item.Status, &updatedAt); err != nil {
 		return store.SkillBinding{}, err
 	}
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)

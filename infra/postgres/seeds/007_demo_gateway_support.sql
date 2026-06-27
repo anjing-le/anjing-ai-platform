@@ -12,16 +12,17 @@ SET
   fallback_model = EXCLUDED.fallback_model,
   status = EXCLUDED.status;
 
-INSERT INTO skill_bindings (id, name, protocol, route, timeout, status)
+INSERT INTO skill_bindings (id, name, protocol, route, timeout, schema_version, status)
 VALUES
-  ('skill_search', 'search-knowledge', 'MCP', '/api/v1/skills/search', '8s', 'Published'),
-  ('skill_message', 'send-message', 'HTTP', '/api/v1/skills/send-message', '8s', 'Draft')
+  ('skill_search', 'search-knowledge', 'MCP', '/api/v1/skills/search', '8s', '0.1', 'Published'),
+  ('skill_message', 'send-message', 'HTTP', '/api/v1/skills/send-message', '8s', '0.1', 'Draft')
 ON CONFLICT (id) DO UPDATE
 SET
   name = EXCLUDED.name,
   protocol = EXCLUDED.protocol,
   route = EXCLUDED.route,
   timeout = EXCLUDED.timeout,
+  schema_version = EXCLUDED.schema_version,
   status = EXCLUDED.status;
 
 INSERT INTO request_logs (id, request, consumer, latency, result, status)

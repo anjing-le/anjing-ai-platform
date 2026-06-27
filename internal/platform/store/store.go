@@ -108,13 +108,14 @@ type ModelRoute struct {
 }
 
 type SkillBinding struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Protocol  string `json:"protocol"`
-	Route     string `json:"route"`
-	Timeout   string `json:"timeout"`
-	Status    string `json:"status"`
-	UpdatedAt string `json:"updatedAt"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	Protocol      string `json:"protocol"`
+	Route         string `json:"route"`
+	Timeout       string `json:"timeout"`
+	SchemaVersion string `json:"schemaVersion"`
+	Status        string `json:"status"`
+	UpdatedAt     string `json:"updatedAt"`
 }
 
 type RequestLog struct {
@@ -288,8 +289,8 @@ func NewSeedStore() *Store {
 			{ID: "model_embedding_default", Alias: "embedding-default", Scenario: "RAG", Primary: "text-embedding-3", Fallback: "local-bge", Status: "Active", UpdatedAt: now},
 		},
 		skills: []SkillBinding{
-			{ID: "skill_search", Name: "search-knowledge", Protocol: "MCP", Route: "/api/v1/skills/search", Timeout: "8s", Status: "Published", UpdatedAt: now},
-			{ID: "skill_message", Name: "send-message", Protocol: "HTTP", Route: "/api/v1/skills/send-message", Timeout: "8s", Status: "Draft", UpdatedAt: now},
+			{ID: "skill_search", Name: "search-knowledge", Protocol: "MCP", Route: "/api/v1/skills/search", Timeout: "8s", SchemaVersion: "0.1", Status: "Published", UpdatedAt: now},
+			{ID: "skill_message", Name: "send-message", Protocol: "HTTP", Route: "/api/v1/skills/send-message", Timeout: "8s", SchemaVersion: "0.1", Status: "Draft", UpdatedAt: now},
 		},
 		requestLogs: []RequestLog{
 			{ID: "req_chat", Request: "POST /llm/chat", Consumer: "customer-service-agent", Latency: "76ms", Result: "200", Status: "Success", CreatedAt: now},
@@ -650,17 +651,22 @@ func (s *Store) ListSkills() []SkillBinding {
 	return append([]SkillBinding(nil), s.skills...)
 }
 
-func (s *Store) CreateSkillBinding(name, protocol, route, timeout string) SkillBinding {
+func (s *Store) CreateSkillBinding(name, protocol, route, timeout string, schemaVersion ...string) SkillBinding {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	version := "0.1"
+	if len(schemaVersion) > 0 && schemaVersion[0] != "" {
+		version = schemaVersion[0]
+	}
 	skill := SkillBinding{
-		ID:        nextID("skill"),
-		Name:      name,
-		Protocol:  protocol,
-		Route:     route,
-		Timeout:   timeout,
-		Status:    "Draft",
-		UpdatedAt: nowLabel(),
+		ID:            nextID("skill"),
+		Name:          name,
+		Protocol:      protocol,
+		Route:         route,
+		Timeout:       timeout,
+		SchemaVersion: version,
+		Status:        "Draft",
+		UpdatedAt:     nowLabel(),
 	}
 	s.skills = append([]SkillBinding{skill}, s.skills...)
 	s.addAuditLocked("网关与模型", "create skill binding", name, "Success")

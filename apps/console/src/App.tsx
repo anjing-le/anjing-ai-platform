@@ -48,6 +48,7 @@ import {
   type LLMInvokeResponse,
   type ModelRoute,
   type PlatformSnapshot,
+  type SkillInvokeInput,
   type SkillInvokeResponse,
   type SkillBinding,
 } from "./lib/api";
@@ -3504,6 +3505,17 @@ function ModelRoutePanel({
   );
 }
 
+function buildSkillInvokeInput(skill: SkillBinding, text: string): SkillInvokeInput["input"] {
+  switch (skill.name) {
+    case "search-knowledge":
+      return { query: text };
+    case "generate-image":
+      return { prompt: text };
+    default:
+      return { text };
+  }
+}
+
 function SkillBindingPanel({
   onCreate,
   onInvoked,
@@ -3589,7 +3601,7 @@ function SkillBindingPanel({
     setInvokeError("");
 
     try {
-      const response = await invokeSkill({ name: skill.name, input: { text: invokeText } }, role);
+      const response = await invokeSkill({ name: skill.name, input: buildSkillInvokeInput(skill, invokeText) }, role);
       setInvokeResult(response);
       await onInvoked();
     } catch (err) {
@@ -3624,6 +3636,12 @@ function SkillBindingPanel({
               <strong>{skill.timeout}</strong>
               <p>治理超时</p>
               <StatusDot tone="watch" />
+            </article>
+            <article>
+              <span>Schema</span>
+              <strong>{skill.schemaVersion || "0.1"}</strong>
+              <p>输入版本</p>
+              <StatusDot tone="neutral" />
             </article>
           </div>
 

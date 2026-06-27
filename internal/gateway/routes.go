@@ -214,10 +214,11 @@ func publishModelRouteHandler(modelRoutes ModelRouteRepository) http.HandlerFunc
 
 func skillsHandler(skills SkillRepository) http.HandlerFunc {
 	type createSkillBindingRequest struct {
-		Name     string `json:"name"`
-		Protocol string `json:"protocol"`
-		Route    string `json:"route"`
-		Timeout  string `json:"timeout"`
+		Name          string `json:"name"`
+		Protocol      string `json:"protocol"`
+		Route         string `json:"route"`
+		Timeout       string `json:"timeout"`
+		SchemaVersion string `json:"schemaVersion"`
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -249,11 +250,15 @@ func skillsHandler(skills SkillRepository) http.HandlerFunc {
 			if req.Timeout == "" {
 				req.Timeout = "8s"
 			}
+			if req.SchemaVersion == "" {
+				req.SchemaVersion = "0.1"
+			}
 			skill, err := skills.CreateSkillBinding(r.Context(), CreateSkillBindingInput{
-				Name:     req.Name,
-				Protocol: req.Protocol,
-				Route:    req.Route,
-				Timeout:  req.Timeout,
+				Name:          req.Name,
+				Protocol:      req.Protocol,
+				Route:         req.Route,
+				Timeout:       req.Timeout,
+				SchemaVersion: req.SchemaVersion,
 			})
 			if err != nil {
 				httpjson.BadRequest(w, err.Error())
