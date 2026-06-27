@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/retention"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -87,6 +88,7 @@ type SkillRepository interface {
 type RequestLogRepository interface {
 	ListRequestLogs(ctx context.Context) ([]store.RequestLog, error)
 	QueryRequestLogs(ctx context.Context, query RequestLogQuery) ([]store.RequestLog, error)
+	PurgeRequestLogsBefore(ctx context.Context, cutoff time.Time, olderThanDays int) (retention.PurgeResult, error)
 }
 
 type InvocationRecorder interface {
@@ -195,6 +197,11 @@ func (repo MemoryRequestLogRepository) ListRequestLogs(context.Context) ([]store
 
 func (repo MemoryRequestLogRepository) QueryRequestLogs(_ context.Context, query RequestLogQuery) ([]store.RequestLog, error) {
 	return filterRequestLogs(repo.store.ListRequestLogs(), query), nil
+}
+
+func (repo MemoryRequestLogRepository) PurgeRequestLogsBefore(_ context.Context, cutoff time.Time, olderThanDays int) (retention.PurgeResult, error) {
+	deleted, retained := repo.store.PurgeRequestLogsBefore(cutoff)
+	return retention.Result(deleted, retained, olderThanDays), nil
 }
 
 type MemoryInvocationRecorder struct {
@@ -675,6 +682,48 @@ func (repo PostgresRequestLogRepository) QueryRequestLogs(ctx context.Context, q
 	}
 
 	return items, nil
+}
+
+func (repo PostgresRequestLogRepository) PurgeRequestLogsBefore(ctx context.Context, cutoff time.Time, olderThanDays int) (retention.PurgeResult, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return retention.PurgeResult{}, fmt.Errorf("begin purge request logs: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
+		delete from request_logs
+		where created_at < $1
+		returning id
+	`, cutoff)
+	if err != nil {
+		return retention.PurgeResult{}, fmt.Errorf("purge request logs: %w", err)
+	}
+	deleted := 0
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return retention.PurgeResult{}, fmt.Errorf("scan purged request log: %w", err)
+		}
+		deleted++
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return retention.PurgeResult{}, fmt.Errorf("collect purged request logs: %w", err)
+	}
+	rows.Close()
+
+	retained := 0
+	if err := tx.QueryRow(ctx, `select count(*) from request_logs`).Scan(&retained); err != nil {
+		return retention.PurgeResult{}, fmt.Errorf("count retained request logs: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return retention.PurgeResult{}, fmt.Errorf("commit purge request logs: %w", err)
+	}
+
+	return retention.Result(deleted, retained, olderThanDays), nil
 }
 
 func filterRequestLogs(items []store.RequestLog, query RequestLogQuery) []store.RequestLog {

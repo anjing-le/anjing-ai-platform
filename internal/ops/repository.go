@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/retention"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,6 +24,7 @@ type HealthRepository interface {
 type AuditRepository interface {
 	ListAudit(ctx context.Context) ([]store.AuditEvent, error)
 	QueryAudit(ctx context.Context, query AuditQuery) ([]store.AuditEvent, error)
+	PurgeAuditBefore(ctx context.Context, cutoff time.Time, olderThanDays int) (retention.PurgeResult, error)
 }
 
 type AuditQuery struct {
@@ -95,6 +97,11 @@ func (repo MemoryAuditRepository) ListAudit(context.Context) ([]store.AuditEvent
 
 func (repo MemoryAuditRepository) QueryAudit(_ context.Context, query AuditQuery) ([]store.AuditEvent, error) {
 	return filterAuditEvents(repo.store.ListAudit(), query), nil
+}
+
+func (repo MemoryAuditRepository) PurgeAuditBefore(_ context.Context, cutoff time.Time, olderThanDays int) (retention.PurgeResult, error) {
+	deleted, retained := repo.store.PurgeAuditBefore(cutoff)
+	return retention.Result(deleted, retained, olderThanDays), nil
 }
 
 type MemorySnapshotRepository struct {
@@ -275,6 +282,48 @@ func (repo PostgresAuditRepository) QueryAudit(ctx context.Context, query AuditQ
 	}
 
 	return items, nil
+}
+
+func (repo PostgresAuditRepository) PurgeAuditBefore(ctx context.Context, cutoff time.Time, olderThanDays int) (retention.PurgeResult, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return retention.PurgeResult{}, fmt.Errorf("begin purge audit events: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
+		delete from audit_events
+		where event_time < $1
+		returning id
+	`, cutoff)
+	if err != nil {
+		return retention.PurgeResult{}, fmt.Errorf("purge audit events: %w", err)
+	}
+	deleted := 0
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return retention.PurgeResult{}, fmt.Errorf("scan purged audit event: %w", err)
+		}
+		deleted++
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return retention.PurgeResult{}, fmt.Errorf("collect purged audit events: %w", err)
+	}
+	rows.Close()
+
+	retained := 0
+	if err := tx.QueryRow(ctx, `select count(*) from audit_events`).Scan(&retained); err != nil {
+		return retention.PurgeResult{}, fmt.Errorf("count retained audit events: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return retention.PurgeResult{}, fmt.Errorf("commit purge audit events: %w", err)
+	}
+
+	return retention.Result(deleted, retained, olderThanDays), nil
 }
 
 func filterAuditEvents(items []store.AuditEvent, query AuditQuery) []store.AuditEvent {

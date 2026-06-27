@@ -227,6 +227,8 @@ func allowOperator(method, path string) bool {
 
 	if method == http.MethodPost {
 		return path == "/api/ops/todos/resolve" ||
+			path == "/api/ops/audit-events/retention/purge" ||
+			path == "/api/gateway/request-logs/retention/purge" ||
 			path == "/api/billing/budget-alerts/resolve"
 	}
 

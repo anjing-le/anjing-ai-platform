@@ -165,6 +165,46 @@ func TestAuditEventsCanBeExported(t *testing.T) {
 	}
 }
 
+func TestAuditEventsCanBePurgedByRetention(t *testing.T) {
+	st := store.NewSeedStore()
+	initialEvents := len(st.ListAudit())
+	if initialEvents == 0 {
+		t.Fatal("seed store should contain audit events")
+	}
+
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"olderThanDays":0}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/ops/audit-events/retention/purge", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Deleted       int `json:"deleted"`
+			Retained      int `json:"retained"`
+			OlderThanDays int `json:"olderThanDays"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Deleted != initialEvents || payload.Data.Retained != 0 || payload.Data.OlderThanDays != 0 {
+		t.Fatalf("unexpected purge response: %+v", payload)
+	}
+	if events := st.ListAudit(); len(events) != 0 {
+		t.Fatalf("expected audit events to be purged, got %+v", events)
+	}
+}
+
 func requestDashboard(t *testing.T, mux *http.ServeMux) struct {
 	Success bool               `json:"success"`
 	Data    store.OpsDashboard `json:"data"`

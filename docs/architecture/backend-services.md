@@ -15,9 +15,9 @@
 
 | 后台入口 | 合并能力 | 后端归属 | API 分组 |
 | --- | --- | --- | --- |
-| 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events`, `/api/ops/audit-events/export` |
+| 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events`, `/api/ops/audit-events/export`, `/api/ops/audit-events/retention/purge` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
-| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export` |
+| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
 | 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/invoices`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
@@ -84,7 +84,7 @@ internal/platform/
 | `Administrator` | 全部接口 |
 | `User` | 运营首页只读、计费与用量只读、LLM 调用 |
 | `Developer` | 运营只读、网关与模型配置、API Key / credentialRef 只读、计费只读、LLM 调用 |
-| `Operator` | 运营处理、服务健康、审计、计费只读、请求日志；不看网关配置 |
+| `Operator` | 运营处理、服务健康、审计、计费只读、日志导出和保留清理；不看网关配置 |
 
 V1.2 已具备本地 passwordless login、签名 session token、session 查询和 logout 闭环。登录优先匹配 seed 用户邮箱；开发态也可以在请求体中指定角色来生成本地 session。多 command 拆分启动时，用相同的 `ANJING_SESSION_SECRET` 共享 session 签名密钥。
 
@@ -265,6 +265,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/skills/invoke`
 - `GET /api/gateway/request-logs`
 - `GET /api/gateway/request-logs/export`
+- `POST /api/gateway/request-logs/retention/purge`
 - `POST /api/gateway/proxy`
 - `POST /api/gateway/llm/invoke`
 
@@ -274,7 +275,7 @@ go run ./cmd/console-web      # :1818
 
 `POST /api/gateway/skills/invoke` 已提供 V1 可替换 Skill adapter 最小闭环：按名称解析 Published Skill 绑定、执行调用、返回协议/路由/输出摘要，写入请求日志、审计和成功 Skill call 用量记录；schema 校验、版本管理和真实 HTTP/MCP 适配保留到后续迭代。
 
-`GET /api/gateway/request-logs` 支持 `q`、`consumer`、`status` 和 `limit` 查询参数，用于控制台按调用方、状态和关键词查看近期请求链路。`GET /api/gateway/request-logs/export` 复用同一套查询参数导出 CSV，默认最多导出 500 条。
+`GET /api/gateway/request-logs` 支持 `q`、`consumer`、`status` 和 `limit` 查询参数，用于控制台按调用方、状态和关键词查看近期请求链路。`GET /api/gateway/request-logs/export` 复用同一套查询参数导出 CSV，默认最多导出 500 条。`POST /api/gateway/request-logs/retention/purge` 按 `olderThanDays` 清理过期请求日志，默认保留 30 天，面向 Administrator 和 Operator。
 
 ### `billing-service`
 
@@ -298,8 +299,9 @@ go run ./cmd/console-web      # :1818
 - `GET /api/ops/service-health`
 - `GET /api/ops/audit-events`
 - `GET /api/ops/audit-events/export`
+- `POST /api/ops/audit-events/retention/purge`
 
-`GET /api/ops/audit-events` 支持 `q`、`module`、`status` 和 `limit` 查询参数，用于控制台按模块、状态和操作对象追踪审计记录。`GET /api/ops/audit-events/export` 复用同一套查询参数导出 CSV，默认最多导出 500 条。
+`GET /api/ops/audit-events` 支持 `q`、`module`、`status` 和 `limit` 查询参数，用于控制台按模块、状态和操作对象追踪审计记录。`GET /api/ops/audit-events/export` 复用同一套查询参数导出 CSV，默认最多导出 500 条。`POST /api/ops/audit-events/retention/purge` 按 `olderThanDays` 清理过期审计事件，默认保留 30 天，面向 Administrator 和 Operator。
 
 ## 后台首页聚合策略
 

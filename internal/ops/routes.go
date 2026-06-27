@@ -8,6 +8,7 @@ import (
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/csvexport"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/retention"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
 
@@ -55,6 +56,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/ops/service-health", healthHandler(repos.Health))
 	mux.HandleFunc("/api/ops/audit-events", auditHandler(repos.Audit))
 	mux.HandleFunc("/api/ops/audit-events/export", auditExportHandler(repos.Audit))
+	mux.HandleFunc("/api/ops/audit-events/retention/purge", auditRetentionPurgeHandler(repos.Audit))
 }
 
 func dashboardWithRepositories(r *http.Request, st *store.Store, repos Repositories) (store.OpsDashboard, error) {
@@ -203,6 +205,32 @@ func auditExportHandler(audit AuditRepository) http.HandlerFunc {
 			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
 			return
 		}
+	}
+}
+
+func auditRetentionPurgeHandler(audit AuditRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req retention.PurgeRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		olderThanDays, err := retention.ResolveOlderThanDays(req.OlderThanDays)
+		if err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+
+		result, err := audit.PurgeAuditBefore(r.Context(), retention.Cutoff(olderThanDays), olderThanDays)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		httpjson.OK(w, result)
 	}
 }
 

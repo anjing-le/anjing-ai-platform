@@ -902,6 +902,36 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/request-logs/retention/purge:
+    post:
+      tags: [gateway]
+      operationId: purgeRequestLogsByRetention
+      summary: Purge request logs by retention policy.
+      x-anjing-roles: [Administrator, Operator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetentionPurgeRequest"
+      responses:
+        "200":
+          description: Request logs purged.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RetentionPurgeResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/gateway/proxy:
     post:
       tags: [gateway]
@@ -1444,6 +1474,36 @@ paths:
             text/csv:
               schema:
                 type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/ops/audit-events/retention/purge:
+    post:
+      tags: [operations]
+      operationId: purgeAuditEventsByRetention
+      summary: Purge audit events by retention policy.
+      x-anjing-roles: [Administrator, Operator]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetentionPurgeRequest"
+      responses:
+        "200":
+          description: Audit events purged.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/RetentionPurgeResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1994,6 +2054,29 @@ components:
           type: string
         createdAt:
           type: string
+    RetentionPurgeRequest:
+      type: object
+      properties:
+        olderThanDays:
+          type: integer
+          minimum: 0
+          maximum: 3650
+          default: 30
+          description: Number of days to retain. Use 0 to purge records older than the current instant.
+    RetentionPurgeResult:
+      type: object
+      required: [deleted, retained, olderThanDays]
+      properties:
+        deleted:
+          type: integer
+          minimum: 0
+        retained:
+          type: integer
+          minimum: 0
+        olderThanDays:
+          type: integer
+          minimum: 0
+          maximum: 3650
     LLMInvokeRequest:
       type: object
       required: [input]

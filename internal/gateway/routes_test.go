@@ -268,6 +268,46 @@ func TestRequestLogsCanBeExported(t *testing.T) {
 	}
 }
 
+func TestRequestLogsCanBePurgedByRetention(t *testing.T) {
+	st := store.NewSeedStore()
+	initialLogs := len(st.ListRequestLogs())
+	if initialLogs == 0 {
+		t.Fatal("seed store should contain request logs")
+	}
+
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"olderThanDays":0}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/request-logs/retention/purge", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Deleted       int `json:"deleted"`
+			Retained      int `json:"retained"`
+			OlderThanDays int `json:"olderThanDays"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Deleted != initialLogs || payload.Data.Retained != 0 || payload.Data.OlderThanDays != 0 {
+		t.Fatalf("unexpected purge response: %+v", payload)
+	}
+	if logs := st.ListRequestLogs(); len(logs) != 0 {
+		t.Fatalf("expected request logs to be purged, got %+v", logs)
+	}
+}
+
 func TestProxyGatewayRetriesAndFallsBack(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())

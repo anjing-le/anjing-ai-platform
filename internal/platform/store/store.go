@@ -698,6 +698,24 @@ func (s *Store) ListRequestLogs() []RequestLog {
 	return append([]RequestLog(nil), s.requestLogs...)
 }
 
+func (s *Store) PurgeRequestLogsBefore(cutoff time.Time) (int, int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	retained := make([]RequestLog, 0, len(s.requestLogs))
+	deleted := 0
+	for _, item := range s.requestLogs {
+		createdAt, ok := parseTimestamp(item.CreatedAt)
+		if ok && createdAt.Before(cutoff) {
+			deleted++
+			continue
+		}
+		retained = append(retained, item)
+	}
+	s.requestLogs = retained
+	return deleted, len(retained)
+}
+
 func (s *Store) RecordLLMInvocation(record LLMInvocationRecord) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -999,6 +1017,24 @@ func (s *Store) ListAudit() []AuditEvent {
 	return append([]AuditEvent(nil), s.audit...)
 }
 
+func (s *Store) PurgeAuditBefore(cutoff time.Time) (int, int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	retained := make([]AuditEvent, 0, len(s.audit))
+	deleted := 0
+	for _, item := range s.audit {
+		eventTime, ok := parseTimestamp(item.Time)
+		if ok && eventTime.Before(cutoff) {
+			deleted++
+			continue
+		}
+		retained = append(retained, item)
+	}
+	s.audit = retained
+	return deleted, len(retained)
+}
+
 func (s *Store) addAuditLocked(module, action, object, status string) {
 	s.audit = append([]AuditEvent{{
 		ID:        nextID("audit"),
@@ -1270,6 +1306,14 @@ func estimateMockCost(tokens int) string {
 
 func nowLabel() string {
 	return time.Now().UTC().Format(time.RFC3339)
+}
+
+func parseTimestamp(value string) (time.Time, bool) {
+	timestamp, err := time.Parse(time.RFC3339, strings.TrimSpace(value))
+	if err != nil {
+		return time.Time{}, false
+	}
+	return timestamp, true
 }
 
 func MaskSecretPreview(value string) string {

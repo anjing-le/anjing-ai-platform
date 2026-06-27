@@ -203,6 +203,22 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 		t.Fatalf("expected budget alert handling to be allowed, got %d", budgetAllowedRec.Code)
 	}
 
+	auditRetentionAllowed := httptest.NewRequest(http.MethodPost, "/api/ops/audit-events/retention/purge", nil)
+	auditRetentionAllowed.Header.Set("Authorization", "Bearer operator-test-token")
+	auditRetentionAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(auditRetentionAllowedRec, auditRetentionAllowed)
+	if auditRetentionAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected audit retention purge to be allowed, got %d", auditRetentionAllowedRec.Code)
+	}
+
+	requestLogRetentionAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/request-logs/retention/purge", nil)
+	requestLogRetentionAllowed.Header.Set("Authorization", "Bearer operator-test-token")
+	requestLogRetentionAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(requestLogRetentionAllowedRec, requestLogRetentionAllowed)
+	if requestLogRetentionAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected request log retention purge to be allowed, got %d", requestLogRetentionAllowedRec.Code)
+	}
+
 	denied := httptest.NewRequest(http.MethodGet, "/api/gateway/routes", nil)
 	denied.Header.Set("Authorization", "Bearer operator-test-token")
 	deniedRec := httptest.NewRecorder()

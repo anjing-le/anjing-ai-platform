@@ -7,6 +7,7 @@ import (
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/csvexport"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/retention"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
 
@@ -36,6 +37,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/gateway/skills/invoke", skillInvokeHandler(repos.Skills, repos.Invocations))
 	mux.HandleFunc("/api/gateway/request-logs", requestLogsHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/request-logs/export", requestLogsExportHandler(repos.RequestLogs))
+	mux.HandleFunc("/api/gateway/request-logs/retention/purge", requestLogsRetentionPurgeHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/proxy", proxyHandler(repos.Routes, repos.ProxyRequests))
 	mux.HandleFunc("/api/gateway/llm/invoke", llmInvokeHandler(repos.ModelRoutes, repos.Invocations))
 }
@@ -353,6 +355,32 @@ func requestLogsExportHandler(requestLogs RequestLogRepository) http.HandlerFunc
 			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
 			return
 		}
+	}
+}
+
+func requestLogsRetentionPurgeHandler(requestLogs RequestLogRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req retention.PurgeRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		olderThanDays, err := retention.ResolveOlderThanDays(req.OlderThanDays)
+		if err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+
+		result, err := requestLogs.PurgeRequestLogsBefore(r.Context(), retention.Cutoff(olderThanDays), olderThanDays)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		httpjson.OK(w, result)
 	}
 }
 
