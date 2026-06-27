@@ -57,6 +57,7 @@ x-anjing-service-boundaries:
     apiGroups:
       - /api/gateway/routes
       - /api/gateway/model-routes
+      - /api/gateway/proxy
       - /api/gateway/llm/invoke
   - consoleEntry: billing
     label: 计费与配额
@@ -821,6 +822,44 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/proxy:
+    post:
+      tags: [gateway]
+      operationId: proxyGatewayRequest
+      summary: Proxy an HTTP request through a configured gateway route or explicit upstream.
+      description: >
+        Executes the V1 gateway runtime path with timeout, bounded retries,
+        optional fallback upstream and request log recording. Streaming remains
+        on the V1.2 backlog.
+      x-anjing-roles: [Administrator, User, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GatewayProxyRequest"
+      responses:
+        "200":
+          description: Gateway proxy completed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/GatewayProxyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
   /api/gateway/llm/invoke:
     post:
       tags: [gateway]
@@ -1294,6 +1333,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
+    BadGateway:
+      description: Upstream request failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
   schemas:
     SuccessEnvelope:
       type: object
@@ -1601,6 +1646,64 @@ components:
       required: [id]
       properties:
         id:
+          type: string
+    GatewayProxyRequest:
+      type: object
+      required: [route]
+      properties:
+        route:
+          type: string
+          examples: [/api/v1/demo/ping]
+        method:
+          type: string
+          enum: [GET, POST, PUT, PATCH, DELETE]
+          default: POST
+        upstream:
+          type: string
+          description: Optional explicit http/https upstream. If omitted, the gateway resolves an active route.
+        fallbackUpstream:
+          type: string
+          description: Optional fallback upstream used after primary retries fail.
+        timeoutMs:
+          type: integer
+          minimum: 0
+          maximum: 30000
+          default: 3000
+        retries:
+          type: integer
+          minimum: 0
+          maximum: 3
+          default: 0
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        body:
+          type: string
+    GatewayProxyResponse:
+      type: object
+      required: [route, upstream, statusCode, attempts, fallback, durationMs, headers, body]
+      properties:
+        route:
+          type: string
+        upstream:
+          type: string
+        statusCode:
+          type: integer
+        attempts:
+          type: integer
+        fallback:
+          type: boolean
+        durationMs:
+          type: integer
+          format: int64
+        headers:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        body:
           type: string
     ModelRoute:
       type: object

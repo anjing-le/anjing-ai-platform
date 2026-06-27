@@ -153,6 +153,14 @@ type LLMInvocationRecord struct {
 	Status      string
 }
 
+type GatewayProxyRecord struct {
+	Request  string
+	Consumer string
+	Latency  string
+	Result   string
+	Status   string
+}
+
 type BudgetAlert struct {
 	ID        string `json:"id"`
 	Project   string `json:"project"`
@@ -690,6 +698,35 @@ func (s *Store) RecordLLMInvocation(record LLMInvocationRecord) {
 		UpdatedAt:  now,
 	}}, s.usageRecords...)
 	s.addAuditLocked("网关与模型", "invoke llm", record.ModelAlias, status)
+}
+
+func (s *Store) RecordGatewayProxy(record GatewayProxyRecord) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := nowLabel()
+	status := record.Status
+	if status == "" {
+		status = "Success"
+	}
+	requestID := nextID("req")
+	s.requestLogs = append([]RequestLog{{
+		ID:        requestID,
+		Request:   record.Request,
+		Consumer:  record.Consumer,
+		Latency:   record.Latency,
+		Result:    record.Result,
+		Status:    status,
+		CreatedAt: now,
+	}}, s.requestLogs...)
+	s.audit = append([]AuditEvent{{
+		ID:        nextID("audit"),
+		Time:      now,
+		Module:    "网关与模型",
+		Action:    "proxy upstream",
+		Object:    record.Request,
+		Status:    status,
+		RequestID: requestID,
+	}}, s.audit...)
 }
 
 func (s *Store) ListPlans() []BillingPlan {

@@ -17,7 +17,7 @@
 | --- | --- | --- | --- |
 | 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
-| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/llm/invoke` |
+| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/model-routes`, `/api/gateway/proxy`, `/api/gateway/llm/invoke` |
 | 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
@@ -261,7 +261,10 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/skills`
 - `POST /api/gateway/skills/publish`
 - `GET /api/gateway/request-logs`
+- `POST /api/gateway/proxy`
 - `POST /api/gateway/llm/invoke`
+
+`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、`timeout`、有限 `retry`、`fallback`、请求日志和审计记录；流式响应保留到后续迭代。
 
 `GET /api/gateway/request-logs` 支持 `q`、`consumer`、`status` 和 `limit` 查询参数，用于控制台按调用方、状态和关键词查看近期请求链路。
 

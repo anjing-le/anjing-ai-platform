@@ -40,6 +40,14 @@ type LLMInvocationInput struct {
 	Status      string
 }
 
+type ProxyRequestLogInput struct {
+	Request  string
+	Consumer string
+	Latency  string
+	Result   string
+	Status   string
+}
+
 type RequestLogQuery struct {
 	Q        string
 	Consumer string
@@ -74,21 +82,27 @@ type InvocationRecorder interface {
 	RecordLLMInvocation(ctx context.Context, input LLMInvocationInput) error
 }
 
+type ProxyRecorder interface {
+	RecordProxyRequest(ctx context.Context, input ProxyRequestLogInput) error
+}
+
 type Repositories struct {
-	Routes      RouteRepository
-	ModelRoutes ModelRouteRepository
-	Skills      SkillRepository
-	RequestLogs RequestLogRepository
-	Invocations InvocationRecorder
+	Routes        RouteRepository
+	ModelRoutes   ModelRouteRepository
+	Skills        SkillRepository
+	RequestLogs   RequestLogRepository
+	Invocations   InvocationRecorder
+	ProxyRequests ProxyRecorder
 }
 
 func NewMemoryRepositories(st *store.Store) Repositories {
 	return Repositories{
-		Routes:      NewMemoryRouteRepository(st),
-		ModelRoutes: NewMemoryModelRouteRepository(st),
-		Skills:      NewMemorySkillRepository(st),
-		RequestLogs: NewMemoryRequestLogRepository(st),
-		Invocations: NewMemoryInvocationRecorder(st),
+		Routes:        NewMemoryRouteRepository(st),
+		ModelRoutes:   NewMemoryModelRouteRepository(st),
+		Skills:        NewMemorySkillRepository(st),
+		RequestLogs:   NewMemoryRequestLogRepository(st),
+		Invocations:   NewMemoryInvocationRecorder(st),
+		ProxyRequests: NewMemoryProxyRecorder(st),
 	}
 }
 
@@ -187,6 +201,25 @@ func (repo MemoryInvocationRecorder) RecordLLMInvocation(_ context.Context, inpu
 		Model:       input.Model,
 		TotalTokens: input.TotalTokens,
 		Status:      input.Status,
+	})
+	return nil
+}
+
+type MemoryProxyRecorder struct {
+	store *store.Store
+}
+
+func NewMemoryProxyRecorder(st *store.Store) MemoryProxyRecorder {
+	return MemoryProxyRecorder{store: st}
+}
+
+func (repo MemoryProxyRecorder) RecordProxyRequest(_ context.Context, input ProxyRequestLogInput) error {
+	repo.store.RecordGatewayProxy(store.GatewayProxyRecord{
+		Request:  input.Request,
+		Consumer: input.Consumer,
+		Latency:  input.Latency,
+		Result:   input.Result,
+		Status:   input.Status,
 	})
 	return nil
 }
@@ -688,6 +721,48 @@ func (repo PostgresInvocationRecorder) RecordLLMInvocation(ctx context.Context, 
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit llm invocation record: %w", err)
+	}
+
+	return nil
+}
+
+type PostgresProxyRecorder struct {
+	pool *pgxpool.Pool
+}
+
+func NewPostgresProxyRecorder(pool *pgxpool.Pool) PostgresProxyRecorder {
+	return PostgresProxyRecorder{pool: pool}
+}
+
+func (repo PostgresProxyRecorder) RecordProxyRequest(ctx context.Context, input ProxyRequestLogInput) error {
+	status := input.Status
+	if status == "" {
+		status = "Success"
+	}
+	requestID := nextID("req")
+
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin proxy request record: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, requestID, input.Request, input.Consumer, input.Latency, input.Result, status); err != nil {
+		return fmt.Errorf("insert proxy request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "proxy upstream", input.Request, status, requestID); err != nil {
+		return fmt.Errorf("insert proxy audit event: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit proxy request record: %w", err)
 	}
 
 	return nil

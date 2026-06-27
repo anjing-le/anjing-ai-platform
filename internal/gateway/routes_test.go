@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
@@ -139,6 +140,136 @@ func TestRequestLogsCanBeFiltered(t *testing.T) {
 	}
 	if payload.Data[0].Consumer != "customer-service-agent" || payload.Data[0].Status != "Success" {
 		t.Fatalf("unexpected request log: %+v", payload.Data[0])
+	}
+}
+
+func TestProxyGatewayRetriesAndFallsBack(t *testing.T) {
+	st := store.NewSeedStore()
+	initialLogs := len(st.ListRequestLogs())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	primaryHits := 0
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		primaryHits++
+		http.Error(w, "temporary outage", http.StatusBadGateway)
+	}))
+	defer primary.Close()
+
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/proxy" {
+			t.Errorf("expected proxied path, got %s", r.URL.Path)
+		}
+		if r.Header.Get("X-Request-Role") != "test" {
+			t.Errorf("expected forwarded request header")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer fallback.Close()
+
+	body := bytes.NewBufferString(`{"route":"/api/v1/proxy","method":"POST","upstream":"` + primary.URL + `","fallbackUpstream":"` + fallback.URL + `","retries":1,"timeoutMs":1000,"headers":{"X-Request-Role":"test"},"body":"{\"hello\":\"world\"}"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Route      string `json:"route"`
+			Upstream   string `json:"upstream"`
+			StatusCode int    `json:"statusCode"`
+			Attempts   int    `json:"attempts"`
+			Fallback   bool   `json:"fallback"`
+			Body       string `json:"body"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Route != "/api/v1/proxy" || payload.Data.Upstream != fallback.URL {
+		t.Fatalf("unexpected proxy payload: %+v", payload)
+	}
+	if payload.Data.StatusCode != http.StatusOK || payload.Data.Attempts != 3 || !payload.Data.Fallback {
+		t.Fatalf("expected retry and fallback success, got %+v", payload.Data)
+	}
+	if primaryHits != 2 {
+		t.Fatalf("expected primary to be tried twice, got %d", primaryHits)
+	}
+	if !strings.Contains(payload.Data.Body, `"ok":true`) {
+		t.Fatalf("expected fallback response body, got %q", payload.Data.Body)
+	}
+	logs := st.ListRequestLogs()
+	if len(logs) != initialLogs+1 || logs[0].Request != "POST /api/v1/proxy" || logs[0].Status != "Fallback" {
+		t.Fatalf("expected fallback request log, got %+v", logs)
+	}
+}
+
+func TestProxyGatewayResolvesPublishedRoute(t *testing.T) {
+	st := store.NewSeedStore()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+		if r.URL.Path != "/api/v1/configured/ping" || r.URL.RawQuery != "trace=1" {
+			t.Errorf("expected configured route path and query, got %s?%s", r.URL.Path, r.URL.RawQuery)
+		}
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`accepted`))
+	}))
+	defer upstream.Close()
+
+	draft := st.CreateRoute("/api/v1/configured/**", upstream.URL, "100/min")
+	if _, ok := st.PublishRoute(draft.ID); !ok {
+		t.Fatalf("expected route to publish")
+	}
+	initialLogs := len(st.ListRequestLogs())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"route":"/api/v1/configured/ping?trace=1","method":"GET","timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Upstream   string `json:"upstream"`
+			StatusCode int    `json:"statusCode"`
+			Attempts   int    `json:"attempts"`
+			Fallback   bool   `json:"fallback"`
+			Body       string `json:"body"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Upstream != upstream.URL || payload.Data.StatusCode != http.StatusAccepted {
+		t.Fatalf("unexpected configured proxy payload: %+v", payload)
+	}
+	if payload.Data.Attempts != 1 || payload.Data.Fallback {
+		t.Fatalf("expected single primary attempt, got %+v", payload.Data)
+	}
+	if payload.Data.Body != "accepted" {
+		t.Fatalf("expected upstream body, got %q", payload.Data.Body)
+	}
+	logs := st.ListRequestLogs()
+	if len(logs) != initialLogs+1 || logs[0].Request != "GET /api/v1/configured/ping?trace=1" || logs[0].Status != "Success" {
+		t.Fatalf("expected resolved route request log, got %+v", logs)
 	}
 }
 

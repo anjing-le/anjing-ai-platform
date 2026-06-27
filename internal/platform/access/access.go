@@ -179,6 +179,7 @@ func allowUser(method, path string) bool {
 		return path == "/api/control/applications" ||
 			path == "/api/control/applications/activate" ||
 			path == "/api/control/applications/rotate-key" ||
+			path == "/api/gateway/proxy" ||
 			path == "/api/gateway/llm/invoke"
 	}
 
@@ -206,6 +207,7 @@ func allowDeveloper(method, path string) bool {
 			path == "/api/gateway/model-routes/publish" ||
 			path == "/api/gateway/skills" ||
 			path == "/api/gateway/skills/publish" ||
+			path == "/api/gateway/proxy" ||
 			path == "/api/gateway/llm/invoke" ||
 			path == "/api/billing/usage-events"
 	}
