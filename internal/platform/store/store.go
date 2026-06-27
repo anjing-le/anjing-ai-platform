@@ -150,6 +150,7 @@ type LLMInvocationRecord struct {
 	Provider    string
 	Model       string
 	TotalTokens int
+	Result      string
 	Status      string
 }
 
@@ -679,24 +680,33 @@ func (s *Store) RecordLLMInvocation(record LLMInvocationRecord) {
 	if status == "" {
 		status = "Success"
 	}
+	result := record.Result
+	if result == "" {
+		result = "200"
+		if status == "Failed" {
+			result = "502"
+		}
+	}
 	s.requestLogs = append([]RequestLog{{
 		ID:        "req_" + record.ID,
 		Request:   "POST /llm/invoke " + record.Model,
 		Consumer:  record.ModelAlias,
 		Latency:   "72ms",
-		Result:    "200",
+		Result:    result,
 		Status:    status,
 		CreatedAt: now,
 	}}, s.requestLogs...)
-	s.usageRecords = append([]UsageRecord{{
-		ID:         "usage_" + record.ID,
-		Project:    record.ModelAlias,
-		Tokens:     fmt.Sprintf("%d", record.TotalTokens),
-		SkillCalls: "0",
-		Cost:       estimateMockCost(record.TotalTokens),
-		Status:     "Normal",
-		UpdatedAt:  now,
-	}}, s.usageRecords...)
+	if status != "Failed" && record.TotalTokens > 0 {
+		s.usageRecords = append([]UsageRecord{{
+			ID:         "usage_" + record.ID,
+			Project:    record.ModelAlias,
+			Tokens:     fmt.Sprintf("%d", record.TotalTokens),
+			SkillCalls: "0",
+			Cost:       estimateMockCost(record.TotalTokens),
+			Status:     "Normal",
+			UpdatedAt:  now,
+		}}, s.usageRecords...)
+	}
 	s.addAuditLocked("网关与模型", "invoke llm", record.ModelAlias, status)
 }
 

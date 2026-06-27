@@ -4064,7 +4064,8 @@ function LLMInvokePanel({
           <strong>{result.model}</strong>
           <p>{result.content}</p>
           <small>
-            兜底 {result.fallback} · {result.usage.totalTokens} tokens
+            兜底 {result.fallback} · {result.usedFallback ? "已启用" : "待命"} ·{" "}
+            {result.usage.totalTokens} tokens
           </small>
         </div>
       ) : null}

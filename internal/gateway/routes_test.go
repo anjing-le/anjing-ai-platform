@@ -86,10 +86,11 @@ func TestInvokeLLMUsesModelRoute(t *testing.T) {
 	var payload struct {
 		Success bool `json:"success"`
 		Data    struct {
-			ModelAlias string `json:"modelAlias"`
-			Provider   string `json:"provider"`
-			Model      string `json:"model"`
-			Usage      struct {
+			ModelAlias   string `json:"modelAlias"`
+			Provider     string `json:"provider"`
+			Model        string `json:"model"`
+			UsedFallback bool   `json:"usedFallback"`
+			Usage        struct {
 				TotalTokens int `json:"totalTokens"`
 			} `json:"usage"`
 		} `json:"data"`
@@ -103,14 +104,113 @@ func TestInvokeLLMUsesModelRoute(t *testing.T) {
 	if payload.Data.Provider != "mock-openai" || payload.Data.Model == "" {
 		t.Fatalf("expected mock-openai model route, got %+v", payload.Data)
 	}
+	if payload.Data.UsedFallback {
+		t.Fatalf("expected primary model route, got %+v", payload.Data)
+	}
 	if payload.Data.Usage.TotalTokens <= 0 {
 		t.Fatalf("expected token usage, got %+v", payload.Data.Usage)
 	}
-	if logs := st.ListRequestLogs(); len(logs) != initialLogs+1 || logs[0].Consumer != "chat-default" {
+	if logs := st.ListRequestLogs(); len(logs) != initialLogs+1 || logs[0].Consumer != "chat-default" || logs[0].Status != "Success" || logs[0].Result != "200" {
 		t.Fatalf("expected llm request log to be appended, got %+v", logs)
 	}
 	if usage := st.ListUsage(); len(usage) != initialUsage+1 || usage[0].Project != "chat-default" || usage[0].Tokens == "0" {
 		t.Fatalf("expected llm usage record to be appended, got %+v", usage)
+	}
+}
+
+func TestInvokeLLMFallsBackWhenPrimaryProviderFails(t *testing.T) {
+	st := store.NewSeedStore()
+	route := st.CreateModelRoute("fallback-demo", "LLM fallback", "gpt-unavailable", "claude-haiku")
+	if _, ok := st.PublishModelRoute(route.ID); !ok {
+		t.Fatalf("expected model route to publish")
+	}
+	initialLogs := len(st.ListRequestLogs())
+	initialUsage := len(st.ListUsage())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"modelAlias":"fallback-demo","input":"需要稳定兜底"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/llm/invoke", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			ModelAlias   string `json:"modelAlias"`
+			Provider     string `json:"provider"`
+			Model        string `json:"model"`
+			UsedFallback bool   `json:"usedFallback"`
+			Usage        struct {
+				TotalTokens int `json:"totalTokens"`
+			} `json:"usage"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.ModelAlias != "fallback-demo" {
+		t.Fatalf("unexpected payload: %+v", payload)
+	}
+	if !payload.Data.UsedFallback || payload.Data.Model != "claude-haiku" || payload.Data.Provider != "mock-anthropic" {
+		t.Fatalf("expected anthropic fallback route, got %+v", payload.Data)
+	}
+	if payload.Data.Usage.TotalTokens <= 0 {
+		t.Fatalf("expected fallback token usage, got %+v", payload.Data.Usage)
+	}
+	if logs := st.ListRequestLogs(); len(logs) != initialLogs+1 || logs[0].Consumer != "fallback-demo" || logs[0].Status != "Fallback" || logs[0].Result != "200" {
+		t.Fatalf("expected fallback request log, got %+v", logs)
+	}
+	if usage := st.ListUsage(); len(usage) != initialUsage+1 || usage[0].Project != "fallback-demo" || usage[0].Tokens == "0" {
+		t.Fatalf("expected fallback usage record, got %+v", usage)
+	}
+}
+
+func TestInvokeLLMReturnsBadGatewayWhenAllProvidersFail(t *testing.T) {
+	st := store.NewSeedStore()
+	route := st.CreateModelRoute("down-route", "LLM failure", "gpt-unavailable", "local-fail")
+	if _, ok := st.PublishModelRoute(route.ID); !ok {
+		t.Fatalf("expected model route to publish")
+	}
+	initialLogs := len(st.ListRequestLogs())
+	initialUsage := len(st.ListUsage())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"modelAlias":"down-route","input":"hello"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/llm/invoke", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Error   struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Success || payload.Error.Code != "llm_unavailable" {
+		t.Fatalf("expected llm_unavailable error, got %+v", payload)
+	}
+	if logs := st.ListRequestLogs(); len(logs) != initialLogs+1 || logs[0].Consumer != "down-route" || logs[0].Status != "Failed" || logs[0].Result != "502" {
+		t.Fatalf("expected failed request log, got %+v", logs)
+	}
+	if usage := st.ListUsage(); len(usage) != initialUsage {
+		t.Fatalf("expected failed invocation not to create usage, got %+v", usage)
 	}
 }
 

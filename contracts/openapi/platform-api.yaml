@@ -864,12 +864,14 @@ paths:
     post:
       tags: [gateway]
       operationId: invokeLLM
-      summary: Invoke an LLM through the gateway mock provider.
+      summary: Invoke an LLM through the model route gateway.
       description: >
-        V1 starts with a deterministic mock provider. The endpoint already uses
-        model route aliases, records request logs and usage records, and returns
-        token usage so the console, examples and future SDKs can integrate
-        against a stable boundary before real providers are wired in.
+        V1 starts with a replaceable mock provider adapter. The endpoint resolves
+        active model route aliases, tries the primary model first, falls back to
+        the configured backup model when the adapter reports a provider failure,
+        records request logs and usage records, and returns token usage so the
+        console, examples and future SDKs can integrate against a stable boundary
+        before real providers are wired in.
       x-anjing-roles: [Administrator, User, Developer]
       requestBody:
         required: true
@@ -897,6 +899,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
   /api/billing/healthz:
     get:
       tags: [billing]
@@ -1838,6 +1842,7 @@ components:
         - provider
         - model
         - fallback
+        - usedFallback
         - content
         - finishReason
         - usage
@@ -1852,6 +1857,8 @@ components:
           type: string
         fallback:
           type: string
+        usedFallback:
+          type: boolean
         content:
           type: string
         finishReason:

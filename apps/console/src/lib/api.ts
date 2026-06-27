@@ -150,6 +150,7 @@ export interface LLMInvokeResponse {
   provider: string;
   model: string;
   fallback: string;
+  usedFallback: boolean;
   content: string;
   finishReason: string;
   usage: {

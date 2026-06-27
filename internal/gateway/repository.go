@@ -37,6 +37,7 @@ type LLMInvocationInput struct {
 	Provider    string
 	Model       string
 	TotalTokens int
+	Result      string
 	Status      string
 }
 
@@ -200,6 +201,7 @@ func (repo MemoryInvocationRecorder) RecordLLMInvocation(_ context.Context, inpu
 		Provider:    input.Provider,
 		Model:       input.Model,
 		TotalTokens: input.TotalTokens,
+		Result:      input.Result,
 		Status:      input.Status,
 	})
 	return nil
@@ -691,6 +693,13 @@ func (repo PostgresInvocationRecorder) RecordLLMInvocation(ctx context.Context, 
 	if status == "" {
 		status = "Success"
 	}
+	result := input.Result
+	if result == "" {
+		result = "200"
+		if status == "Failed" {
+			result = "502"
+		}
+	}
 
 	tx, err := repo.pool.Begin(ctx)
 	if err != nil {
@@ -701,15 +710,17 @@ func (repo PostgresInvocationRecorder) RecordLLMInvocation(ctx context.Context, 
 	if _, err := tx.Exec(ctx, `
 		insert into request_logs(id, request, consumer, latency, result, status)
 		values($1, $2, $3, $4, $5, $6)
-	`, "req_"+input.ID, "POST /llm/invoke "+input.Model, input.ModelAlias, "72ms", "200", status); err != nil {
+	`, "req_"+input.ID, "POST /llm/invoke "+input.Model, input.ModelAlias, "72ms", result, status); err != nil {
 		return fmt.Errorf("insert llm request log: %w", err)
 	}
 
-	if _, err := tx.Exec(ctx, `
-		insert into usage_records(id, project, tokens, skill_calls, cost, status)
-		values($1, $2, $3, $4, $5, $6)
-	`, "usage_"+input.ID, input.ModelAlias, fmt.Sprintf("%d", input.TotalTokens), "0", estimateMockCost(input.TotalTokens), "Normal"); err != nil {
-		return fmt.Errorf("insert llm usage record: %w", err)
+	if status != "Failed" && input.TotalTokens > 0 {
+		if _, err := tx.Exec(ctx, `
+			insert into usage_records(id, project, tokens, skill_calls, cost, status)
+			values($1, $2, $3, $4, $5, $6)
+		`, "usage_"+input.ID, input.ModelAlias, fmt.Sprintf("%d", input.TotalTokens), "0", estimateMockCost(input.TotalTokens), "Normal"); err != nil {
+			return fmt.Errorf("insert llm usage record: %w", err)
+		}
 	}
 
 	if _, err := tx.Exec(ctx, `
