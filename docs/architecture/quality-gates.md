@@ -239,6 +239,7 @@ scripts/check-console-runtime-copy.mjs
 - 文档中心调用示例必须指向默认 `platform-all` API 地址 `http://localhost:18080`。
 - 单服务规划中的健康检查地址必须展示真实的 `http://localhost:182x/healthz`。
 - 不能把不存在的 `/api/*/healthz` 当成服务健康地址展示。
+- 窄屏响应式样式必须保留顶部状态、角色切换、模块摘要、确认弹窗和移动端截图覆盖，避免后台只在桌面宽度可用。
 
 ## Gate 9：平台快照合约
 

@@ -1,6 +1,6 @@
 # Console Screenshots
 
-这组截图用于让 public repo 的访问者快速理解当前平台形态：先看到项目定位，再进入后台首页，然后浏览运营、权限、网关、计费和帮助文档五个核心入口。
+这组截图用于让 public repo 的访问者快速理解当前平台形态：先看到项目定位，再进入后台首页，然后浏览运营、权限、网关、计费和帮助文档五个核心入口。脚本同时保留关键移动端截图，确保窄屏下仍能看清导航、角色视角、模块入口和核心操作。
 
 截图由根目录脚本生成：
 
@@ -37,3 +37,15 @@ pnpm screenshots:console
 ## Docs
 
 ![Help Docs](../assets/screenshots/help-docs.png)
+
+## Mobile Console Home
+
+![Console Home Mobile](../assets/screenshots/console-home-mobile.png)
+
+## Mobile Gateway
+
+![Gateway and Model Mobile](../assets/screenshots/gateway-model-mobile.png)
+
+## Mobile Docs
+
+![Help Docs Mobile](../assets/screenshots/help-docs-mobile.png)

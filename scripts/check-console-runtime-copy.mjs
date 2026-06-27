@@ -8,6 +8,7 @@ const accessSource = readFileSync("apps/console/src/lib/access.ts", "utf8");
 const dataSource = readFileSync("apps/console/src/data/console.ts", "utf8");
 const hydrateSource = readFileSync("apps/console/src/lib/hydrate.ts", "utf8");
 const styleSource = readFileSync("apps/console/src/styles.css", "utf8");
+const screenshotSource = readFileSync("scripts/capture-console-screenshots.mjs", "utf8");
 
 if (!appSource.includes("<code>pnpm dev:api</code>")) {
   errors.push("Console home runtime command must show pnpm dev:api.");
@@ -759,6 +760,38 @@ for (const command of ["pnpm dev:control", "pnpm dev:gateway", "pnpm dev:billing
 for (const stalePath of ["/api/control/healthz", "/api/gateway/healthz", "/api/billing/healthz", "/api/ops/healthz"]) {
   if (dataSource.includes(stalePath)) {
     errors.push(`Console backend plan must not show stale health path ${stalePath}.`);
+  }
+}
+
+if (
+  !styleSource.includes("@media (max-width: 420px)") ||
+  !styleSource.includes(".topbar__actions > .icon-command") ||
+  !styleSource.includes(".module-action-strip strong,") ||
+  !styleSource.includes(".confirm-dialog__footer {") ||
+  !styleSource.includes("grid-template-columns: repeat(2, minmax(0, 1fr));")
+) {
+  errors.push("Console responsive styles must keep narrow-screen topbar, role switcher, module summaries and dialogs usable.");
+}
+
+for (const mobileScreenshot of ["console-home-mobile.png", "gateway-model-mobile.png", "help-docs-mobile.png"]) {
+  if (!screenshotSource.includes(mobileScreenshot)) {
+    errors.push(`Console screenshot script must keep mobile coverage for ${mobileScreenshot}.`);
+  }
+}
+
+if (!screenshotSource.includes("width: 390") || !screenshotSource.includes("height: 1400") || !screenshotSource.includes("`--window-size=${width},${height}`")) {
+  errors.push("Console screenshot script must support per-shot mobile viewport sizes.");
+}
+
+for (const mobileScreenshotRuntime of [
+  "function createCdpClient",
+  "Emulation.setDeviceMetricsOverride",
+  "Page.captureScreenshot",
+  "captureWithChromeCdp",
+  "shot.width && shot.width < 600",
+]) {
+  if (!screenshotSource.includes(mobileScreenshotRuntime)) {
+    errors.push(`Console mobile screenshots must use real viewport emulation: ${mobileScreenshotRuntime}.`);
   }
 }
 

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -18,6 +18,9 @@ const screenshots = [
   { label: "Gateway and model", route: "/#/console/gateway", file: "gateway-model.png" },
   { label: "Billing and quota", route: "/#/console/quota", file: "billing-quota.png" },
   { label: "Help docs", route: "/#/console/docs", file: "help-docs.png" },
+  { label: "Console home mobile", route: "/#/console/home", file: "console-home-mobile.png", width: 390, height: 1200 },
+  { label: "Gateway and model mobile", route: "/#/console/gateway", file: "gateway-model-mobile.png", width: 390, height: 1400 },
+  { label: "Help docs mobile", route: "/#/console/docs", file: "help-docs-mobile.png", width: 390, height: 1400 },
 ];
 
 function run(command, args, options = {}) {
@@ -120,6 +123,70 @@ function wait(milliseconds) {
   return new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
 }
 
+function createCdpClient(webSocketDebuggerUrl) {
+  const socket = new WebSocket(webSocketDebuggerUrl);
+  let nextId = 0;
+  const pending = new Map();
+
+  socket.addEventListener("message", (event) => {
+    const message = JSON.parse(event.data);
+    if (!message.id || !pending.has(message.id)) {
+      return;
+    }
+
+    const { reject, resolve } = pending.get(message.id);
+    pending.delete(message.id);
+
+    if (message.error) {
+      reject(new Error(JSON.stringify(message.error)));
+      return;
+    }
+
+    resolve(message.result);
+  });
+
+  return new Promise((resolveClient, rejectClient) => {
+    socket.addEventListener("open", () => {
+      resolveClient({
+        close() {
+          socket.close();
+        },
+        send(method, params = {}) {
+          const id = ++nextId;
+          socket.send(JSON.stringify({ id, method, params }));
+          return new Promise((resolveCommand, rejectCommand) => {
+            pending.set(id, { reject: rejectCommand, resolve: resolveCommand });
+          });
+        },
+      });
+    });
+    socket.addEventListener("error", rejectClient);
+  });
+}
+
+async function waitForChromeDebug(debugURL, chrome, output) {
+  const deadline = Date.now() + 15_000;
+
+  while (Date.now() < deadline) {
+    if (chrome.exitCode !== null) {
+      throw new Error(`Chrome exited before DevTools was ready.\n${output.join("")}`);
+    }
+
+    try {
+      const response = await fetch(`${debugURL}/json/version`);
+      if (response.ok) {
+        return;
+      }
+    } catch {
+      // Chrome may still be starting its debugging endpoint.
+    }
+
+    await wait(150);
+  }
+
+  throw new Error(`Timed out waiting for Chrome DevTools on ${debugURL}.\n${output.join("")}`);
+}
+
 async function waitForHealth(baseURL, server, output) {
   const deadline = Date.now() + 45_000;
 
@@ -187,10 +254,33 @@ function stopPlatform(server) {
   server.kill("SIGTERM");
 }
 
+function stopChildProcess(child) {
+  return new Promise((resolveStop) => {
+    if (child.exitCode !== null) {
+      resolveStop();
+      return;
+    }
+
+    const forceKill = setTimeout(() => {
+      if (child.exitCode === null) {
+        child.kill("SIGKILL");
+      }
+    }, 2_000);
+
+    child.once("exit", () => {
+      clearTimeout(forceKill);
+      resolveStop();
+    });
+    child.kill("SIGTERM");
+  });
+}
+
 function captureWithChrome(chrome, baseURL, shot, index) {
   const output = join(outputDir, shot.file);
   const userDataDir = join(tmpRoot, `chrome-${index}`);
   const url = `${baseURL}${shot.route}`;
+  const width = shot.width || 1440;
+  const height = shot.height || 1100;
   const result = spawnSync(chrome, [
     "--headless=new",
     "--disable-gpu",
@@ -200,7 +290,7 @@ function captureWithChrome(chrome, baseURL, shot, index) {
     "--no-first-run",
     "--no-default-browser-check",
     `--user-data-dir=${userDataDir}`,
-    "--window-size=1440,1100",
+    `--window-size=${width},${height}`,
     "--force-device-scale-factor=1",
     "--timeout=12000",
     "--virtual-time-budget=8000",
@@ -228,6 +318,87 @@ function captureWithChrome(chrome, baseURL, shot, index) {
   console.log(`captured ${shot.label}: ${output}`);
 }
 
+async function captureWithChromeCdp(chrome, baseURL, shot, index) {
+  const output = join(outputDir, shot.file);
+  const userDataDir = join(tmpRoot, `chrome-${index}`);
+  const url = `${baseURL}${shot.route}`;
+  const width = shot.width || 1440;
+  const height = shot.height || 1100;
+  const debugPort = await getFreePort();
+  const debugURL = `http://127.0.0.1:${debugPort}`;
+  const chromeOutput = [];
+  const browser = spawn(chrome, [
+    "--headless=new",
+    "--disable-gpu",
+    "--disable-dev-shm-usage",
+    "--disable-extensions",
+    "--hide-scrollbars",
+    "--no-first-run",
+    "--no-default-browser-check",
+    `--user-data-dir=${userDataDir}`,
+    `--remote-debugging-port=${debugPort}`,
+    `--window-size=${width},${height}`,
+    "--force-device-scale-factor=1",
+    "about:blank",
+  ], {
+    cwd: repoRoot,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  const collect = (chunk) => {
+    chromeOutput.push(chunk.toString());
+    if (chromeOutput.join("").length > 10_000) {
+      chromeOutput.splice(0, chromeOutput.length - 10);
+    }
+  };
+  browser.stdout.on("data", collect);
+  browser.stderr.on("data", collect);
+
+  let client;
+  try {
+    await waitForChromeDebug(debugURL, browser, chromeOutput);
+    const targets = await (await fetch(`${debugURL}/json/list`)).json();
+    const page = targets.find((target) => target.type === "page") || targets[0];
+    if (!page?.webSocketDebuggerUrl) {
+      throw new Error(`Chrome did not expose a page target.\n${chromeOutput.join("")}`);
+    }
+
+    client = await createCdpClient(page.webSocketDebuggerUrl);
+    await client.send("Page.enable");
+    await client.send("Runtime.enable");
+    await client.send("Emulation.setDeviceMetricsOverride", {
+      deviceScaleFactor: 1,
+      height,
+      mobile: false,
+      width,
+    });
+    await client.send("Page.navigate", { url });
+    await wait(4_000);
+    await client.send("Runtime.evaluate", {
+      awaitPromise: true,
+      expression: "document.fonts?.ready ? document.fonts.ready.then(() => true) : true",
+      returnByValue: true,
+    });
+    await wait(500);
+
+    const screenshot = await client.send("Page.captureScreenshot", {
+      captureBeyondViewport: false,
+      format: "png",
+    });
+    writeFileSync(output, Buffer.from(screenshot.data, "base64"));
+
+    const size = existsSync(output) ? statSync(output).size : 0;
+    if (size < 10_000) {
+      throw new Error(`Screenshot ${basename(output)} looks too small (${size} bytes).`);
+    }
+
+    console.log(`captured ${shot.label}: ${output}`);
+  } finally {
+    client?.close();
+    await stopChildProcess(browser);
+  }
+}
+
 async function main() {
   const chrome = findChrome();
   if (!chrome) {
@@ -251,7 +422,11 @@ async function main() {
   try {
     await waitForHealth(baseURL, server, output);
     for (const [index, shot] of screenshots.entries()) {
-      captureWithChrome(chrome, baseURL, shot, index);
+      if (shot.width && shot.width < 600) {
+        await captureWithChromeCdp(chrome, baseURL, shot, index);
+      } else {
+        captureWithChrome(chrome, baseURL, shot, index);
+      }
     }
   } finally {
     stopPlatform(server);
