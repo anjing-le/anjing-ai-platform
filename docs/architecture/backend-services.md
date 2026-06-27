@@ -17,7 +17,7 @@
 | --- | --- | --- | --- |
 | 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events`, `/api/ops/audit-events/export`, `/api/ops/audit-events/retention/purge` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
-| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/routes/update`, `/api/gateway/routes/health-check`, `/api/gateway/routes/preflight`, `/api/gateway/model-routes`, `/api/gateway/model-routes/update`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/llm/stream`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
+| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/routes/update`, `/api/gateway/routes/health-check`, `/api/gateway/routes/preflight`, `/api/gateway/model-routes`, `/api/gateway/model-routes/update`, `/api/gateway/skills`, `/api/gateway/skills/update`, `/api/gateway/skills/publish`, `/api/gateway/skills/invoke`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/llm/stream`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
 | 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/invoices`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
@@ -297,6 +297,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/model-routes/publish`
 - `GET /api/gateway/skills`
 - `POST /api/gateway/skills`
+- `POST /api/gateway/skills/update`
 - `POST /api/gateway/skills/publish`
 - `POST /api/gateway/skills/invoke`
 - `GET /api/gateway/request-logs`

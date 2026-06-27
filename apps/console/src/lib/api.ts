@@ -388,6 +388,10 @@ export interface CreateSkillBindingInput {
   schemaVersion?: string;
 }
 
+export interface UpdateSkillBindingInput extends CreateSkillBindingInput {
+  id: string;
+}
+
 export interface CreatePlanInput {
   name: string;
   rps: string;
@@ -604,6 +608,13 @@ export function publishModelRoute(id: string, role?: RoleId): Promise<ModelRoute
 
 export function createSkillBinding(input: CreateSkillBindingInput, role?: RoleId): Promise<SkillBinding> {
   return requestJson<SkillBinding>("/api/gateway/skills", {
+    method: "POST",
+    body: JSON.stringify(input),
+  }, role);
+}
+
+export function updateSkillBinding(input: UpdateSkillBindingInput, role?: RoleId): Promise<SkillBinding> {
+  return requestJson<SkillBinding>("/api/gateway/skills/update", {
     method: "POST",
     body: JSON.stringify(input),
   }, role);

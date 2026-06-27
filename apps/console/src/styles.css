@@ -2204,31 +2204,36 @@ tbody tr.is-selected td:first-child {
   justify-content: center;
 }
 
-.model-route-form__head {
+.model-route-form__head,
+.skill-binding-form__head {
   display: grid;
   gap: 4px;
 }
 
-.model-route-form__head span {
+.model-route-form__head span,
+.skill-binding-form__head span {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.model-route-form__head strong {
+.model-route-form__head strong,
+.skill-binding-form__head strong {
   overflow-wrap: anywhere;
   color: var(--ink);
   font-size: 0.96rem;
 }
 
-.model-route-form__actions {
+.model-route-form__actions,
+.skill-binding-form__actions {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
-.model-route-form__actions:has(.button + .button) {
+.model-route-form__actions:has(.button + .button),
+.skill-binding-form__actions:has(.button + .button) {
   grid-template-columns: minmax(0, 1fr) minmax(128px, 0.42fr);
 }
 

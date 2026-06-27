@@ -1733,6 +1733,52 @@ func TestCreateSkillBindingAddsDraftSkill(t *testing.T) {
 	}
 }
 
+func TestUpdateSkillBindingReturnsDraftSkill(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	created := st.CreateSkillBinding("summarize-ticket", "HTTP", "/api/v1/skills/summarize", "6s", "0.2")
+	if _, ok := st.PublishSkillBinding(created.ID); !ok {
+		t.Fatal("expected seeded skill to publish")
+	}
+
+	body := bytes.NewBufferString(`{
+		"id":"` + created.ID + `",
+		"name":"summarize-ticket-v2",
+		"protocol":"MCP",
+		"route":"/mcp/skills/summarize",
+		"timeout":"10s",
+		"schemaVersion":"0.3"
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/update", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool               `json:"success"`
+		Data    store.SkillBinding `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success {
+		t.Fatalf("expected success response, got %+v", payload)
+	}
+	if payload.Data.ID != created.ID || payload.Data.Name != "summarize-ticket-v2" || payload.Data.Status != "Draft" {
+		t.Fatalf("expected updated draft skill binding, got %+v", payload.Data)
+	}
+	if payload.Data.Protocol != "MCP" || payload.Data.Route != "/mcp/skills/summarize" || payload.Data.Timeout != "10s" || payload.Data.SchemaVersion != "0.3" {
+		t.Fatalf("expected updated skill binding fields, got %+v", payload.Data)
+	}
+}
+
 func TestInvokeSkillUsesPublishedBinding(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())

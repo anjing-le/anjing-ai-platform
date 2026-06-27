@@ -7,6 +7,7 @@ import {
   logoutSession,
   updateModelRoute,
   updateRoute,
+  updateSkillBinding,
   type AuthSession,
   type PlatformSnapshot,
 } from "./api";
@@ -187,6 +188,37 @@ describe("console API client", () => {
 
     expect(result.id).toBe("model_route_agent");
     expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/model-routes/update");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
+    expect(fetchMock.mock.calls[0][1]?.body).toBe(JSON.stringify(input));
+  });
+
+  it("updates a skill binding", async () => {
+    const skill = {
+      id: "skill_ticket",
+      name: "summarize-ticket-v2",
+      protocol: "MCP",
+      route: "/mcp/skills/summarize",
+      timeout: "10s",
+      schemaVersion: "0.3",
+      status: "Draft",
+      updatedAt: "2026-06-27T00:00:00Z",
+    };
+    const input = {
+      id: "skill_ticket",
+      name: "summarize-ticket-v2",
+      protocol: "MCP",
+      route: "/mcp/skills/summarize",
+      timeout: "10s",
+      schemaVersion: "0.3",
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ success: true, data: skill }),
+    );
+
+    const result = await updateSkillBinding(input, "developer");
+
+    expect(result.id).toBe("skill_ticket");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/skills/update");
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
     expect(fetchMock.mock.calls[0][1]?.body).toBe(JSON.stringify(input));
   });

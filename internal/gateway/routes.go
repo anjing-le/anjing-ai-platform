@@ -120,6 +120,7 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 	mux.HandleFunc("/api/gateway/model-routes/update", updateModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/model-routes/publish", publishModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/skills", skillsHandler(repos.Skills))
+	mux.HandleFunc("/api/gateway/skills/update", updateSkillBindingHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skills/publish", publishSkillBindingHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skills/invoke", skillInvokeHandler(repos.Skills, repos.Invocations))
 	mux.HandleFunc("/api/gateway/request-logs", requestLogsHandler(repos.RequestLogs))
@@ -831,6 +832,77 @@ func skillsHandler(skills SkillRepository) http.HandlerFunc {
 		default:
 			httpjson.MethodNotAllowed(w)
 		}
+	}
+}
+
+func updateSkillBindingHandler(skills SkillRepository) http.HandlerFunc {
+	type updateSkillBindingRequest struct {
+		ID            string `json:"id"`
+		Name          string `json:"name"`
+		Protocol      string `json:"protocol"`
+		Route         string `json:"route"`
+		Timeout       string `json:"timeout"`
+		SchemaVersion string `json:"schemaVersion"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req updateSkillBindingRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+
+		req.ID = strings.TrimSpace(req.ID)
+		req.Name = strings.TrimSpace(req.Name)
+		req.Protocol = strings.TrimSpace(req.Protocol)
+		req.Route = strings.TrimSpace(req.Route)
+		req.Timeout = strings.TrimSpace(req.Timeout)
+		req.SchemaVersion = strings.TrimSpace(req.SchemaVersion)
+
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+		if req.Name == "" {
+			httpjson.BadRequest(w, "name is required")
+			return
+		}
+		if req.Route == "" {
+			httpjson.BadRequest(w, "route is required")
+			return
+		}
+		if req.Protocol == "" {
+			req.Protocol = "HTTP"
+		}
+		if req.Timeout == "" {
+			req.Timeout = "8s"
+		}
+		if req.SchemaVersion == "" {
+			req.SchemaVersion = "0.1"
+		}
+
+		skill, ok, err := skills.UpdateSkillBinding(r.Context(), UpdateSkillBindingInput{
+			ID:            req.ID,
+			Name:          req.Name,
+			Protocol:      req.Protocol,
+			Route:         req.Route,
+			Timeout:       req.Timeout,
+			SchemaVersion: req.SchemaVersion,
+		})
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "skill binding not found")
+			return
+		}
+
+		httpjson.OK(w, skill)
 	}
 }
 

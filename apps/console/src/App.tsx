@@ -36,6 +36,7 @@ import {
   rotateCredential,
   revokeAPIKey,
   rotateApplicationKey,
+  updateSkillBinding,
   updateRoute,
   updateModelRoute,
   type APIKey,
@@ -54,6 +55,7 @@ import {
   type SkillInvokeResponse,
   type SkillBinding,
   type UpdateModelRouteInput,
+  type UpdateSkillBindingInput,
 } from "./lib/api";
 import {
   canAccessRoute,
@@ -730,7 +732,24 @@ function App() {
       setSelectedSkillId(skill.id);
       setNotice(`已创建 Skill 绑定：${skill.name}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Skill 绑定创建失败");
+      const message = actionErrorMessage(error, "Skill 绑定创建失败");
+      setNotice(message);
+      throw new Error(message);
+    }
+  }
+
+  async function handleSkillBindingUpdate(input: UpdateSkillBindingInput) {
+    setNotice("");
+
+    try {
+      const skill = await updateSkillBinding(input, role);
+      await refreshSnapshot();
+      setSelectedSkillId(skill.id);
+      setNotice(`已更新 Skill 绑定：${skill.name}`);
+    } catch (error) {
+      const message = actionErrorMessage(error, "Skill 绑定更新失败");
+      setNotice(message);
+      throw new Error(message);
     }
   }
 
@@ -991,6 +1010,7 @@ function App() {
             onRoutePublish={handleRoutePublish}
             onSkillBindingCreate={handleSkillBindingCreate}
             onSkillBindingPublish={handleSkillBindingPublish}
+            onSkillBindingUpdate={handleSkillBindingUpdate}
             onUserActivate={handleUserActivate}
             activatingApplicationId={activatingApplicationId}
             activatingPlanId={activatingPlanId}
@@ -1729,6 +1749,7 @@ function ModulePage({
   onRoutePublish,
   onSkillBindingCreate,
   onSkillBindingPublish,
+  onSkillBindingUpdate,
   onUserActivate,
   page,
   activatingUserId,
@@ -1769,6 +1790,7 @@ function ModulePage({
   onRoutePublish: (id: string) => Promise<void>;
   onSkillBindingCreate: (input: CreateSkillBindingInput) => Promise<void>;
   onSkillBindingPublish: (id: string) => Promise<void>;
+  onSkillBindingUpdate: (input: UpdateSkillBindingInput) => Promise<void>;
   onUserActivate: (id: string) => Promise<void>;
   activatingPlanId: string;
   page: ModulePageDefinition;
@@ -2626,6 +2648,7 @@ function ModulePage({
               onCreate={onSkillBindingCreate}
               onInvoked={onLLMInvoked}
               onPublish={onSkillBindingPublish}
+              onUpdate={onSkillBindingUpdate}
               publishing={publishingSkillId === selectedSkill?.id}
               role={role}
               skill={selectedSkill}
@@ -3720,6 +3743,7 @@ function SkillBindingPanel({
   onCreate,
   onInvoked,
   onPublish,
+  onUpdate,
   publishing,
   role,
   skill,
@@ -3727,14 +3751,17 @@ function SkillBindingPanel({
   onCreate: (input: CreateSkillBindingInput) => Promise<void>;
   onInvoked: () => Promise<unknown>;
   onPublish: (id: string) => Promise<void>;
+  onUpdate: (input: UpdateSkillBindingInput) => Promise<void>;
   publishing: boolean;
   role: RoleId;
   skill?: SkillBinding;
 }) {
+  const [mode, setMode] = useState<"create" | "edit">("create");
   const [name, setName] = useState("summarize-ticket");
   const [protocol, setProtocol] = useState("HTTP");
   const [route, setRoute] = useState("/api/v1/skills/summarize");
   const [timeout, setTimeoutValue] = useState("8s");
+  const [schemaVersion, setSchemaVersion] = useState("0.1");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [invokeText, setInvokeText] = useState("查询客户退款政策");
@@ -3742,6 +3769,49 @@ function SkillBindingPanel({
   const [invokeError, setInvokeError] = useState("");
   const [invokeResult, setInvokeResult] = useState<SkillInvokeResponse>();
   const nameInputRef = useInitialFocus<HTMLInputElement>(role !== "operator");
+  const isEditing = mode === "edit" && Boolean(skill);
+
+  useEffect(() => {
+    if (mode !== "edit") {
+      return;
+    }
+    if (!skill) {
+      setMode("create");
+      return;
+    }
+
+    setName(skill.name);
+    setProtocol(skill.protocol || "HTTP");
+    setRoute(skill.route);
+    setTimeoutValue(skill.timeout || "8s");
+    setSchemaVersion(skill.schemaVersion || "0.1");
+  }, [mode, skill?.id]);
+
+  function resetForm() {
+    setMode("create");
+    setName("summarize-ticket");
+    setProtocol("HTTP");
+    setRoute("/api/v1/skills/summarize");
+    setTimeoutValue("8s");
+    setSchemaVersion("0.1");
+    setError("");
+  }
+
+  function startEdit() {
+    if (!skill || role === "operator") {
+      return;
+    }
+
+    setMode("edit");
+    setName(skill.name);
+    setProtocol(skill.protocol || "HTTP");
+    setRoute(skill.route);
+    setTimeoutValue(skill.timeout || "8s");
+    setSchemaVersion(skill.schemaVersion || "0.1");
+    setError("");
+    window.setTimeout(() => nameInputRef.current?.focus(), 0);
+  }
+
   const publishLabel = skill
     ? role === "operator"
       ? `无法发布 Skill ${skill.name}，需要管理员或开发人员`
@@ -3751,12 +3821,21 @@ function SkillBindingPanel({
           ? `正在发布 Skill ${skill.name}`
           : `发布 Skill ${skill.name}`
     : undefined;
-  const createLabel =
+  const editLabel = skill
+    ? role === "operator"
+      ? `无法编辑 Skill ${skill.name}，需要管理员或开发人员`
+      : `编辑 Skill ${skill.name}`
+    : undefined;
+  const submitLabel =
     role === "operator"
       ? "无法创建 Skill 绑定，需要管理员或开发人员"
       : busy
-        ? `正在创建 Skill 绑定 ${name}`
-        : `创建 Skill 绑定 ${name}`;
+        ? isEditing
+          ? `正在保存 Skill 绑定 ${name}`
+          : `正在创建 Skill 绑定 ${name}`
+        : isEditing
+          ? `保存 Skill 绑定 ${name}`
+          : `创建 Skill 绑定 ${name}`;
   const canInvokeSkill = Boolean(skill && skill.status === "Published" && role !== "operator");
   const invokeDisabledReason = !skill
     ? "暂无可调用 Skill"
@@ -3782,10 +3861,15 @@ function SkillBindingPanel({
     setError("");
 
     try {
-      await onCreate({ name, protocol, route, timeout });
-      setName(`${name}-next`);
+      if (isEditing && skill) {
+        await onUpdate({ id: skill.id, name, protocol, route, timeout, schemaVersion });
+        resetForm();
+      } else {
+        await onCreate({ name, protocol, route, timeout, schemaVersion });
+        setName(`${name}-next`);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Skill 绑定创建失败");
+      setError(err instanceof Error ? err.message : isEditing ? "Skill 绑定更新失败" : "Skill 绑定创建失败");
     } finally {
       setBusy(false);
     }
@@ -3847,6 +3931,17 @@ function SkillBindingPanel({
 
           <div className="application-actions">
             <button
+              aria-label={editLabel}
+              className="button"
+              disabled={busy || role === "operator"}
+              onClick={startEdit}
+              title={role === "operator" ? "运维人员只读 Skill 配置" : undefined}
+              type="button"
+            >
+              编辑配置
+              <ArrowRight aria-hidden="true" size={16} />
+            </button>
+            <button
               aria-label={publishLabel}
               className="button button--primary"
               disabled={publishing || skill.status === "Published" || role === "operator"}
@@ -3857,7 +3952,7 @@ function SkillBindingPanel({
               {skill.status === "Published" ? "已发布" : publishing ? "发布中" : "发布 Skill"}
               <ChevronRight aria-hidden="true" size={16} />
             </button>
-            {role === "operator" ? <ActionHint>需要管理员或开发人员发布 Skill。</ActionHint> : null}
+            {role === "operator" ? <ActionHint>需要管理员或开发人员编辑或发布 Skill。</ActionHint> : null}
           </div>
 
           <form aria-busy={invokeBusy} className="skill-invoke-form" onSubmit={handleInvokeSubmit}>
@@ -3907,6 +4002,10 @@ function SkillBindingPanel({
       )}
 
       <form aria-busy={busy} className="skill-binding-form" onSubmit={handleSubmit}>
+        <div className="skill-binding-form__head">
+          <span>{isEditing ? "Edit Draft" : "New Skill"}</span>
+          <strong>{isEditing ? `编辑 ${skill?.name}` : "创建 Skill 绑定"}</strong>
+        </div>
         <fieldset disabled={busy || role === "operator"}>
           <label>
             <span>名称</span>
@@ -3927,23 +4026,34 @@ function SkillBindingPanel({
             <span>超时</span>
             <input onChange={(event) => setTimeoutValue(event.target.value)} required value={timeout} />
           </label>
+          <label>
+            <span>Schema</span>
+            <input onChange={(event) => setSchemaVersion(event.target.value)} required value={schemaVersion} />
+          </label>
         </fieldset>
         {error ? (
           <p aria-live="polite" className="form-error" role="alert">
             {error}
           </p>
         ) : null}
-        <button
-          aria-label={createLabel}
-          aria-live="polite"
-          className="button button--primary"
-          disabled={busy || role === "operator"}
-          title={role === "operator" ? "运维人员只读 Skill 创建配置" : undefined}
-          type="submit"
-        >
-          {busy ? "创建中" : "创建 Skill 绑定"}
-        </button>
-        {role === "operator" ? <ActionHint>需要管理员或开发人员创建 Skill 绑定。</ActionHint> : null}
+        <div className="skill-binding-form__actions">
+          <button
+            aria-label={submitLabel}
+            aria-live="polite"
+            className="button button--primary"
+            disabled={busy || role === "operator"}
+            title={role === "operator" ? "运维人员只读 Skill 配置" : undefined}
+            type="submit"
+          >
+            {busy ? (isEditing ? "保存中" : "创建中") : isEditing ? "保存 Skill" : "创建 Skill 绑定"}
+          </button>
+          {isEditing ? (
+            <button className="button" disabled={busy} onClick={resetForm} type="button">
+              取消编辑
+            </button>
+          ) : null}
+        </div>
+        {role === "operator" ? <ActionHint>需要管理员或开发人员创建或编辑 Skill 绑定。</ActionHint> : null}
       </form>
     </Panel>
   );

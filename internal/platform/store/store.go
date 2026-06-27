@@ -154,6 +154,15 @@ type SkillBinding struct {
 	UpdatedAt     string `json:"updatedAt"`
 }
 
+type SkillBindingUpdateInput struct {
+	ID            string
+	Name          string
+	Protocol      string
+	Route         string
+	Timeout       string
+	SchemaVersion string
+}
+
 type RequestLog struct {
 	ID        string `json:"id"`
 	Request   string `json:"request"`
@@ -786,6 +795,40 @@ func (s *Store) CreateSkillBinding(name, protocol, route, timeout string, schema
 	s.skills = append([]SkillBinding{skill}, s.skills...)
 	s.addAuditLocked("网关与模型", "create skill binding", name, "Success")
 	return skill
+}
+
+func (s *Store) UpdateSkillBinding(input SkillBindingUpdateInput) (SkillBinding, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	version := input.SchemaVersion
+	if version == "" {
+		version = "0.1"
+	}
+	for index := range s.skills {
+		if s.skills[index].ID != input.ID {
+			continue
+		}
+
+		s.skills[index].Name = input.Name
+		s.skills[index].Protocol = input.Protocol
+		s.skills[index].Route = input.Route
+		s.skills[index].Timeout = input.Timeout
+		s.skills[index].SchemaVersion = version
+		s.skills[index].Status = "Draft"
+		s.skills[index].UpdatedAt = nowLabel()
+		s.requestLogs = append([]RequestLog{{
+			ID:        nextID("req"),
+			Request:   "UPDATE skill:" + s.skills[index].Name,
+			Consumer:  s.skills[index].Protocol,
+			Latency:   "35ms",
+			Result:    "200",
+			Status:    "Success",
+			CreatedAt: nowLabel(),
+		}}, s.requestLogs...)
+		s.addAuditLocked("网关与模型", "update skill binding", s.skills[index].Name, "Success")
+		return s.skills[index], true
+	}
+	return SkillBinding{}, false
 }
 
 func (s *Store) PublishSkillBinding(id string) (SkillBinding, bool) {

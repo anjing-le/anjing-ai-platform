@@ -61,9 +61,16 @@ x-anjing-service-boundaries:
       - /api/gateway/routes/preflight
       - /api/gateway/model-routes
       - /api/gateway/model-routes/update
+      - /api/gateway/skills
+      - /api/gateway/skills/update
+      - /api/gateway/skills/publish
+      - /api/gateway/skills/invoke
       - /api/gateway/proxy
       - /api/gateway/llm/invoke
       - /api/gateway/llm/stream
+      - /api/gateway/request-logs
+      - /api/gateway/request-logs/export
+      - /api/gateway/request-logs/retention/purge
   - consoleEntry: billing
     label: 计费与配额
     owner: billing-service
@@ -981,6 +988,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/skills/update:
+    post:
+      tags: [gateway]
+      operationId: updateSkillBinding
+      summary: Update a skill binding draft.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSkillBindingRequest"
+      responses:
+        "200":
+          description: Skill binding updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SkillBinding"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/gateway/skills/publish:
     post:
       tags: [gateway]
@@ -2537,6 +2576,28 @@ components:
       type: object
       required: [name, route]
       properties:
+        name:
+          type: string
+          examples: [search-knowledge]
+        protocol:
+          type: string
+          enum: [HTTP, MCP]
+          default: HTTP
+        route:
+          type: string
+          examples: [/api/v1/skills/search]
+        timeout:
+          type: string
+          default: 8s
+        schemaVersion:
+          type: string
+          default: "0.1"
+    UpdateSkillBindingRequest:
+      type: object
+      required: [id, name, route]
+      properties:
+        id:
+          type: string
         name:
           type: string
           examples: [search-knowledge]

@@ -243,7 +243,7 @@ V1 先采用 DVSkyFolding 风格的 Go 服务边界，前端后台已经收敛�
 | --- | --- | --- |
 | `operations` | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events`, `/api/ops/audit-events/export`, `/api/ops/audit-events/retention/purge` |
 | `access` | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
-| `gateway` | `gateway-api` | `/api/gateway/routes`, `/api/gateway/routes/update`, `/api/gateway/routes/health-check`, `/api/gateway/routes/preflight`, `/api/gateway/proxy`, `/api/gateway/model-routes`, `/api/gateway/model-routes/update`, `/api/gateway/llm/invoke`, `/api/gateway/llm/stream`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
+| `gateway` | `gateway-api` | `/api/gateway/routes`, `/api/gateway/routes/update`, `/api/gateway/routes/health-check`, `/api/gateway/routes/preflight`, `/api/gateway/proxy`, `/api/gateway/model-routes`, `/api/gateway/model-routes/update`, `/api/gateway/skills`, `/api/gateway/skills/update`, `/api/gateway/skills/publish`, `/api/gateway/skills/invoke`, `/api/gateway/llm/invoke`, `/api/gateway/llm/stream`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
 | `billing` | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/invoices`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | `docs` | `console-web` + 对应业务 API | `/`, `/api/*` |
 

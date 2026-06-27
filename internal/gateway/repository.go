@@ -59,6 +59,15 @@ type CreateSkillBindingInput struct {
 	SchemaVersion string
 }
 
+type UpdateSkillBindingInput struct {
+	ID            string
+	Name          string
+	Protocol      string
+	Route         string
+	Timeout       string
+	SchemaVersion string
+}
+
 type LLMInvocationInput struct {
 	ID          string
 	ModelAlias  string
@@ -111,6 +120,7 @@ type ModelRouteRepository interface {
 type SkillRepository interface {
 	ListSkills(ctx context.Context) ([]store.SkillBinding, error)
 	CreateSkillBinding(ctx context.Context, input CreateSkillBindingInput) (store.SkillBinding, error)
+	UpdateSkillBinding(ctx context.Context, input UpdateSkillBindingInput) (store.SkillBinding, bool, error)
 	PublishSkillBinding(ctx context.Context, id string) (store.SkillBinding, bool, error)
 }
 
@@ -240,6 +250,18 @@ func (repo MemorySkillRepository) ListSkills(context.Context) ([]store.SkillBind
 
 func (repo MemorySkillRepository) CreateSkillBinding(_ context.Context, input CreateSkillBindingInput) (store.SkillBinding, error) {
 	return repo.store.CreateSkillBinding(input.Name, input.Protocol, input.Route, input.Timeout, input.SchemaVersion), nil
+}
+
+func (repo MemorySkillRepository) UpdateSkillBinding(_ context.Context, input UpdateSkillBindingInput) (store.SkillBinding, bool, error) {
+	skill, ok := repo.store.UpdateSkillBinding(store.SkillBindingUpdateInput{
+		ID:            input.ID,
+		Name:          input.Name,
+		Protocol:      input.Protocol,
+		Route:         input.Route,
+		Timeout:       input.Timeout,
+		SchemaVersion: input.SchemaVersion,
+	})
+	return skill, ok, nil
 }
 
 func (repo MemorySkillRepository) PublishSkillBinding(_ context.Context, id string) (store.SkillBinding, bool, error) {
@@ -770,6 +792,65 @@ func (repo PostgresSkillRepository) CreateSkillBinding(ctx context.Context, inpu
 
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil
+}
+
+func (repo PostgresSkillRepository) UpdateSkillBinding(ctx context.Context, input UpdateSkillBindingInput) (store.SkillBinding, bool, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("begin update skill binding: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	schemaVersion := input.SchemaVersion
+	if schemaVersion == "" {
+		schemaVersion = "0.1"
+	}
+
+	rows, err := tx.Query(ctx, `
+		update skill_bindings
+		set name = $2,
+			protocol = $3,
+			route = $4,
+			timeout = $5,
+			schema_version = $6,
+			status = 'Draft',
+			updated_at = now()
+		where id = $1
+		returning id, name, protocol, route, timeout, schema_version, status, updated_at
+	`, input.ID, input.Name, input.Protocol, input.Route, input.Timeout, schemaVersion)
+	if err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("update skill binding: %w", err)
+	}
+	defer rows.Close()
+
+	skill, err := pgx.CollectOneRow(rows, scanSkillBinding)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.SkillBinding{}, false, nil
+		}
+		return store.SkillBinding{}, false, fmt.Errorf("collect updated skill binding: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "UPDATE skill:"+skill.Name, skill.Protocol, "35ms", "200", "Success"); err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("insert skill binding update request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "update skill binding", skill.Name, "Success", nextID("req")); err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("insert skill binding update audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.SkillBinding{}, false, fmt.Errorf("commit update skill binding: %w", err)
+	}
+
+	return skill, true, nil
 }
 
 func (repo PostgresSkillRepository) PublishSkillBinding(ctx context.Context, id string) (store.SkillBinding, bool, error) {
