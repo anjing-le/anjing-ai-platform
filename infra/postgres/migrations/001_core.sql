@@ -46,6 +46,11 @@ CREATE TABLE IF NOT EXISTS gateway_routes (
   upstream TEXT NOT NULL,
   auth TEXT NOT NULL,
   rate_limit TEXT NOT NULL,
+  strategy TEXT NOT NULL DEFAULT 'ordered',
+  upstream_weights JSONB NOT NULL DEFAULT '{}'::jsonb,
+  canary_header TEXT NOT NULL DEFAULT '',
+  canary_value TEXT NOT NULL DEFAULT '',
+  canary_upstream TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'Draft',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

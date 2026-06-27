@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
 
 const (
@@ -475,7 +476,7 @@ func copyProxyResponseHeaders(dst http.Header, src http.Header) {
 }
 
 func resolveProxyRoute(ctx context.Context, routes RouteRepository, options gatewayProxyRoutingOptions) (resolvedProxyRoute, error) {
-	strategy, err := normalizeGatewayProxyStrategy(options.Strategy)
+	requestStrategy, err := normalizeGatewayProxyStrategy(options.Strategy)
 	if err != nil {
 		return resolvedProxyRoute{}, err
 	}
@@ -485,11 +486,11 @@ func resolveProxyRoute(ctx context.Context, routes RouteRepository, options gate
 		if err != nil {
 			return resolvedProxyRoute{}, err
 		}
-		ordered, canaryMatched, err := orderGatewayProxyUpstreams(validated, strategy, options)
+		ordered, canaryMatched, err := orderGatewayProxyUpstreams(validated, requestStrategy, options)
 		if err != nil {
 			return resolvedProxyRoute{}, err
 		}
-		return resolvedProxyRoute{Upstream: ordered[0], Upstreams: ordered, Strategy: strategy, CanaryMatched: canaryMatched}, nil
+		return resolvedProxyRoute{Upstream: ordered[0], Upstreams: ordered, Strategy: requestStrategy, CanaryMatched: canaryMatched}, nil
 	}
 
 	items, err := routes.ListRoutes(ctx)
@@ -505,14 +506,19 @@ func resolveProxyRoute(ctx context.Context, routes RouteRepository, options gate
 			if err != nil {
 				return resolvedProxyRoute{}, err
 			}
-			ordered, canaryMatched, err := orderGatewayProxyUpstreams(validated, strategy, options)
+			routeOptions := mergeGatewayRouteRoutingOptions(options, item)
+			routeStrategy, err := normalizeGatewayProxyStrategy(routeOptions.Strategy)
+			if err != nil {
+				return resolvedProxyRoute{}, err
+			}
+			ordered, canaryMatched, err := orderGatewayProxyUpstreams(validated, routeStrategy, routeOptions)
 			if err != nil {
 				return resolvedProxyRoute{}, err
 			}
 			return resolvedProxyRoute{
 				Upstream:      ordered[0],
 				Upstreams:     ordered,
-				Strategy:      strategy,
+				Strategy:      routeStrategy,
 				CanaryMatched: canaryMatched,
 				RoutePattern:  item.Route,
 				Limit:         item.Limit,
@@ -520,6 +526,37 @@ func resolveProxyRoute(ctx context.Context, routes RouteRepository, options gate
 		}
 	}
 	return resolvedProxyRoute{}, errActiveRouteNotFound
+}
+
+func mergeGatewayRouteRoutingOptions(options gatewayProxyRoutingOptions, route store.GatewayRoute) gatewayProxyRoutingOptions {
+	merged := options
+	if strings.TrimSpace(merged.Strategy) == "" {
+		merged.Strategy = route.Strategy
+	}
+	if len(merged.UpstreamWeights) == 0 && len(route.UpstreamWeights) > 0 {
+		merged.UpstreamWeights = cloneGatewayProxyWeights(route.UpstreamWeights)
+	}
+	if strings.TrimSpace(merged.CanaryHeader) == "" {
+		merged.CanaryHeader = route.CanaryHeader
+	}
+	if strings.TrimSpace(merged.CanaryValue) == "" {
+		merged.CanaryValue = route.CanaryValue
+	}
+	if strings.TrimSpace(merged.CanaryUpstream) == "" {
+		merged.CanaryUpstream = route.CanaryUpstream
+	}
+	return merged
+}
+
+func cloneGatewayProxyWeights(values map[string]int) map[string]int {
+	if len(values) == 0 {
+		return nil
+	}
+	cloned := make(map[string]int, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
 }
 
 func normalizeGatewayProxyStrategy(strategy string) (string, error) {

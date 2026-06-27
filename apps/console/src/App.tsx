@@ -416,6 +416,7 @@ function App() {
         const route = await createRoute(
           {
             route: values.route,
+            strategy: "ordered",
             upstream: values.upstream,
             limit: values.limit,
           },
@@ -594,6 +595,12 @@ function App() {
       description: `确认发布 ${route?.route || "该 API 路由"} 到统一网关入口。`,
       details: [
         `上游目标：${route?.upstream || "以后端记录为准"}`,
+        `负载策略：${formatGatewayRouteStrategy(route?.strategy)}`,
+        route?.canaryHeader
+          ? `灰度规则：${route.canaryHeader}${route.canaryValue ? `=${route.canaryValue}` : " 非空"} -> ${
+              route.canaryUpstream || "以后端记录为准"
+            }`
+          : "灰度规则：未启用",
         `鉴权策略：${route?.auth || "以后端记录为准"}`,
         `限流策略：${route?.limit || "以后端记录为准"}`,
       ],
@@ -1960,7 +1967,13 @@ function ModulePage({
     if (page.id === "docs" && activeTab === "API Examples") {
       const routeRows: TableRow[] = (snapshot?.routes || []).map((route) => ({
         id: `doc-route-${route.id}`,
-        cells: [route.route, "Gateway route", route.auth, `限流 ${route.limit}`, route.status],
+        cells: [
+          route.route,
+          "Gateway route",
+          route.auth,
+          `${formatGatewayRouteStrategy(route.strategy)} · ${route.limit}`,
+          route.status,
+        ],
         status: route.status,
         tone: toneForStatus(route.status),
       }));
@@ -3298,6 +3311,45 @@ function QuickstartSnippet({
   );
 }
 
+function formatGatewayRouteStrategy(strategy?: GatewayRoute["strategy"]) {
+  if (strategy === "round_robin") {
+    return "Round robin";
+  }
+  if (strategy === "weighted") {
+    return "Weighted";
+  }
+  return "Ordered";
+}
+
+function formatGatewayRouteWeights(weights?: Record<string, number>) {
+  const entries = Object.entries(weights || {}).filter(([, value]) => value > 0);
+
+  if (!entries.length) {
+    return "默认权重";
+  }
+
+  return entries.map(([upstream, weight]) => `${shortenUpstream(upstream)} ${weight}`).join(" / ");
+}
+
+function formatGatewayRouteCanary(route?: GatewayRoute) {
+  if (!route?.canaryHeader) {
+    return "未启用";
+  }
+
+  return `${route.canaryHeader}${route.canaryValue ? `=${route.canaryValue}` : " 非空"} -> ${shortenUpstream(
+    route.canaryUpstream || "",
+  )}`;
+}
+
+function shortenUpstream(value: string) {
+  try {
+    const url = new URL(value);
+    return url.host;
+  } catch {
+    return value || "未配置";
+  }
+}
+
 function GatewayRoutePanel({
   onPublish,
   publishing,
@@ -3310,12 +3362,25 @@ function GatewayRoutePanel({
   if (!route) {
     return (
       <Panel eyebrow="Route" title="路由详情">
-        <EmptyPanel description="新增路由后，这里会展示鉴权、限流、发布状态和上线动作。" title="暂无路由" />
+        <EmptyPanel description="新增路由后，这里会展示策略、灰度、鉴权、限流、发布状态和上线动作。" title="暂无路由" />
       </Panel>
     );
   }
 
+  const strategy = route.strategy || "ordered";
   const checks = [
+    {
+      label: "策略",
+      value: formatGatewayRouteStrategy(strategy),
+      note: formatGatewayRouteWeights(route.upstreamWeights),
+      tone: strategy === "weighted" ? "watch" : "neutral",
+    },
+    {
+      label: "灰度",
+      value: formatGatewayRouteCanary(route),
+      note: route.canaryHeader ? "Header 命中后优先上游" : "未启用 canary",
+      tone: route.canaryHeader ? "watch" : "neutral",
+    },
     {
       label: "鉴权",
       value: route.auth,

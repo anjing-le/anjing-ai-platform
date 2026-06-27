@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -51,6 +52,17 @@ type gatewayRoutePreflightResponse struct {
 	CheckedAt string                           `json:"checkedAt"`
 	Checks    []gatewayRoutePreflightCheck     `json:"checks"`
 	Health    *gatewayRouteHealthCheckResponse `json:"health,omitempty"`
+}
+
+type createRouteRequest struct {
+	Route           string         `json:"route"`
+	Upstream        string         `json:"upstream"`
+	Limit           string         `json:"limit"`
+	Strategy        string         `json:"strategy"`
+	UpstreamWeights map[string]int `json:"upstreamWeights,omitempty"`
+	CanaryHeader    string         `json:"canaryHeader,omitempty"`
+	CanaryValue     string         `json:"canaryValue,omitempty"`
+	CanaryUpstream  string         `json:"canaryUpstream,omitempty"`
 }
 
 func Register(mux *http.ServeMux, st *store.Store) {
@@ -105,12 +117,6 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 }
 
 func routesHandler(routes RouteRepository) http.HandlerFunc {
-	type createRouteRequest struct {
-		Route    string `json:"route"`
-		Upstream string `json:"upstream"`
-		Limit    string `json:"limit"`
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -136,10 +142,20 @@ func routesHandler(routes RouteRepository) http.HandlerFunc {
 			if req.Limit == "" {
 				req.Limit = "600/min"
 			}
+			strategy, weights, canaryHeader, canaryValue, canaryUpstream, err := normalizeGatewayRouteCreatePolicy(req)
+			if err != nil {
+				httpjson.BadRequest(w, err.Error())
+				return
+			}
 			route, err := routes.CreateRoute(r.Context(), CreateRouteInput{
-				Route:    req.Route,
-				Upstream: req.Upstream,
-				Limit:    req.Limit,
+				Route:           req.Route,
+				Upstream:        req.Upstream,
+				Limit:           req.Limit,
+				Strategy:        strategy,
+				UpstreamWeights: weights,
+				CanaryHeader:    canaryHeader,
+				CanaryValue:     canaryValue,
+				CanaryUpstream:  canaryUpstream,
 			})
 			if err != nil {
 				httpjson.BadRequest(w, err.Error())
@@ -184,6 +200,32 @@ func publishRouteHandler(routes RouteRepository) http.HandlerFunc {
 
 		httpjson.OK(w, route)
 	}
+}
+
+func normalizeGatewayRouteCreatePolicy(req createRouteRequest) (string, map[string]int, string, string, string, error) {
+	strategy, err := normalizeGatewayProxyStrategy(req.Strategy)
+	if err != nil {
+		return "", nil, "", "", "", err
+	}
+	weights, err := validateGatewayProxyWeights(splitGatewayProxyUpstreams(req.Upstream), req.UpstreamWeights)
+	if err != nil {
+		return "", nil, "", "", "", err
+	}
+
+	canaryHeader := strings.TrimSpace(req.CanaryHeader)
+	canaryValue := strings.TrimSpace(req.CanaryValue)
+	canaryUpstream := strings.TrimSpace(req.CanaryUpstream)
+	if canaryHeader == "" && canaryValue == "" && canaryUpstream == "" {
+		return strategy, weights, "", "", "", nil
+	}
+	if canaryHeader == "" || canaryUpstream == "" {
+		return "", nil, "", "", "", errors.New("canaryHeader and canaryUpstream are required together")
+	}
+	validatedUpstream, err := validateProxyUpstream(canaryUpstream)
+	if err != nil {
+		return "", nil, "", "", "", err
+	}
+	return strategy, weights, canaryHeader, canaryValue, validatedUpstream, nil
 }
 
 func routeHealthCheckHandler(routes RouteRepository) http.HandlerFunc {

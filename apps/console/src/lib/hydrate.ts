@@ -18,6 +18,20 @@ const sourceToRoute: Record<string, ConsoleRoute> = {
   "帮助文档": "docs",
 };
 
+function formatGatewayStrategy(strategy?: string) {
+  if (strategy === "round_robin") {
+    return "Round robin";
+  }
+  if (strategy === "weighted") {
+    return "Weighted";
+  }
+  return "Ordered";
+}
+
+function formatGatewayCanary(canaryHeader?: string) {
+  return canaryHeader ? "Canary" : "No canary";
+}
+
 export function hydrateHomeMetrics(snapshot?: PlatformSnapshot): MetricItem[] {
   if (!snapshot?.dashboard?.metrics?.length) {
     return homeMetrics;
@@ -108,7 +122,13 @@ export function hydrateModulePages(
           ...page.table,
           rows: snapshot.routes.map((route) => ({
             id: route.id,
-            cells: [route.route, route.upstream, route.auth, route.limit, route.status],
+            cells: [
+              route.route,
+              route.upstream,
+              route.auth,
+              `${formatGatewayStrategy(route.strategy)} · ${route.limit} · ${formatGatewayCanary(route.canaryHeader)}`,
+              route.status,
+            ],
             status: route.status,
             tone: toneForStatus(route.status),
           })),

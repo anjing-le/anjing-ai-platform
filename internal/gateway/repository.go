@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -13,9 +14,14 @@ import (
 )
 
 type CreateRouteInput struct {
-	Route    string
-	Upstream string
-	Limit    string
+	Route           string
+	Upstream        string
+	Limit           string
+	Strategy        string
+	UpstreamWeights map[string]int
+	CanaryHeader    string
+	CanaryValue     string
+	CanaryUpstream  string
 }
 
 type CreateModelRouteInput struct {
@@ -134,7 +140,16 @@ func (repo MemoryRouteRepository) ListRoutes(context.Context) ([]store.GatewayRo
 }
 
 func (repo MemoryRouteRepository) CreateRoute(_ context.Context, input CreateRouteInput) (store.GatewayRoute, error) {
-	return repo.store.CreateRoute(input.Route, input.Upstream, input.Limit), nil
+	return repo.store.CreateRouteWithPolicy(store.GatewayRouteCreateInput{
+		Route:           input.Route,
+		Upstream:        input.Upstream,
+		Limit:           input.Limit,
+		Strategy:        input.Strategy,
+		UpstreamWeights: input.UpstreamWeights,
+		CanaryHeader:    input.CanaryHeader,
+		CanaryValue:     input.CanaryValue,
+		CanaryUpstream:  input.CanaryUpstream,
+	}), nil
 }
 
 func (repo MemoryRouteRepository) PublishRoute(_ context.Context, id string) (store.GatewayRoute, bool, error) {
@@ -268,7 +283,7 @@ func NewPostgresRouteRepository(pool *pgxpool.Pool) PostgresRouteRepository {
 
 func (repo PostgresRouteRepository) ListRoutes(ctx context.Context) ([]store.GatewayRoute, error) {
 	rows, err := repo.pool.Query(ctx, `
-		select id, route, upstream, auth, rate_limit, status, updated_at
+		select id, route, upstream, auth, rate_limit, strategy, upstream_weights, canary_header, canary_value, canary_upstream, status, updated_at
 		from gateway_routes
 		order by updated_at desc
 	`)
@@ -287,12 +302,20 @@ func (repo PostgresRouteRepository) ListRoutes(ctx context.Context) ([]store.Gat
 
 func (repo PostgresRouteRepository) CreateRoute(ctx context.Context, input CreateRouteInput) (store.GatewayRoute, error) {
 	item := store.GatewayRoute{
-		ID:       nextID("route"),
-		Route:    input.Route,
-		Upstream: input.Upstream,
-		Auth:     "API Key",
-		Limit:    input.Limit,
-		Status:   "Draft",
+		ID:              nextID("route"),
+		Route:           input.Route,
+		Upstream:        input.Upstream,
+		Auth:            "API Key",
+		Limit:           input.Limit,
+		Strategy:        input.Strategy,
+		UpstreamWeights: input.UpstreamWeights,
+		CanaryHeader:    input.CanaryHeader,
+		CanaryValue:     input.CanaryValue,
+		CanaryUpstream:  input.CanaryUpstream,
+		Status:          "Draft",
+	}
+	if strings.TrimSpace(item.Strategy) == "" {
+		item.Strategy = "ordered"
 	}
 
 	tx, err := repo.pool.Begin(ctx)
@@ -302,11 +325,18 @@ func (repo PostgresRouteRepository) CreateRoute(ctx context.Context, input Creat
 	defer tx.Rollback(ctx)
 
 	var updatedAt time.Time
+	weightsJSON, err := json.Marshal(item.UpstreamWeights)
+	if err != nil {
+		return store.GatewayRoute{}, fmt.Errorf("marshal gateway route upstream weights: %w", err)
+	}
+	if len(item.UpstreamWeights) == 0 {
+		weightsJSON = []byte("{}")
+	}
 	if err := tx.QueryRow(ctx, `
-		insert into gateway_routes(id, route, upstream, auth, rate_limit, status)
-		values($1, $2, $3, $4, $5, $6)
+		insert into gateway_routes(id, route, upstream, auth, rate_limit, strategy, upstream_weights, canary_header, canary_value, canary_upstream, status)
+		values($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		returning updated_at
-	`, item.ID, item.Route, item.Upstream, item.Auth, item.Limit, item.Status).Scan(&updatedAt); err != nil {
+	`, item.ID, item.Route, item.Upstream, item.Auth, item.Limit, item.Strategy, weightsJSON, item.CanaryHeader, item.CanaryValue, item.CanaryUpstream, item.Status).Scan(&updatedAt); err != nil {
 		return store.GatewayRoute{}, fmt.Errorf("insert gateway route: %w", err)
 	}
 
@@ -343,7 +373,7 @@ func (repo PostgresRouteRepository) PublishRoute(ctx context.Context, id string)
 		update gateway_routes
 		set status = 'Active', updated_at = now()
 		where id = $1
-		returning id, route, upstream, auth, rate_limit, status, updated_at
+		returning id, route, upstream, auth, rate_limit, strategy, upstream_weights, canary_header, canary_value, canary_upstream, status, updated_at
 	`, id)
 	if err != nil {
 		return store.GatewayRoute{}, false, fmt.Errorf("publish gateway route: %w", err)
@@ -930,8 +960,30 @@ func nextID(prefix string) string {
 func scanGatewayRoute(row pgx.CollectableRow) (store.GatewayRoute, error) {
 	var item store.GatewayRoute
 	var updatedAt time.Time
-	if err := row.Scan(&item.ID, &item.Route, &item.Upstream, &item.Auth, &item.Limit, &item.Status, &updatedAt); err != nil {
+	var weightsJSON []byte
+	if err := row.Scan(
+		&item.ID,
+		&item.Route,
+		&item.Upstream,
+		&item.Auth,
+		&item.Limit,
+		&item.Strategy,
+		&weightsJSON,
+		&item.CanaryHeader,
+		&item.CanaryValue,
+		&item.CanaryUpstream,
+		&item.Status,
+		&updatedAt,
+	); err != nil {
 		return store.GatewayRoute{}, err
+	}
+	if len(weightsJSON) > 0 && string(weightsJSON) != "null" {
+		if err := json.Unmarshal(weightsJSON, &item.UpstreamWeights); err != nil {
+			return store.GatewayRoute{}, fmt.Errorf("decode gateway route upstream weights: %w", err)
+		}
+	}
+	if strings.TrimSpace(item.Strategy) == "" {
+		item.Strategy = "ordered"
 	}
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil

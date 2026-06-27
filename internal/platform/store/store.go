@@ -88,13 +88,29 @@ type Credential struct {
 }
 
 type GatewayRoute struct {
-	ID        string `json:"id"`
-	Route     string `json:"route"`
-	Upstream  string `json:"upstream"`
-	Auth      string `json:"auth"`
-	Limit     string `json:"limit"`
-	Status    string `json:"status"`
-	UpdatedAt string `json:"updatedAt"`
+	ID              string         `json:"id"`
+	Route           string         `json:"route"`
+	Upstream        string         `json:"upstream"`
+	Auth            string         `json:"auth"`
+	Limit           string         `json:"limit"`
+	Strategy        string         `json:"strategy"`
+	UpstreamWeights map[string]int `json:"upstreamWeights,omitempty"`
+	CanaryHeader    string         `json:"canaryHeader,omitempty"`
+	CanaryValue     string         `json:"canaryValue,omitempty"`
+	CanaryUpstream  string         `json:"canaryUpstream,omitempty"`
+	Status          string         `json:"status"`
+	UpdatedAt       string         `json:"updatedAt"`
+}
+
+type GatewayRouteCreateInput struct {
+	Route           string
+	Upstream        string
+	Limit           string
+	Strategy        string
+	UpstreamWeights map[string]int
+	CanaryHeader    string
+	CanaryValue     string
+	CanaryUpstream  string
 }
 
 type ModelRoute struct {
@@ -281,8 +297,8 @@ func NewSeedStore() *Store {
 			{ID: "cred_claude", Ref: "cred.claude.backup", Purpose: "LLM fallback", Scope: "Gateway / Model", ExpiresAt: "2026-06-28", Status: "Expiring", MaskedPreview: "sk-****-91cb"},
 		},
 		routes: []GatewayRoute{
-			{ID: "route_llm", Route: "/api/v1/llm/**", Upstream: "gateway-api", Auth: "API Key", Limit: "1200/min", Status: "Active", UpdatedAt: now},
-			{ID: "route_skill", Route: "/api/v1/skills/**", Upstream: "gateway-api", Auth: "API Key", Limit: "800/min", Status: "Active", UpdatedAt: now},
+			{ID: "route_llm", Route: "/api/v1/llm/**", Upstream: "gateway-api", Auth: "API Key", Limit: "1200/min", Strategy: "ordered", Status: "Active", UpdatedAt: now},
+			{ID: "route_skill", Route: "/api/v1/skills/**", Upstream: "gateway-api", Auth: "API Key", Limit: "800/min", Strategy: "ordered", Status: "Active", UpdatedAt: now},
 		},
 		modelRoutes: []ModelRoute{
 			{ID: "model_chat_default", Alias: "chat-default", Scenario: "客服 Agent", Primary: "gpt-4.1-mini", Fallback: "claude-haiku", Status: "Active", UpdatedAt: now},
@@ -557,19 +573,36 @@ func (s *Store) RotateCredential(id string) (Credential, bool) {
 func (s *Store) ListRoutes() []GatewayRoute {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return append([]GatewayRoute(nil), s.routes...)
+	return cloneGatewayRoutes(s.routes)
 }
 
 func (s *Store) CreateRoute(route, upstream, limit string) GatewayRoute {
+	return s.CreateRouteWithPolicy(GatewayRouteCreateInput{Route: route, Upstream: upstream, Limit: limit, Strategy: "ordered"})
+}
+
+func (s *Store) CreateRouteWithPolicy(input GatewayRouteCreateInput) GatewayRoute {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	item := GatewayRoute{ID: nextID("route"), Route: route, Upstream: upstream, Auth: "API Key", Limit: limit, Status: "Draft", UpdatedAt: nowLabel()}
+	item := GatewayRoute{
+		ID:              nextID("route"),
+		Route:           input.Route,
+		Upstream:        input.Upstream,
+		Auth:            "API Key",
+		Limit:           input.Limit,
+		Strategy:        input.Strategy,
+		UpstreamWeights: cloneIntMap(input.UpstreamWeights),
+		CanaryHeader:    input.CanaryHeader,
+		CanaryValue:     input.CanaryValue,
+		CanaryUpstream:  input.CanaryUpstream,
+		Status:          "Draft",
+		UpdatedAt:       nowLabel(),
+	}
 	s.routes = append([]GatewayRoute{item}, s.routes...)
 	s.requestLogs = append([]RequestLog{{
-		ID: nextID("req"), Request: "POST " + route, Consumer: "demo-agent-workbench", Latency: "64ms", Result: "201", Status: "Mocked", CreatedAt: nowLabel(),
+		ID: nextID("req"), Request: "POST " + input.Route, Consumer: "demo-agent-workbench", Latency: "64ms", Result: "201", Status: "Mocked", CreatedAt: nowLabel(),
 	}}, s.requestLogs...)
-	s.addAuditLocked("网关与模型", "create route", route, "Success")
-	return item
+	s.addAuditLocked("网关与模型", "create route", input.Route, "Success")
+	return cloneGatewayRoute(item)
 }
 
 func (s *Store) PublishRoute(id string) (GatewayRoute, bool) {
@@ -592,7 +625,7 @@ func (s *Store) PublishRoute(id string) (GatewayRoute, bool) {
 			CreatedAt: nowLabel(),
 		}}, s.requestLogs...)
 		s.addAuditLocked("网关与模型", "publish route", s.routes[index].Route, "Success")
-		return s.routes[index], true
+		return cloneGatewayRoute(s.routes[index]), true
 	}
 	return GatewayRoute{}, false
 }
@@ -957,7 +990,7 @@ func (s *Store) Snapshot() PlatformSnapshot {
 		Roles:        append([]RolePolicy(nil), s.roles...),
 		APIKeys:      append([]APIKey(nil), s.apiKeys...),
 		Credentials:  append([]Credential(nil), s.credentials...),
-		Routes:       append([]GatewayRoute(nil), s.routes...),
+		Routes:       cloneGatewayRoutes(s.routes),
 		ModelRoutes:  append([]ModelRoute(nil), s.modelRoutes...),
 		Skills:       append([]SkillBinding(nil), s.skills...),
 		RequestLogs:  append([]RequestLog(nil), s.requestLogs...),
@@ -1347,6 +1380,30 @@ func MaskSecretPreview(value string) string {
 		suffix = suffix[len(suffix)-4:]
 	}
 	return prefix + "-****-" + suffix
+}
+
+func cloneGatewayRoutes(items []GatewayRoute) []GatewayRoute {
+	cloned := make([]GatewayRoute, len(items))
+	for index, item := range items {
+		cloned[index] = cloneGatewayRoute(item)
+	}
+	return cloned
+}
+
+func cloneGatewayRoute(item GatewayRoute) GatewayRoute {
+	item.UpstreamWeights = cloneIntMap(item.UpstreamWeights)
+	return item
+}
+
+func cloneIntMap(values map[string]int) map[string]int {
+	if len(values) == 0 {
+		return nil
+	}
+	cloned := make(map[string]int, len(values))
+	for key, value := range values {
+		cloned[key] = value
+	}
+	return cloned
 }
 
 func nextID(prefix string) string {

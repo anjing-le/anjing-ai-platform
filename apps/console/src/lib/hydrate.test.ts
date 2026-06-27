@@ -87,6 +87,7 @@ const snapshot: PlatformSnapshot = {
       upstream: "gateway-api",
       auth: "API Key",
       limit: "600/min",
+      strategy: "ordered",
       status: "Published",
       updatedAt: "today",
     },

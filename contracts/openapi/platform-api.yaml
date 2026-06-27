@@ -2105,7 +2105,7 @@ components:
           type: string
     GatewayRoute:
       type: object
-      required: [id, route, upstream, auth, limit, status, updatedAt]
+      required: [id, route, upstream, auth, limit, strategy, status, updatedAt]
       properties:
         id:
           type: string
@@ -2117,6 +2117,21 @@ components:
         auth:
           type: string
         limit:
+          type: string
+        strategy:
+          type: string
+          enum: [ordered, round_robin, weighted]
+        upstreamWeights:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 1
+            maximum: 10000
+        canaryHeader:
+          type: string
+        canaryValue:
+          type: string
+        canaryUpstream:
           type: string
         status:
           type: string
@@ -2136,6 +2151,22 @@ components:
         limit:
           type: string
           default: 600/min
+        strategy:
+          type: string
+          enum: [ordered, round_robin, weighted]
+          default: ordered
+        upstreamWeights:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 1
+            maximum: 10000
+        canaryHeader:
+          type: string
+        canaryValue:
+          type: string
+        canaryUpstream:
+          type: string
     PublishGatewayRouteRequest:
       type: object
       required: [id]

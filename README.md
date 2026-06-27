@@ -46,7 +46,7 @@ pnpm screenshots:console
 - 运营闭环：待办查看、事项处理、总览指标刷新、服务健康和审计事件联动
 - 业务入口：运营总览、用户与权限、网关与模型、计费与配额、帮助文档
 - 权限闭环：邀请用户、激活用户、角色边界、API Key 撤销、credentialRef 轮换
-- 网关闭环：新增路由、发布路由、已发布 route 代理限流、多 upstream 候选、`ordered` / `round_robin` / `weighted` 策略、请求级 canary header 灰度、route 级熔断冷却、模型路由创建与发布、Skill 绑定创建与发布、Skill 输入校验、LLM 调用测试、请求日志与用量联动
+- 网关闭环：新增路由、发布路由、已发布 route 代理限流、多 upstream 候选、`ordered` / `round_robin` / `weighted` 策略、route 级策略/权重/canary 灰度持久化、请求级策略覆盖、route 级熔断冷却、模型路由创建与发布、Skill 绑定创建与发布、Skill 输入校验、LLM 调用测试、请求日志与用量联动
 - 网关限流后端：默认内存固定窗口，生产可选 Redis 分布式限流；Redis 异常时回退到本机限流，避免代理链路直接中断
 - 计费闭环：新增套餐、启用套餐、用量记录、预算告警处理联动
 - 接入闭环：创建应用、默认 API Key、API Key 轮换、网关路由、用量、审计、调用日志联动

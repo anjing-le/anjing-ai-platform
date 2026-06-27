@@ -81,6 +81,78 @@ func TestCreateRouteAddsRoute(t *testing.T) {
 	}
 }
 
+func TestCreateRoutePersistsRoutingPolicy(t *testing.T) {
+	st := store.NewSeedStore()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer primary.Close()
+	secondary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer secondary.Close()
+	canary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer canary.Close()
+
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"route":"/api/v1/policy/**","upstream":"` + primary.URL + `,` + secondary.URL + `","limit":"900/min","strategy":"weighted","upstreamWeights":{"` + primary.URL + `":1,"` + secondary.URL + `":50},"canaryHeader":"X-Release-Cohort","canaryValue":"beta","canaryUpstream":"` + canary.URL + `"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/routes", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool               `json:"success"`
+		Data    store.GatewayRoute `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Strategy != "weighted" {
+		t.Fatalf("expected weighted route policy, got %+v", payload)
+	}
+	if payload.Data.UpstreamWeights[primary.URL] != 1 || payload.Data.UpstreamWeights[secondary.URL] != 50 {
+		t.Fatalf("expected route weights to persist, got %+v", payload.Data.UpstreamWeights)
+	}
+	if payload.Data.CanaryHeader != "X-Release-Cohort" || payload.Data.CanaryValue != "beta" || payload.Data.CanaryUpstream != canary.URL {
+		t.Fatalf("expected route canary policy to persist, got %+v", payload.Data)
+	}
+
+	publishBody := bytes.NewBufferString(`{"id":"` + payload.Data.ID + `"}`)
+	publishReq := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/publish", publishBody)
+	publishReq.Header.Set("Content-Type", "application/json")
+	publishRec := httptest.NewRecorder()
+
+	mux.ServeHTTP(publishRec, publishReq)
+
+	if publishRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", publishRec.Code, publishRec.Body.String())
+	}
+
+	var published struct {
+		Success bool               `json:"success"`
+		Data    store.GatewayRoute `json:"data"`
+	}
+	if err := json.NewDecoder(publishRec.Body).Decode(&published); err != nil {
+		t.Fatalf("decode publish response: %v", err)
+	}
+	if !published.Success || published.Data.Status != "Active" || published.Data.Strategy != "weighted" {
+		t.Fatalf("expected published weighted route, got %+v", published)
+	}
+	if published.Data.UpstreamWeights[secondary.URL] != 50 || published.Data.CanaryUpstream != canary.URL {
+		t.Fatalf("expected published route policy to persist, got %+v", published.Data)
+	}
+}
+
 func TestGatewayRouteHealthCheckReportsHealthy(t *testing.T) {
 	st := store.NewSeedStore()
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -998,6 +1070,108 @@ func TestProxyGatewayUsesWeightedUpstreams(t *testing.T) {
 
 	if countByUpstream[secondUpstream.URL] < 10 {
 		t.Fatalf("expected weighted strategy to prefer second upstream, got counts %+v", countByUpstream)
+	}
+}
+
+func TestProxyGatewayUsesPersistedRouteRoutingPolicy(t *testing.T) {
+	st := store.NewSeedStore()
+	firstUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`first`))
+	}))
+	defer firstUpstream.Close()
+	secondUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`second`))
+	}))
+	defer secondUpstream.Close()
+	canary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`canary`))
+	}))
+	defer canary.Close()
+
+	draft := st.CreateRouteWithPolicy(store.GatewayRouteCreateInput{
+		Route:           "/api/v1/persisted/**",
+		Upstream:        firstUpstream.URL + "," + secondUpstream.URL,
+		Limit:           "100/min",
+		Strategy:        "weighted",
+		UpstreamWeights: map[string]int{firstUpstream.URL: 1, secondUpstream.URL: 100},
+		CanaryHeader:    "X-Release-Cohort",
+		CanaryValue:     "beta",
+		CanaryUpstream:  canary.URL,
+	})
+	if _, ok := st.PublishRoute(draft.ID); !ok {
+		t.Fatalf("expected route to publish")
+	}
+
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	canaryBody := bytes.NewBufferString(`{"route":"/api/v1/persisted/ping","method":"GET","headers":{"X-Release-Cohort":"beta"},"timeoutMs":1000}`)
+	canaryReq := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", canaryBody)
+	canaryReq.Header.Set("Content-Type", "application/json")
+	canaryRec := httptest.NewRecorder()
+	mux.ServeHTTP(canaryRec, canaryReq)
+	if canaryRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", canaryRec.Code, canaryRec.Body.String())
+	}
+
+	var canaryPayload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Upstream           string   `json:"upstream"`
+			Strategy           string   `json:"strategy"`
+			CandidateUpstreams []string `json:"candidateUpstreams"`
+			CanaryMatched      bool     `json:"canaryMatched"`
+			StatusCode         int      `json:"statusCode"`
+			Attempts           int      `json:"attempts"`
+			Body               string   `json:"body"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(canaryRec.Body).Decode(&canaryPayload); err != nil {
+		t.Fatalf("decode canary response: %v", err)
+	}
+	if !canaryPayload.Success || canaryPayload.Data.Upstream != canary.URL || canaryPayload.Data.Strategy != "weighted" {
+		t.Fatalf("expected persisted canary policy, got %+v", canaryPayload)
+	}
+	if !canaryPayload.Data.CanaryMatched || canaryPayload.Data.Body != "canary" || canaryPayload.Data.Attempts != 1 {
+		t.Fatalf("expected canary route to use canary upstream once, got %+v", canaryPayload.Data)
+	}
+	if len(canaryPayload.Data.CandidateUpstreams) != 3 || canaryPayload.Data.CandidateUpstreams[0] != canary.URL {
+		t.Fatalf("expected canary upstream to lead persisted candidates, got %+v", canaryPayload.Data.CandidateUpstreams)
+	}
+
+	gatewayProxyStrategyCursor.Store(0)
+	countByUpstream := map[string]int{}
+	for i := 0; i < 12; i++ {
+		body := bytes.NewBufferString(`{"route":"/api/v1/persisted/ping","method":"GET","timeoutMs":1000}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+		var payload struct {
+			Success bool `json:"success"`
+			Data    struct {
+				Upstream   string `json:"upstream"`
+				Strategy   string `json:"strategy"`
+				StatusCode int    `json:"statusCode"`
+				Attempts   int    `json:"attempts"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode weighted response: %v", err)
+		}
+		if !payload.Success || payload.Data.Strategy != "weighted" || payload.Data.StatusCode != http.StatusOK || payload.Data.Attempts != 1 {
+			t.Fatalf("unexpected persisted weighted payload: %+v", payload)
+		}
+		countByUpstream[payload.Data.Upstream]++
+	}
+	if countByUpstream[secondUpstream.URL] < 10 {
+		t.Fatalf("expected persisted weighted policy to prefer second upstream, got counts %+v", countByUpstream)
 	}
 }
 

@@ -110,6 +110,11 @@ export interface GatewayRoute {
   upstream: string;
   auth: string;
   limit: string;
+  strategy: GatewayProxyStrategy;
+  upstreamWeights?: Record<string, number>;
+  canaryHeader?: string;
+  canaryValue?: string;
+  canaryUpstream?: string;
   status: string;
   updatedAt: string;
 }
@@ -353,6 +358,11 @@ export interface CreateRouteInput {
   route: string;
   upstream: string;
   limit: string;
+  strategy?: GatewayProxyStrategy;
+  upstreamWeights?: Record<string, number>;
+  canaryHeader?: string;
+  canaryValue?: string;
+  canaryUpstream?: string;
 }
 
 export interface CreateModelRouteInput {
