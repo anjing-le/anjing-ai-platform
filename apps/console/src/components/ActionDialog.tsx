@@ -1,49 +1,119 @@
 import { X } from "lucide-react";
 import { useEffect, type FormEvent } from "react";
 
-export type ActionMode = "iam" | "gateway" | "quota" | "docs";
+export type ActionMode = "iam" | "gateway" | "gateway-edit" | "quota" | "docs";
 
 export type ActionValues = Record<string, string>;
 
 type SelectOption = string | { label: string; value: string };
 
+type ActionField =
+  | {
+      kind: "input";
+      label: string;
+      name: string;
+      placeholder: string;
+      help?: string;
+      required?: boolean;
+      span?: "full";
+      type?: string;
+    }
+  | {
+      kind: "select";
+      label: string;
+      name: string;
+      options: SelectOption[];
+      help?: string;
+      required?: boolean;
+      span?: "full";
+    };
+
 interface ActionDialogProps {
   busy: boolean;
   error: string;
+  initialValues?: ActionValues;
   mode: ActionMode;
   onClose: () => void;
   onSubmit: (values: ActionValues) => Promise<void>;
 }
 
-const actionCopy: Record<
-  ActionMode,
+interface ActionCopy {
+  title: string;
+  description: string;
+  submit: string;
+  fields: ActionField[];
+}
+
+const gatewayFields: ActionField[] = [
   {
-    title: string;
-    description: string;
-    submit: string;
-    fields: Array<
-      | {
-          kind: "input";
-          label: string;
-          name: string;
-          placeholder: string;
-          help?: string;
-          required?: boolean;
-          span?: "full";
-          type?: string;
-        }
-      | {
-          kind: "select";
-          label: string;
-          name: string;
-          options: SelectOption[];
-          help?: string;
-          required?: boolean;
-          span?: "full";
-        }
-    >;
-  }
-> = {
+    kind: "input",
+    label: "Route",
+    name: "route",
+    placeholder: "/api/v1/agents/**",
+    help: "对外暴露的 API 路径，支持 V1 通配符。",
+    required: true,
+    span: "full",
+  },
+  {
+    kind: "input",
+    label: "Upstream",
+    name: "upstream",
+    placeholder: "https://primary.internal, https://fallback.internal",
+    help: "一个或多个 http/https 上游，多个候选用逗号、分号或换行分隔。",
+    required: true,
+    span: "full",
+  },
+  {
+    kind: "input",
+    label: "Limit",
+    name: "limit",
+    placeholder: "600/min",
+    required: true,
+  },
+  {
+    kind: "select",
+    label: "Strategy",
+    name: "strategy",
+    options: [
+      { label: "Ordered · 主上游优先", value: "ordered" },
+      { label: "Round robin · 轮询", value: "round_robin" },
+      { label: "Weighted · 权重", value: "weighted" },
+    ],
+    required: true,
+  },
+  {
+    kind: "input",
+    label: "Weights",
+    name: "upstreamWeights",
+    placeholder: "https://primary.internal=80, https://fallback.internal=20",
+    help: "仅 Weighted 策略使用；key 必须和 Upstream 候选完全一致。",
+    span: "full",
+  },
+  {
+    kind: "input",
+    label: "Canary Header",
+    name: "canaryHeader",
+    placeholder: "X-Release-Cohort",
+    help: "填写后，命中该 header 的请求会优先走 Canary Upstream。",
+  },
+  {
+    kind: "input",
+    label: "Canary Value",
+    name: "canaryValue",
+    placeholder: "beta",
+    help: "可选；留空表示 header 非空即可命中。",
+  },
+  {
+    kind: "input",
+    label: "Canary Upstream",
+    name: "canaryUpstream",
+    placeholder: "https://canary.internal",
+    help: "启用灰度时必填，必须是可代理的 http/https 地址。",
+    span: "full",
+  },
+];
+
+const actionCopy: Record<ActionMode, ActionCopy> = {
   iam: {
     title: "邀请用户",
     description: "创建一个平台用户，后续会进入 API Key、角色和凭据配置流程。",
@@ -77,74 +147,13 @@ const actionCopy: Record<
     title: "新增路由",
     description: "创建一条统一入口路由，并同时声明负载策略、权重和灰度规则。",
     submit: "创建路由",
-    fields: [
-      {
-        kind: "input",
-        label: "Route",
-        name: "route",
-        placeholder: "/api/v1/agents/**",
-        help: "对外暴露的 API 路径，支持 V1 通配符。",
-        required: true,
-        span: "full",
-      },
-      {
-        kind: "input",
-        label: "Upstream",
-        name: "upstream",
-        placeholder: "https://primary.internal, https://fallback.internal",
-        help: "一个或多个 http/https 上游，多个候选用逗号、分号或换行分隔。",
-        required: true,
-        span: "full",
-      },
-      {
-        kind: "input",
-        label: "Limit",
-        name: "limit",
-        placeholder: "600/min",
-        required: true,
-      },
-      {
-        kind: "select",
-        label: "Strategy",
-        name: "strategy",
-        options: [
-          { label: "Ordered · 主上游优先", value: "ordered" },
-          { label: "Round robin · 轮询", value: "round_robin" },
-          { label: "Weighted · 权重", value: "weighted" },
-        ],
-        required: true,
-      },
-      {
-        kind: "input",
-        label: "Weights",
-        name: "upstreamWeights",
-        placeholder: "https://primary.internal=80, https://fallback.internal=20",
-        help: "仅 Weighted 策略使用；key 必须和 Upstream 候选完全一致。",
-        span: "full",
-      },
-      {
-        kind: "input",
-        label: "Canary Header",
-        name: "canaryHeader",
-        placeholder: "X-Release-Cohort",
-        help: "填写后，命中该 header 的请求会优先走 Canary Upstream。",
-      },
-      {
-        kind: "input",
-        label: "Canary Value",
-        name: "canaryValue",
-        placeholder: "beta",
-        help: "可选；留空表示 header 非空即可命中。",
-      },
-      {
-        kind: "input",
-        label: "Canary Upstream",
-        name: "canaryUpstream",
-        placeholder: "https://canary.internal",
-        help: "启用灰度时必填，必须是可代理的 http/https 地址。",
-        span: "full",
-      },
-    ],
+    fields: gatewayFields,
+  },
+  "gateway-edit": {
+    title: "编辑路由策略",
+    description: "调整负载策略、权重和灰度规则；保存后会回到 Draft，确认后再发布。",
+    submit: "保存策略",
+    fields: gatewayFields,
   },
   quota: {
     title: "新增套餐",
@@ -219,8 +228,9 @@ const actionCopy: Record<
   },
 };
 
-export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDialogProps) {
+export function ActionDialog({ busy, error, initialValues = {}, mode, onClose, onSubmit }: ActionDialogProps) {
   const copy = actionCopy[mode];
+  const layoutMode = mode === "gateway-edit" ? "gateway" : mode;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -251,7 +261,7 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
         aria-describedby="action-dialog-description"
         aria-labelledby="action-dialog-title"
         aria-modal="true"
-        className={`action-dialog action-dialog--${mode}`}
+        className={`action-dialog action-dialog--${layoutMode}`}
         role="dialog"
       >
         <header>
@@ -265,20 +275,21 @@ export function ActionDialog({ busy, error, mode, onClose, onSubmit }: ActionDia
           </button>
         </header>
 
-        <form aria-busy={busy} className={`action-form action-form--${mode}`} onSubmit={handleSubmit}>
+        <form aria-busy={busy} className={`action-form action-form--${layoutMode}`} onSubmit={handleSubmit}>
           {copy.fields.map((field, index) => (
             <label className={field.span === "full" ? "action-form__field action-form__field--full" : "action-form__field"} key={field.name}>
               <span>{field.label}</span>
               {field.kind === "input" ? (
                 <input
                   autoFocus={index === 0}
+                  defaultValue={initialValues[field.name] || ""}
                   name={field.name}
                   placeholder={field.placeholder}
                   required={field.required}
                   type={field.type || "text"}
                 />
               ) : (
-                <select autoFocus={index === 0} name={field.name} required={field.required}>
+                <select autoFocus={index === 0} defaultValue={initialValues[field.name] || ""} name={field.name} required={field.required}>
                   {field.options.map((option) => (
                     <option key={typeof option === "string" ? option : option.value} value={typeof option === "string" ? option : option.value}>
                       {typeof option === "string" ? option : option.label}

@@ -5,6 +5,7 @@ import {
   loadPlatformSnapshot,
   loginSession,
   logoutSession,
+  updateRoute,
   type AuthSession,
   type PlatformSnapshot,
 } from "./api";
@@ -128,5 +129,35 @@ describe("console API client", () => {
     expect(fetchMock.mock.calls[2][1]?.headers).toMatchObject({
       Authorization: "Bearer sess_test",
     });
+  });
+
+  it("updates a gateway route policy", async () => {
+    const route = {
+      id: "route_llm",
+      route: "/api/v1/llm/**",
+      upstream: "gateway-api",
+      auth: "API Key",
+      limit: "900/min",
+      strategy: "ordered" as const,
+      status: "Draft",
+      updatedAt: "2026-06-27T00:00:00Z",
+    };
+    const input = {
+      id: "route_llm",
+      route: "/api/v1/llm/**",
+      upstream: "gateway-api",
+      limit: "900/min",
+      strategy: "ordered" as const,
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ success: true, data: route }),
+    );
+
+    const result = await updateRoute(input, "developer");
+
+    expect(result.id).toBe("route_llm");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/routes/update");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
+    expect(fetchMock.mock.calls[0][1]?.body).toBe(JSON.stringify(input));
   });
 });

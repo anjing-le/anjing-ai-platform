@@ -65,6 +65,18 @@ type createRouteRequest struct {
 	CanaryUpstream  string         `json:"canaryUpstream,omitempty"`
 }
 
+type updateRouteRequest struct {
+	ID              string         `json:"id"`
+	Route           string         `json:"route"`
+	Upstream        string         `json:"upstream"`
+	Limit           string         `json:"limit"`
+	Strategy        string         `json:"strategy"`
+	UpstreamWeights map[string]int `json:"upstreamWeights,omitempty"`
+	CanaryHeader    string         `json:"canaryHeader,omitempty"`
+	CanaryValue     string         `json:"canaryValue,omitempty"`
+	CanaryUpstream  string         `json:"canaryUpstream,omitempty"`
+}
+
 func Register(mux *http.ServeMux, st *store.Store) {
 	RegisterWithOptions(mux, st, Options{})
 }
@@ -100,6 +112,7 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 		httpjson.OK(w, map[string]string{"service": "gateway-api", "status": "ok"})
 	})
 	mux.HandleFunc("/api/gateway/routes", routesHandler(repos.Routes))
+	mux.HandleFunc("/api/gateway/routes/update", updateRouteHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/routes/publish", publishRouteHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/routes/health-check", routeHealthCheckHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/routes/preflight", routePreflightHandler(repos.Routes))
@@ -168,6 +181,71 @@ func routesHandler(routes RouteRepository) http.HandlerFunc {
 	}
 }
 
+func updateRouteHandler(routes RouteRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req updateRouteRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		req.ID = strings.TrimSpace(req.ID)
+		req.Route = strings.TrimSpace(req.Route)
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+		if req.Route == "" {
+			httpjson.BadRequest(w, "route is required")
+			return
+		}
+		if req.Upstream == "" {
+			req.Upstream = "gateway-api"
+		}
+		if req.Limit == "" {
+			req.Limit = "600/min"
+		}
+
+		strategy, weights, canaryHeader, canaryValue, canaryUpstream, err := normalizeGatewayRoutePolicy(
+			req.Upstream,
+			req.Strategy,
+			req.UpstreamWeights,
+			req.CanaryHeader,
+			req.CanaryValue,
+			req.CanaryUpstream,
+		)
+		if err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+
+		route, ok, err := routes.UpdateRoute(r.Context(), UpdateRouteInput{
+			ID:              req.ID,
+			Route:           req.Route,
+			Upstream:        req.Upstream,
+			Limit:           req.Limit,
+			Strategy:        strategy,
+			UpstreamWeights: weights,
+			CanaryHeader:    canaryHeader,
+			CanaryValue:     canaryValue,
+			CanaryUpstream:  canaryUpstream,
+		})
+		if err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "route not found")
+			return
+		}
+
+		httpjson.OK(w, route)
+	}
+}
+
 func publishRouteHandler(routes RouteRepository) http.HandlerFunc {
 	type publishRouteRequest struct {
 		ID string `json:"id"`
@@ -203,18 +281,29 @@ func publishRouteHandler(routes RouteRepository) http.HandlerFunc {
 }
 
 func normalizeGatewayRouteCreatePolicy(req createRouteRequest) (string, map[string]int, string, string, string, error) {
-	strategy, err := normalizeGatewayProxyStrategy(req.Strategy)
+	return normalizeGatewayRoutePolicy(
+		req.Upstream,
+		req.Strategy,
+		req.UpstreamWeights,
+		req.CanaryHeader,
+		req.CanaryValue,
+		req.CanaryUpstream,
+	)
+}
+
+func normalizeGatewayRoutePolicy(upstream string, rawStrategy string, rawWeights map[string]int, rawCanaryHeader string, rawCanaryValue string, rawCanaryUpstream string) (string, map[string]int, string, string, string, error) {
+	strategy, err := normalizeGatewayProxyStrategy(rawStrategy)
 	if err != nil {
 		return "", nil, "", "", "", err
 	}
-	weights, err := validateGatewayProxyWeights(splitGatewayProxyUpstreams(req.Upstream), req.UpstreamWeights)
+	weights, err := validateGatewayProxyWeights(splitGatewayProxyUpstreams(upstream), rawWeights)
 	if err != nil {
 		return "", nil, "", "", "", err
 	}
 
-	canaryHeader := strings.TrimSpace(req.CanaryHeader)
-	canaryValue := strings.TrimSpace(req.CanaryValue)
-	canaryUpstream := strings.TrimSpace(req.CanaryUpstream)
+	canaryHeader := strings.TrimSpace(rawCanaryHeader)
+	canaryValue := strings.TrimSpace(rawCanaryValue)
+	canaryUpstream := strings.TrimSpace(rawCanaryUpstream)
 	if canaryHeader == "" && canaryValue == "" && canaryUpstream == "" {
 		return strategy, weights, "", "", "", nil
 	}

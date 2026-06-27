@@ -365,6 +365,10 @@ export interface CreateRouteInput {
   canaryUpstream?: string;
 }
 
+export interface UpdateRouteInput extends CreateRouteInput {
+  id: string;
+}
+
 export interface CreateModelRouteInput {
   alias: string;
   scenario: string;
@@ -533,6 +537,13 @@ export function rotateApplicationKey(id: string, role?: RoleId): Promise<Applica
 
 export function createRoute(input: CreateRouteInput, role?: RoleId): Promise<GatewayRoute> {
   return requestJson<GatewayRoute>("/api/gateway/routes", {
+    method: "POST",
+    body: JSON.stringify(input),
+  }, role);
+}
+
+export function updateRoute(input: UpdateRouteInput, role?: RoleId): Promise<GatewayRoute> {
+  return requestJson<GatewayRoute>("/api/gateway/routes/update", {
     method: "POST",
     body: JSON.stringify(input),
   }, role);

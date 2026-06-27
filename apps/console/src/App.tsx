@@ -36,6 +36,7 @@ import {
   rotateCredential,
   revokeAPIKey,
   rotateApplicationKey,
+  updateRoute,
   type APIKey,
   type Application,
   type BudgetAlert,
@@ -60,7 +61,7 @@ import {
   visibleNavItems,
 } from "./lib/access";
 import { hydrateHomeMetrics, hydrateModulePages, hydrateTodos } from "./lib/hydrate";
-import { buildGatewayRouteCreateInput } from "./lib/routePolicy";
+import { buildGatewayRouteCreateInput, buildGatewayRouteUpdateInput, gatewayRouteToActionValues } from "./lib/routePolicy";
 import type {
   ConsoleRoute,
   MetricItem,
@@ -243,6 +244,7 @@ function App() {
   const [publishingModelRouteId, setPublishingModelRouteId] = useState("");
   const [publishingSkillId, setPublishingSkillId] = useState("");
   const [selectedRouteId, setSelectedRouteId] = useState("");
+  const [editingRoute, setEditingRoute] = useState<GatewayRoute | null>(null);
   const [selectedModelRouteId, setSelectedModelRouteId] = useState("");
   const [selectedSkillId, setSelectedSkillId] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState("");
@@ -365,6 +367,7 @@ function App() {
   async function handleModuleAction(pageId: ConsoleRoute) {
     setNotice("");
     setActionError("");
+    setEditingRoute(null);
 
     if (!canRunPrimaryAction(role, pageId)) {
       setNotice(primaryActionHint(role, pageId));
@@ -419,6 +422,16 @@ function App() {
         setNotice(`已创建路由：${route.route}`);
       }
 
+      if (actionMode === "gateway-edit") {
+        if (!editingRoute) {
+          throw new Error("请选择要编辑的路由。");
+        }
+
+        const route = await updateRoute(buildGatewayRouteUpdateInput(editingRoute.id, values), role);
+        setSelectedRouteId(route.id);
+        setNotice(`已保存路由策略：${route.route}`);
+      }
+
       if (actionMode === "quota") {
         const plan = await createPlan(
           {
@@ -448,6 +461,7 @@ function App() {
       }
 
       setActionMode(null);
+      setEditingRoute(null);
       await refreshSnapshot();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "操作失败");
@@ -604,6 +618,19 @@ function App() {
       tone: "warning",
       type: "route-publish",
     });
+  }
+
+  function handleRouteEdit(route: GatewayRoute) {
+    setNotice("");
+    setActionError("");
+
+    if (!canRunPrimaryAction(role, "gateway")) {
+      setNotice(primaryActionHint(role, "gateway"));
+      return;
+    }
+
+    setEditingRoute(route);
+    setActionMode("gateway-edit");
   }
 
   async function runRoutePublish(id: string) {
@@ -940,6 +967,7 @@ function App() {
             onModelRoutePublish={handleModelRoutePublish}
             onBudgetAlertResolve={handleBudgetAlertResolve}
             onPlanActivate={handlePlanActivate}
+            onRouteEdit={handleRouteEdit}
             onRoutePublish={handleRoutePublish}
             onSkillBindingCreate={handleSkillBindingCreate}
             onSkillBindingPublish={handleSkillBindingPublish}
@@ -974,8 +1002,12 @@ function App() {
         <ActionDialog
           busy={actionBusy}
           error={actionError}
+          initialValues={editingRoute ? gatewayRouteToActionValues(editingRoute) : undefined}
           mode={actionMode}
-          onClose={() => setActionMode(null)}
+          onClose={() => {
+            setActionMode(null);
+            setEditingRoute(null);
+          }}
           onSubmit={handleActionSubmit}
         />
       ) : null}
@@ -1672,6 +1704,7 @@ function ModulePage({
   onModelRoutePublish,
   onPlanActivate,
   onPrimaryAction,
+  onRouteEdit,
   onRoutePublish,
   onSkillBindingCreate,
   onSkillBindingPublish,
@@ -1710,6 +1743,7 @@ function ModulePage({
   onModelRoutePublish: (id: string) => Promise<void>;
   onPlanActivate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
+  onRouteEdit: (route: GatewayRoute) => void;
   onRoutePublish: (id: string) => Promise<void>;
   onSkillBindingCreate: (input: CreateSkillBindingInput) => Promise<void>;
   onSkillBindingPublish: (id: string) => Promise<void>;
@@ -2549,6 +2583,7 @@ function ModulePage({
           ) : null}
           {page.id === "gateway" && activeTab === "API 路由" ? (
             <GatewayRoutePanel
+              onEdit={onRouteEdit}
               onPublish={onRoutePublish}
               publishing={publishingRouteId === selectedRoute?.id}
               route={selectedRoute}
@@ -3344,10 +3379,12 @@ function shortenUpstream(value: string) {
 }
 
 function GatewayRoutePanel({
+  onEdit,
   onPublish,
   publishing,
   route,
 }: {
+  onEdit: (route: GatewayRoute) => void;
   onPublish: (id: string) => Promise<void>;
   publishing: boolean;
   route?: GatewayRoute;
@@ -3409,6 +3446,10 @@ function GatewayRoutePanel({
       </div>
 
       <div className="application-actions">
+        <button aria-label={`编辑路由策略 ${route.route}`} className="button" onClick={() => onEdit(route)} type="button">
+          编辑策略
+          <ArrowRight aria-hidden="true" size={16} />
+        </button>
         <button
           aria-label={publishLabel}
           className="button button--primary"

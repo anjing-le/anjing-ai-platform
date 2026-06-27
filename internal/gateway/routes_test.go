@@ -153,6 +153,78 @@ func TestCreateRoutePersistsRoutingPolicy(t *testing.T) {
 	}
 }
 
+func TestUpdateRouteReopensDraftWithRoutingPolicy(t *testing.T) {
+	st := store.NewSeedStore()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer primary.Close()
+	fallback := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer fallback.Close()
+	canary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer canary.Close()
+
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	createBody := bytes.NewBufferString(`{"route":"/api/v1/policy/**","upstream":"` + primary.URL + `","limit":"300/min"}`)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/gateway/routes", createBody)
+	createReq.Header.Set("Content-Type", "application/json")
+	createRec := httptest.NewRecorder()
+
+	mux.ServeHTTP(createRec, createReq)
+
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", createRec.Code, createRec.Body.String())
+	}
+
+	var created struct {
+		Success bool               `json:"success"`
+		Data    store.GatewayRoute `json:"data"`
+	}
+	if err := json.NewDecoder(createRec.Body).Decode(&created); err != nil {
+		t.Fatalf("decode create response: %v", err)
+	}
+	if _, ok := st.PublishRoute(created.Data.ID); !ok {
+		t.Fatalf("expected seed route to publish")
+	}
+
+	updateBody := bytes.NewBufferString(`{"id":"` + created.Data.ID + `","route":"/api/v1/policy-edited/**","upstream":"` + primary.URL + `,` + fallback.URL + `","limit":"450/min","strategy":"weighted","upstreamWeights":{"` + primary.URL + `":30,"` + fallback.URL + `":70},"canaryHeader":"X-Cohort","canaryValue":"beta","canaryUpstream":"` + canary.URL + `"}`)
+	updateReq := httptest.NewRequest(http.MethodPost, "/api/gateway/routes/update", updateBody)
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateRec := httptest.NewRecorder()
+
+	mux.ServeHTTP(updateRec, updateReq)
+
+	if updateRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", updateRec.Code, updateRec.Body.String())
+	}
+
+	var updated struct {
+		Success bool               `json:"success"`
+		Data    store.GatewayRoute `json:"data"`
+	}
+	if err := json.NewDecoder(updateRec.Body).Decode(&updated); err != nil {
+		t.Fatalf("decode update response: %v", err)
+	}
+	if !updated.Success || updated.Data.Status != "Draft" {
+		t.Fatalf("expected updated route to return to draft, got %+v", updated)
+	}
+	if updated.Data.Route != "/api/v1/policy-edited/**" || updated.Data.Limit != "450/min" || updated.Data.Strategy != "weighted" {
+		t.Fatalf("expected route policy fields to update, got %+v", updated.Data)
+	}
+	if updated.Data.UpstreamWeights[primary.URL] != 30 || updated.Data.UpstreamWeights[fallback.URL] != 70 {
+		t.Fatalf("expected updated weights, got %+v", updated.Data.UpstreamWeights)
+	}
+	if updated.Data.CanaryHeader != "X-Cohort" || updated.Data.CanaryValue != "beta" || updated.Data.CanaryUpstream != canary.URL {
+		t.Fatalf("expected updated canary policy, got %+v", updated.Data)
+	}
+}
+
 func TestGatewayRouteHealthCheckReportsHealthy(t *testing.T) {
 	st := store.NewSeedStore()
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

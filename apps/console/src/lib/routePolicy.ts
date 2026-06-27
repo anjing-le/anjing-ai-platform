@@ -1,9 +1,43 @@
-import type { CreateRouteInput, GatewayProxyStrategy } from "./api";
+import type { CreateRouteInput, GatewayProxyStrategy, GatewayRoute, UpdateRouteInput } from "./api";
 
 const routeStrategies: GatewayProxyStrategy[] = ["ordered", "round_robin", "weighted"];
 const maxRouteWeight = 10000;
 
 export function buildGatewayRouteCreateInput(values: Record<string, string>): CreateRouteInput {
+  return buildGatewayRoutePolicyInput(values);
+}
+
+export function buildGatewayRouteUpdateInput(id: string, values: Record<string, string>): UpdateRouteInput {
+  return {
+    id: requiredValue(id, "Route ID"),
+    ...buildGatewayRoutePolicyInput(values),
+  };
+}
+
+export function gatewayRouteToActionValues(route: GatewayRoute): Record<string, string> {
+  return {
+    route: route.route,
+    upstream: route.upstream,
+    limit: route.limit,
+    strategy: route.strategy || "ordered",
+    upstreamWeights: stringifyGatewayRouteWeights(route.upstreamWeights),
+    canaryHeader: route.canaryHeader || "",
+    canaryValue: route.canaryValue || "",
+    canaryUpstream: route.canaryUpstream || "",
+  };
+}
+
+export function stringifyGatewayRouteWeights(weights?: Record<string, number>): string {
+  if (!weights || !Object.keys(weights).length) {
+    return "";
+  }
+
+  return Object.entries(weights)
+    .map(([upstream, weight]) => `${upstream}=${weight}`)
+    .join(", ");
+}
+
+function buildGatewayRoutePolicyInput(values: Record<string, string>): CreateRouteInput {
   const route = requiredValue(values.route, "Route");
   const upstream = requiredValue(values.upstream, "Upstream");
   const limit = requiredValue(values.limit, "Limit");

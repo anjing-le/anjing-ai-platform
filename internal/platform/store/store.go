@@ -113,6 +113,18 @@ type GatewayRouteCreateInput struct {
 	CanaryUpstream  string
 }
 
+type GatewayRouteUpdateInput struct {
+	ID              string
+	Route           string
+	Upstream        string
+	Limit           string
+	Strategy        string
+	UpstreamWeights map[string]int
+	CanaryHeader    string
+	CanaryValue     string
+	CanaryUpstream  string
+}
+
 type ModelRoute struct {
 	ID        string `json:"id"`
 	Alias     string `json:"alias"`
@@ -603,6 +615,39 @@ func (s *Store) CreateRouteWithPolicy(input GatewayRouteCreateInput) GatewayRout
 	}}, s.requestLogs...)
 	s.addAuditLocked("网关与模型", "create route", input.Route, "Success")
 	return cloneGatewayRoute(item)
+}
+
+func (s *Store) UpdateRouteWithPolicy(input GatewayRouteUpdateInput) (GatewayRoute, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.routes {
+		if s.routes[index].ID != input.ID {
+			continue
+		}
+
+		s.routes[index].Route = input.Route
+		s.routes[index].Upstream = input.Upstream
+		s.routes[index].Limit = input.Limit
+		s.routes[index].Strategy = input.Strategy
+		s.routes[index].UpstreamWeights = cloneIntMap(input.UpstreamWeights)
+		s.routes[index].CanaryHeader = input.CanaryHeader
+		s.routes[index].CanaryValue = input.CanaryValue
+		s.routes[index].CanaryUpstream = input.CanaryUpstream
+		s.routes[index].Status = "Draft"
+		s.routes[index].UpdatedAt = nowLabel()
+		s.requestLogs = append([]RequestLog{{
+			ID:        nextID("req"),
+			Request:   "UPDATE " + input.Route,
+			Consumer:  input.Upstream,
+			Latency:   "31ms",
+			Result:    "200",
+			Status:    "Success",
+			CreatedAt: nowLabel(),
+		}}, s.requestLogs...)
+		s.addAuditLocked("网关与模型", "update route", input.Route, "Success")
+		return cloneGatewayRoute(s.routes[index]), true
+	}
+	return GatewayRoute{}, false
 }
 
 func (s *Store) PublishRoute(id string) (GatewayRoute, bool) {

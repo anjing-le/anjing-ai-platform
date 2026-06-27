@@ -24,6 +24,18 @@ type CreateRouteInput struct {
 	CanaryUpstream  string
 }
 
+type UpdateRouteInput struct {
+	ID              string
+	Route           string
+	Upstream        string
+	Limit           string
+	Strategy        string
+	UpstreamWeights map[string]int
+	CanaryHeader    string
+	CanaryValue     string
+	CanaryUpstream  string
+}
+
 type CreateModelRouteInput struct {
 	Alias    string
 	Scenario string
@@ -77,6 +89,7 @@ type RequestLogQuery struct {
 type RouteRepository interface {
 	ListRoutes(ctx context.Context) ([]store.GatewayRoute, error)
 	CreateRoute(ctx context.Context, input CreateRouteInput) (store.GatewayRoute, error)
+	UpdateRoute(ctx context.Context, input UpdateRouteInput) (store.GatewayRoute, bool, error)
 	PublishRoute(ctx context.Context, id string) (store.GatewayRoute, bool, error)
 }
 
@@ -150,6 +163,21 @@ func (repo MemoryRouteRepository) CreateRoute(_ context.Context, input CreateRou
 		CanaryValue:     input.CanaryValue,
 		CanaryUpstream:  input.CanaryUpstream,
 	}), nil
+}
+
+func (repo MemoryRouteRepository) UpdateRoute(_ context.Context, input UpdateRouteInput) (store.GatewayRoute, bool, error) {
+	route, ok := repo.store.UpdateRouteWithPolicy(store.GatewayRouteUpdateInput{
+		ID:              input.ID,
+		Route:           input.Route,
+		Upstream:        input.Upstream,
+		Limit:           input.Limit,
+		Strategy:        input.Strategy,
+		UpstreamWeights: input.UpstreamWeights,
+		CanaryHeader:    input.CanaryHeader,
+		CanaryValue:     input.CanaryValue,
+		CanaryUpstream:  input.CanaryUpstream,
+	})
+	return route, ok, nil
 }
 
 func (repo MemoryRouteRepository) PublishRoute(_ context.Context, id string) (store.GatewayRoute, bool, error) {
@@ -360,6 +388,71 @@ func (repo PostgresRouteRepository) CreateRoute(ctx context.Context, input Creat
 
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil
+}
+
+func (repo PostgresRouteRepository) UpdateRoute(ctx context.Context, input UpdateRouteInput) (store.GatewayRoute, bool, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("begin update gateway route: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	weightsJSON, err := json.Marshal(input.UpstreamWeights)
+	if err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("marshal gateway route upstream weights: %w", err)
+	}
+	if len(input.UpstreamWeights) == 0 {
+		weightsJSON = []byte("{}")
+	}
+
+	rows, err := tx.Query(ctx, `
+		update gateway_routes
+		set route = $2,
+		    upstream = $3,
+		    rate_limit = $4,
+		    strategy = $5,
+		    upstream_weights = $6,
+		    canary_header = $7,
+		    canary_value = $8,
+		    canary_upstream = $9,
+		    status = 'Draft',
+		    updated_at = now()
+		where id = $1
+		returning id, route, upstream, auth, rate_limit, strategy, upstream_weights, canary_header, canary_value, canary_upstream, status, updated_at
+	`, input.ID, input.Route, input.Upstream, input.Limit, input.Strategy, weightsJSON, input.CanaryHeader, input.CanaryValue, input.CanaryUpstream)
+	if err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("update gateway route: %w", err)
+	}
+	defer rows.Close()
+
+	route, err := pgx.CollectOneRow(rows, scanGatewayRoute)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.GatewayRoute{}, false, nil
+		}
+		return store.GatewayRoute{}, false, fmt.Errorf("collect updated gateway route: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "UPDATE "+route.Route, route.Upstream, "31ms", "200", "Success"); err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("insert gateway route update request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "update route", route.Route, "Success", nextID("req")); err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("insert gateway route update audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.GatewayRoute{}, false, fmt.Errorf("commit update gateway route: %w", err)
+	}
+
+	return route, true, nil
 }
 
 func (repo PostgresRouteRepository) PublishRoute(ctx context.Context, id string) (store.GatewayRoute, bool, error) {

@@ -56,6 +56,7 @@ x-anjing-service-boundaries:
     owner: gateway-api
     apiGroups:
       - /api/gateway/routes
+      - /api/gateway/routes/update
       - /api/gateway/routes/health-check
       - /api/gateway/routes/preflight
       - /api/gateway/model-routes
@@ -678,6 +679,39 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/routes/update:
+    post:
+      tags: [gateway]
+      operationId: updateGatewayRoute
+      summary: Update a gateway route draft.
+      description: Updates route policy fields and returns the route to Draft so it can be reviewed and published again.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGatewayRouteRequest"
+      responses:
+        "200":
+          description: Gateway route updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/GatewayRoute"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/gateway/routes/publish:
     post:
       tags: [gateway]
@@ -2141,6 +2175,38 @@ components:
       type: object
       required: [route]
       properties:
+        route:
+          type: string
+          examples: [/api/v1/llm/**]
+        upstream:
+          type: string
+          default: gateway-api
+          description: Primary upstream. Multiple candidates can be represented as a comma-separated http/https list in V1.
+        limit:
+          type: string
+          default: 600/min
+        strategy:
+          type: string
+          enum: [ordered, round_robin, weighted]
+          default: ordered
+        upstreamWeights:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 1
+            maximum: 10000
+        canaryHeader:
+          type: string
+        canaryValue:
+          type: string
+        canaryUpstream:
+          type: string
+    UpdateGatewayRouteRequest:
+      type: object
+      required: [id, route]
+      properties:
+        id:
+          type: string
         route:
           type: string
           examples: [/api/v1/llm/**]

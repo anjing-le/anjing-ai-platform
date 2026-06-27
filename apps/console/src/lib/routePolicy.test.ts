@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildGatewayRouteCreateInput, parseGatewayRouteWeights } from "./routePolicy";
+import {
+  buildGatewayRouteCreateInput,
+  buildGatewayRouteUpdateInput,
+  gatewayRouteToActionValues,
+  parseGatewayRouteWeights,
+} from "./routePolicy";
 
 describe("gateway route policy form", () => {
   it("builds an ordered route with required fields only", () => {
@@ -40,6 +45,54 @@ describe("gateway route policy form", () => {
         "https://fallback.example.com": 80,
       },
       canaryHeader: "X-Release-Cohort",
+      canaryValue: "beta",
+      canaryUpstream: "https://canary.example.com",
+    });
+  });
+
+  it("builds an update payload with a route id", () => {
+    expect(
+      buildGatewayRouteUpdateInput(" route_123 ", {
+        route: " /api/v1/llm/** ",
+        upstream: " gateway-api ",
+        limit: " 900/min ",
+        strategy: "ordered",
+      }),
+    ).toEqual({
+      id: "route_123",
+      route: "/api/v1/llm/**",
+      upstream: "gateway-api",
+      limit: "900/min",
+      strategy: "ordered",
+    });
+  });
+
+  it("hydrates action form values from an existing route", () => {
+    expect(
+      gatewayRouteToActionValues({
+        id: "route_llm",
+        route: "/api/v1/llm/**",
+        upstream: "gateway-a,gateway-b",
+        auth: "API Key",
+        limit: "600/min",
+        strategy: "weighted",
+        upstreamWeights: {
+          "gateway-a": 80,
+          "gateway-b": 20,
+        },
+        canaryHeader: "X-Cohort",
+        canaryValue: "beta",
+        canaryUpstream: "https://canary.example.com",
+        status: "Draft",
+        updatedAt: "now",
+      }),
+    ).toEqual({
+      route: "/api/v1/llm/**",
+      upstream: "gateway-a,gateway-b",
+      limit: "600/min",
+      strategy: "weighted",
+      upstreamWeights: "gateway-a=80, gateway-b=20",
+      canaryHeader: "X-Cohort",
       canaryValue: "beta",
       canaryUpstream: "https://canary.example.com",
     });
