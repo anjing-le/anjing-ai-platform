@@ -11,7 +11,7 @@ Anjing AI Platform 的前端只保留一个正式后台入口：`apps/console`�
 - 用户与权限：用户、角色、API Key、应用接入和凭据引用。
 - 网关与模型：API 路由、模型路由、Skill 绑定、LLM 调用测试和请求日志。
 - 计费与配额：套餐、用量、预算告警和未来计费能力。
-- 帮助文档：Quickstart、API 示例、FAQ 和运行命令。
+- 帮助文档：Guides、API Examples、Deployment、Troubleshooting，覆盖接入指南、调用示例、部署说明和排障路径。
 
 根目录脚本 `pnpm dev:console`、`pnpm build:console`、`pnpm preview:console` 都必须通过 `--filter @anjing-ai-platform/console` 指向这个应用。
 
@@ -40,4 +40,3 @@ Anjing AI Platform 的前端只保留一个正式后台入口：`apps/console`�
 | `docs` | 全部角色 | `console-web` + module APIs |
 
 `llm`、`skill`、`credential`、`audit` 暂时不拆成独立导航入口。它们作为能力分别归入 `gateway`、`access` 和 `operations`，等真实业务使用边界稳定后再拆。
-

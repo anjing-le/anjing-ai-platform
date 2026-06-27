@@ -66,18 +66,36 @@ for (const staleDataCopy of [
   }
 }
 
-for (const localizedDataCopy of ["快速接入、API 参考", "负责人", "模型别名", "用量 / 审计", "按项目", "必须带标签", "网关端点", "客户端示例"]) {
+for (const localizedDataCopy of [
+  "Guides",
+  "API Examples",
+  "Deployment",
+  "Troubleshooting",
+  "接入指南",
+  "创建接入应用",
+  "负责人",
+  "模型别名",
+  "用量 / 审计",
+  "按项目",
+  "必须带标签",
+]) {
   if (!dataSource.includes(localizedDataCopy) && !appSource.includes(localizedDataCopy)) {
     errors.push(`Console module data must keep localized enterprise labels: ${localizedDataCopy}`);
   }
 }
 
-if (dataSource.includes('tabs: ["Quickstart"') || dataSource.includes('eyebrow: "Quickstart"')) {
-  errors.push("Console docs module must expose 快速接入 instead of Quickstart.");
+if (!dataSource.includes('tabs: ["Guides", "API Examples", "Deployment", "Troubleshooting"]')) {
+  errors.push("Console docs module must expose Guides, API Examples, Deployment and Troubleshooting tabs.");
 }
 
-if (dataSource.includes('"FAQ"') || appSource.includes('activeTab === "FAQ"') || appSource.includes('eyebrow: "FAQ"')) {
-  errors.push("Console docs module must expose 常见问题 instead of FAQ.");
+for (const staleDocsTab of ['"快速接入"', '"API 文档"', '"服务边界"', '"常见问题"', '"FAQ"']) {
+  if (
+    dataSource.includes(staleDocsTab) ||
+    appSource.includes(`activeTab === ${staleDocsTab}`) ||
+    appSource.includes(`eyebrow: ${staleDocsTab}`)
+  ) {
+    errors.push(`Console docs module must not keep the old docs tab ${staleDocsTab}.`);
+  }
 }
 
 for (const staleSnapshotCopy of [
@@ -98,7 +116,15 @@ for (const staleSnapshotCopy of [
   }
 }
 
-for (const localizedSnapshotCopy of ["Go API 在线", "生产环境", "可发起调用", "已签发密钥", 'eyebrow: "接入应用"', 'columns: ["应用", "负责人"']) {
+for (const localizedSnapshotCopy of [
+  "Go API 在线",
+  "Guides",
+  "API Examples",
+  "Deployment",
+  "Runbooks",
+  'eyebrow: "接入应用"',
+  'columns: ["应用", "负责人"',
+]) {
   if (!appSource.includes(localizedSnapshotCopy) && !hydrateSource.includes(localizedSnapshotCopy)) {
     errors.push(`Console live snapshot copy must keep localized labels: ${localizedSnapshotCopy}`);
   }
@@ -185,10 +211,27 @@ if (
 if (
   !appSource.includes("aria-label={`复制本地运行命令：pnpm dev:api，${runtimeCommandCopyLabel}`}") ||
   !appSource.includes("aria-label={`复制 ${item.label} 运行命令：${item.command}`}") ||
-  !appSource.includes("aria-label={`${copyLabel}：快速接入 curl 调用示例`}") ||
+  !appSource.includes("aria-label={`${copyLabel}：${ariaLabel}`}") ||
+  !appSource.includes('ariaLabel = "快速接入 curl 调用示例"') ||
   (appSource.match(/<Copy aria-hidden="true" size=\{14\}/g) || []).length < 3
 ) {
   errors.push("Console copy buttons must expose explicit labels and hide decorative copy icons.");
+}
+
+if (
+  !appSource.includes("function DocsReferencePanel") ||
+  !appSource.includes("function docsReferenceFor") ||
+  !appSource.includes('activeTab === "API Examples"') ||
+  !appSource.includes('activeTab === "Deployment"') ||
+  !appSource.includes('activeTab === "Troubleshooting"') ||
+  !appSource.includes("docs-reference-summary") ||
+  !appSource.includes("docs-reference-grid") ||
+  !appSource.includes("docs-path-list") ||
+  !appSource.includes("ariaLabel={reference.snippetAriaLabel}") ||
+  !styleSource.includes(".docs-reference-grid") ||
+  !styleSource.includes(".docs-path-list")
+) {
+  errors.push("Console docs center must expose enterprise documentation tabs with selectable reference details.");
 }
 
 if (

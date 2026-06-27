@@ -140,14 +140,15 @@ export function hydrateModulePages(
 
     if (page.id === "docs" && snapshot.applications) {
       const activeCount = snapshot.applications.filter((app) => app.status === "Active").length;
-      const productionCount = snapshot.applications.filter((app) => app.environment === "Production").length;
+      const apiExampleCount =
+        (snapshot.routes?.length || 0) + (snapshot.modelRoutes?.length || 0) + (snapshot.skills?.length || 0);
       return {
         ...page,
         metrics: [
-          metric("接入应用", `${snapshot.applications.length}`, "Go API 在线"),
-          metric("生产应用", `${productionCount}`, "生产环境"),
-          metric("运行中", `${activeCount}`, "可发起调用", activeCount > 0 ? "good" : "watch"),
-          metric("API Key", `${snapshot.apiKeys?.length || 0}`, "已签发密钥"),
+          metric("Guides", "4", `${snapshot.applications.length} 个接入应用`),
+          metric("API Examples", `${apiExampleCount}`, "routes / models / skills", apiExampleCount > 0 ? "good" : "watch"),
+          metric("Deployment", "3", "本地 / 单镜像 / Compose", "watch"),
+          metric("Runbooks", "4", `${activeCount} 个运行中应用`, activeCount > 0 ? "good" : "watch"),
         ],
         table: {
           ...page.table,

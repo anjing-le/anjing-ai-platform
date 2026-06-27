@@ -147,8 +147,8 @@ describe("console snapshot hydration", () => {
     expect(iam?.metrics[0]).toMatchObject({ label: "用户", value: "1" });
     expect(gateway?.table.rows[0].cells).toContain("/api/v1/agents/**");
     expect(quota?.metrics[2]).toMatchObject({ label: "预算告警", value: "1", tone: "warn" });
-    expect(docs?.metrics[0]).toMatchObject({ label: "接入应用", value: "2" });
-    expect(docs?.metrics[1]).toMatchObject({ label: "生产应用", value: "1" });
+    expect(docs?.metrics[0]).toMatchObject({ label: "Guides", value: "4" });
+    expect(docs?.metrics[1]).toMatchObject({ label: "API Examples", value: "1" });
     expect(docs?.table.rows[0].cells).toEqual([
       "customer-service-agent",
       "owner@anjing.ai",

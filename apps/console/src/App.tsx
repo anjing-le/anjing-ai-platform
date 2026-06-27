@@ -172,10 +172,10 @@ const moduleWorkflows: Record<Exclude<ConsoleRoute, "home">, WorkflowStep[]> = {
     { label: "预算", note: "处理预算告警", tab: "预算告警" },
   ],
   docs: [
-    { label: "开始", note: "创建接入应用", tab: "快速接入" },
-    { label: "边界", note: "确认服务归属", tab: "服务边界" },
-    { label: "参考", note: "查看 API 边界", tab: "API 文档" },
-    { label: "帮助", note: "排查常见问题", tab: "常见问题" },
+    { label: "Guides", note: "创建接入应用", tab: "Guides" },
+    { label: "API", note: "复制最小调用", tab: "API Examples" },
+    { label: "部署", note: "确认本地与镜像", tab: "Deployment" },
+    { label: "排障", note: "按症状处理", tab: "Troubleshooting" },
   ],
 };
 
@@ -1327,7 +1327,7 @@ function ConsoleHome({
     {
       href: canViewGateway ? routeHash.gateway : routeHash.docs,
       label: canViewGateway ? "服务边界" : "帮助中心",
-      note: canViewGateway ? "查看 API 路由、模型别名和 Skill 调用" : "查看可访问模块与常见问题",
+      note: canViewGateway ? "查看 API 路由、模型别名和 Skill 调用" : "查看可访问模块与排障路径",
       title: canViewGateway ? "网关与模型路由" : "接入文档",
     },
   ];
@@ -1931,75 +1931,75 @@ function ModulePage({
       };
     }
 
-    if (page.id === "docs" && activeTab === "API 文档") {
+    if (page.id === "docs" && activeTab === "API Examples") {
       const routeRows: TableRow[] = (snapshot?.routes || []).map((route) => ({
         id: `doc-route-${route.id}`,
-        cells: [route.route, "API Route", route.auth, route.limit, route.status],
+        cells: [route.route, "Gateway route", route.auth, `限流 ${route.limit}`, route.status],
         status: route.status,
         tone: toneForStatus(route.status),
       }));
       const modelRows: TableRow[] = (snapshot?.modelRoutes || []).map((route) => ({
         id: `doc-model-${route.id}`,
-        cells: [route.alias, "模型别名", route.primary, route.fallback, route.status],
+        cells: [route.alias, "Model route", "API Key", `${route.primary} -> ${route.fallback}`, route.status],
         status: route.status,
         tone: toneForStatus(route.status),
       }));
       const skillRows: TableRow[] = (snapshot?.skills || []).map((skill) => ({
         id: `doc-skill-${skill.id}`,
-        cells: [skill.route, `Skill ${skill.protocol}`, skill.name, skill.timeout, skill.status],
+        cells: [skill.route, `Skill ${skill.protocol}`, "API Key + RBAC", `${skill.name} · ${skill.timeout}`, skill.status],
         status: skill.status,
         tone: toneForStatus(skill.status),
       }));
 
       return {
-        eyebrow: "API 参考",
-        title: "接口参考",
-        columns: ["入口", "类型", "主配置", "治理", "状态"],
+        eyebrow: "API Examples",
+        title: "调用示例",
+        columns: ["入口", "类型", "认证", "请求要点", "状态"],
         rows: [...routeRows, ...modelRows, ...skillRows],
       };
     }
 
-    if (page.id === "docs" && activeTab === "服务边界") {
+    if (page.id === "docs" && activeTab === "Deployment") {
       return {
-        eyebrow: "服务边界",
-        title: "服务边界",
-        columns: ["后台入口", "归属服务", "API 分组", "职责范围", "状态"],
-        rows: consoleServiceMap.map((item) => ({
-          id: `service-${item.owner}`,
-          cells: [item.entry, item.owner, item.apis.join(" · "), item.scope, "已就绪"],
+        eyebrow: "Deployment",
+        title: "部署说明",
+        columns: ["组件", "启动命令", "健康检查", "职责", "状态"],
+        rows: backendPlan.map((item) => ({
+          id: `deploy-${item.label}`,
+          cells: [item.label, item.command, item.health, item.title, "已就绪"],
           status: "已就绪",
           tone: "good",
         })),
       };
     }
 
-    if (page.id === "docs" && activeTab === "常见问题") {
+    if (page.id === "docs" && activeTab === "Troubleshooting") {
       return {
-        eyebrow: "常见问题",
-        title: "常见问题",
-        columns: ["问题", "处理建议", "模块", "状态"],
+        eyebrow: "Troubleshooting",
+        title: "排障路径",
+        columns: ["症状", "处理路径", "关联模块", "状态"],
         rows: [
           {
-            id: "faq-auth",
-            cells: ["调用返回 401", "检查 API Key、scope 和 RBAC 角色", "用户与权限", "已就绪"],
+            id: "runbook-auth",
+            cells: ["调用返回 401 / 403", "检查 API Key、scope、RBAC 角色和应用状态", "用户与权限", "已就绪"],
             status: "已就绪",
             tone: "good",
           },
           {
-            id: "faq-route",
-            cells: ["模型别名不可用", "确认模型路由已发布且 fallback 可用", "网关与模型", "已就绪"],
+            id: "runbook-route",
+            cells: ["模型路由超时", "确认模型别名已发布、fallback 可用、供应商凭据未过期", "网关与模型", "已就绪"],
             status: "已就绪",
             tone: "good",
           },
           {
-            id: "faq-budget",
-            cells: ["预算接近阈值", "查看用量项目并处理预算告警", "计费与配额", "已就绪"],
+            id: "runbook-budget",
+            cells: ["预算或配额超限", "查看项目用量、套餐限制和预算告警处理状态", "计费与配额", "已就绪"],
             status: "已就绪",
             tone: "good",
           },
           {
-            id: "faq-sdk",
-            cells: ["SDK 如何接入", "先按 OpenAPI 调用，TypeScript / Go 示例保持同一认证边界", "帮助文档", "已就绪"],
+            id: "runbook-runtime",
+            cells: ["本地服务不可用", "按 Deployment 启动命令和 healthz 地址逐个确认", "帮助文档", "已就绪"],
             status: "已就绪",
             tone: "watch",
           },
@@ -2214,10 +2214,10 @@ function ModulePage({
   if (page.id === "iam" && activeTab === "角色权限") {
     selectedTableRowId = selectedRowId;
   }
-  if (page.id === "docs" && activeTab === "快速接入") {
+  if (page.id === "docs" && activeTab === "Guides") {
     selectedTableRowId = selectedApplication?.id;
   }
-  if (page.id === "docs" && activeTab !== "快速接入") {
+  if (page.id === "docs" && activeTab !== "Guides") {
     selectedTableRowId = selectedRowId;
   }
   if (page.id === "gateway" && activeTab === "API 路由") {
@@ -2561,7 +2561,7 @@ function ModulePage({
           {page.id === "quota" && activeTab === "用量" ? (
             <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
           ) : null}
-          {page.id === "docs" && activeTab === "快速接入" ? (
+          {page.id === "docs" && activeTab === "Guides" ? (
             <ApplicationJourneyPanel
               activating={activatingApplicationId === selectedApplication?.id}
               application={selectedApplication}
@@ -2572,8 +2572,8 @@ function ModulePage({
               snapshot={snapshot}
             />
           ) : null}
-          {page.id === "docs" && activeTab !== "快速接入" ? (
-            <SelectedRowPanel columns={tableView.columns} row={selectedGenericRow} title={tableView.title} />
+          {page.id === "docs" && activeTab !== "Guides" ? (
+            <DocsReferencePanel activeTab={activeTab} row={selectedGenericRow} />
           ) : null}
           {page.id === "overview" ? <OperationsSignalPanel snapshot={snapshot} /> : null}
           {page.panels.map((panel) => (
@@ -2798,6 +2798,190 @@ function SelectedRowPanel({
         <span>下一步</span>
         <strong>{nextStep}</strong>
         <p>先看状态，再进入对应模块处理配置、调用、预算或审计问题。</p>
+      </div>
+    </Panel>
+  );
+}
+
+interface DocsReferenceArticle {
+  label: string;
+  title: string;
+  note: string;
+}
+
+interface DocsReferencePath {
+  label: string;
+  title: string;
+  note: string;
+  status: string;
+}
+
+interface DocsReferenceConfig {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  focus: string;
+  outcome: string;
+  snippetEyebrow: string;
+  snippetTitle: string;
+  snippetAriaLabel: string;
+  snippet: string;
+  articles: DocsReferenceArticle[];
+  paths: DocsReferencePath[];
+}
+
+function normalizeDocsEndpoint(value?: string) {
+  if (!value?.startsWith("/")) {
+    return "/api/v1/llm/chat";
+  }
+
+  return value.replace("/**", "/chat").replace(/\*+/g, "chat");
+}
+
+function docsReferenceFor(activeTab: string, row?: TableRow): DocsReferenceConfig {
+  if (activeTab === "API Examples") {
+    const endpoint = normalizeDocsEndpoint(row?.cells[0]);
+    const entry = row?.cells[0] || endpoint;
+
+    return {
+      eyebrow: "API Examples",
+      title: "调用示例详情",
+      summary: "围绕当前入口给出最小请求、认证方式和验证路径，方便开发人员直接复制后接入。",
+      focus: entry,
+      outcome: row?.cells[3] || "确认请求格式、认证头和状态返回。",
+      snippetEyebrow: "API Examples",
+      snippetTitle: "最小调用示例",
+      snippetAriaLabel: "API Examples curl 调用示例",
+      snippet: [
+        `curl -X POST http://localhost:18080${endpoint} \\`,
+        '  -H "Authorization: Bearer ak_live_xxx" \\',
+        '  -H "Content-Type: application/json" \\',
+        '  -d \'{"appId":"app_demo","message":"hello"}\'',
+      ].join("\n"),
+      articles: [
+        { label: "Auth", title: "统一认证头", note: row?.cells[2] || "API Key + RBAC" },
+        { label: "Request", title: "请求体保持最小", note: "先验证 appId、message 和 route，再接业务字段。" },
+        { label: "Observe", title: "验证用量与日志", note: "成功后回到运营总览和计费模块确认链路。" },
+      ],
+      paths: [
+        { label: "01", title: "复制示例", note: "替换 API Key 与 appId。", status: "Ready" },
+        { label: "02", title: "发送请求", note: "先打本地 platform-all，再接入真实调用方。", status: "Ready" },
+        { label: "03", title: "查看结果", note: "确认请求日志、Token 用量和预算状态。", status: "Ready" },
+      ],
+    };
+  }
+
+  if (activeTab === "Deployment") {
+    const component = row?.cells[0] || "platform-all";
+    const command = row?.cells[1] || "pnpm dev:api";
+    const health = row?.cells[2] || "http://localhost:18080/healthz";
+
+    return {
+      eyebrow: "Deployment",
+      title: "部署说明详情",
+      summary: "把本地预览、单服务启动和健康检查放在同一视图，便于从前端直接对齐后端运行边界。",
+      focus: component,
+      outcome: row?.cells[3] || "确认服务启动命令、健康检查和职责范围。",
+      snippetEyebrow: "Deployment",
+      snippetTitle: "本地验证命令",
+      snippetAriaLabel: "Deployment 本地验证命令",
+      snippet: [command, `curl ${health}`, "pnpm verify:smoke-api", "pnpm verify:console-copy"].join("\n"),
+      articles: [
+        { label: "Local", title: "本地优先", note: "V1 先用轻量命令跑通控制台与 Go API。" },
+        { label: "Image", title: "单镜像预留", note: "成熟后按 control / gateway / billing / ops 拆容器。" },
+        { label: "Health", title: "健康检查", note: health },
+      ],
+      paths: [
+        { label: "01", title: "安装依赖", note: "pnpm install 后再启动服务。", status: "Ready" },
+        { label: "02", title: "启动组件", note: command, status: "Ready" },
+        { label: "03", title: "运行校验", note: "执行 smoke 和 copy gate，避免界面与服务边界漂移。", status: "Ready" },
+      ],
+    };
+  }
+
+  const symptom = row?.cells[0] || "调用失败";
+  const resolution = row?.cells[1] || "先确认认证、路由、预算和服务健康。";
+
+  return {
+    eyebrow: "Troubleshooting",
+    title: "排障路径详情",
+    summary: "按症状把排查顺序固定下来，优先定位认证、路由、预算和本地运行状态。",
+    focus: symptom,
+    outcome: resolution,
+    snippetEyebrow: "Troubleshooting",
+    snippetTitle: "排障检查命令",
+    snippetAriaLabel: "Troubleshooting 排障检查命令",
+    snippet: [
+      "curl http://localhost:18080/healthz",
+      "pnpm verify:smoke-api",
+      "pnpm verify:console-copy",
+      "pnpm verify",
+    ].join("\n"),
+    articles: [
+      { label: "Auth", title: "先看身份", note: "API Key、scope、RBAC 和应用状态决定是否能进网关。" },
+      { label: "Route", title: "再看路由", note: "确认 API 路由、模型别名、fallback 和供应商凭据。" },
+      { label: "Quota", title: "最后看预算", note: "预算、套餐和 Token 用量会影响真实调用结果。" },
+    ],
+    paths: [
+      { label: "01", title: "确认健康", note: "先确认 platform-all 或对应服务 healthz。", status: "Ready" },
+      { label: "02", title: "复现请求", note: "复制 API Examples 的最小调用。", status: "Ready" },
+      { label: "03", title: "回看日志", note: "在运营总览和请求日志中确认失败点。", status: "Ready" },
+    ],
+  };
+}
+
+function DocsReferencePanel({ activeTab, row }: { activeTab: string; row?: TableRow }) {
+  const reference = docsReferenceFor(activeTab, row);
+  const status = row?.status || "已就绪";
+  const tone: StatusTone = row?.tone || "good";
+
+  return (
+    <Panel eyebrow={reference.eyebrow} title={reference.title}>
+      <div className="docs-reference-summary">
+        <div>
+          <span>当前资料</span>
+          <strong>{reference.focus}</strong>
+          <p>{reference.summary}</p>
+        </div>
+        <StatusBadge tone={tone}>{status}</StatusBadge>
+      </div>
+
+      <div className="docs-reference-grid">
+        {reference.articles.map((article) => (
+          <article aria-label={`${article.label}：${article.title}，${article.note}`} key={article.label}>
+            <span>{article.label}</span>
+            <strong>{article.title}</strong>
+            <p>{article.note}</p>
+          </article>
+        ))}
+      </div>
+
+      <QuickstartSnippet
+        ariaLabel={reference.snippetAriaLabel}
+        curl={reference.snippet}
+        eyebrow={reference.snippetEyebrow}
+        title={reference.snippetTitle}
+      />
+
+      <div className="docs-path-list">
+        <article>
+          <span aria-hidden="true">00</span>
+          <div>
+            <strong>当前结论</strong>
+            <p>{reference.outcome}</p>
+          </div>
+          <StatusBadge tone={tone}>{status}</StatusBadge>
+        </article>
+        {reference.paths.map((path) => (
+          <article aria-label={`${path.title}：${path.status}，${path.note}`} key={path.label}>
+            <span aria-hidden="true">{path.label}</span>
+            <div>
+              <strong>{path.title}</strong>
+              <p>{path.note}</p>
+            </div>
+            <StatusBadge tone={toneForStatus(path.status)}>{path.status}</StatusBadge>
+          </article>
+        ))}
       </div>
     </Panel>
   );
@@ -3028,7 +3212,17 @@ function QuickstartChecklist({
   );
 }
 
-function QuickstartSnippet({ curl }: { curl: string }) {
+function QuickstartSnippet({
+  ariaLabel = "快速接入 curl 调用示例",
+  curl,
+  eyebrow = "快速接入",
+  title = "最小调用示例",
+}: {
+  ariaLabel?: string;
+  curl: string;
+  eyebrow?: string;
+  title?: string;
+}) {
   const [copyState, setCopyState] = useState<"idle" | "success" | "error">("idle");
 
   async function handleSnippetCopy() {
@@ -3047,11 +3241,11 @@ function QuickstartSnippet({ curl }: { curl: string }) {
   return (
     <div className="quickstart-snippet">
       <div>
-        <span>快速接入</span>
-        <strong>最小调用示例</strong>
+        <span>{eyebrow}</span>
+        <strong>{title}</strong>
       </div>
       <button
-        aria-label={`${copyLabel}：快速接入 curl 调用示例`}
+        aria-label={`${copyLabel}：${ariaLabel}`}
         className="text-command"
         onClick={() => void handleSnippetCopy()}
         type="button"
@@ -3066,7 +3260,7 @@ function QuickstartSnippet({ curl }: { curl: string }) {
           浏览器未允许剪贴板写入，请手动复制代码片段。
         </p>
       ) : null}
-      <pre aria-label="快速接入 curl 调用示例">
+      <pre aria-label={ariaLabel}>
         <code>{curl}</code>
       </pre>
     </div>

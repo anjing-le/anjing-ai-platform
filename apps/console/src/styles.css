@@ -2227,7 +2227,8 @@ tbody tr.is-selected td:first-child {
   line-height: 1.6;
 }
 
-.application-summary {
+.application-summary,
+.docs-reference-summary {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -2236,7 +2237,8 @@ tbody tr.is-selected td:first-child {
   border-bottom: 1px solid var(--line);
 }
 
-.application-summary div {
+.application-summary div,
+.docs-reference-summary div {
   display: grid;
   min-width: 0;
   gap: 7px;
@@ -2283,6 +2285,8 @@ tbody tr.is-selected td:first-child {
 .api-key-summary span,
 .credential-summary span,
 .selected-row-summary span,
+.docs-reference-summary span,
+.docs-reference-grid span,
 .selected-row-fields span,
 .selected-row-next span,
 .journey-list small,
@@ -2312,7 +2316,10 @@ tbody tr.is-selected td:first-child {
 .budget-alert-summary strong,
 .api-key-summary strong,
 .credential-summary strong,
-.selected-row-summary strong {
+.selected-row-summary strong,
+.docs-reference-summary strong,
+.docs-reference-grid strong,
+.docs-path-list strong {
   overflow-wrap: anywhere;
   font-size: 1.12rem;
   line-height: 1.18;
@@ -2328,6 +2335,9 @@ tbody tr.is-selected td:first-child {
 .api-key-summary p,
 .credential-summary p,
 .selected-row-summary p,
+.docs-reference-summary p,
+.docs-reference-grid p,
+.docs-path-list p,
 .selected-row-next p,
 .journey-list p,
 .application-usage p,
@@ -2438,6 +2448,68 @@ tbody tr.is-selected td:first-child {
 
 .selected-row-next strong {
   font-size: 1rem;
+}
+
+.docs-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+}
+
+.docs-reference-grid article {
+  display: grid;
+  gap: 7px;
+  min-height: 118px;
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+}
+
+.docs-reference-grid article:last-child {
+  border-right: 0;
+}
+
+.docs-reference-grid strong,
+.docs-path-list strong {
+  font-size: 0.94rem;
+  line-height: 1.3;
+}
+
+.docs-path-list {
+  display: grid;
+  background: #ffffff;
+}
+
+.docs-path-list article {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.docs-path-list article:last-child {
+  border-bottom: 0;
+}
+
+.docs-path-list article > span {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #f8f8f8;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.docs-path-list div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
 }
 
 .journey-list {
@@ -3031,6 +3103,19 @@ tbody tr.is-selected td:first-child {
     align-items: start;
   }
 
+  .docs-reference-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .docs-reference-grid article {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .docs-reference-grid article:last-child {
+    border-bottom: 0;
+  }
+
   .module-card,
   .architecture-card,
   .service-plan article {
@@ -3130,6 +3215,21 @@ tbody tr.is-selected td:first-child {
   .empty-panel {
     min-height: 108px;
     margin: 12px;
+  }
+
+  .application-summary,
+  .docs-reference-summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .docs-path-list article {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  .docs-path-list article .status {
+    grid-column: 2;
+    width: max-content;
   }
 
   .home-overview-strip {
