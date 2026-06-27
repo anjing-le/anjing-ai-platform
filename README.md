@@ -151,7 +151,24 @@ pnpm smoke:api:db
 ANJING_AUTH_MODE=enforced go run ./cmd/platform-all
 ```
 
-开发默认是 `permissive`，方便前端先跑通。强制模式下，控制台会按当前角色自动带 demo bearer token：
+开发默认是 `permissive`，方便前端先跑通。强制模式下，控制台可以先通过本地 passwordless login 获取签名 session token：
+
+```bash
+curl -X POST http://localhost:18080/api/control/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"lin.chen@anjing.ai"}'
+```
+
+后续请求使用返回的 token：
+
+```bash
+curl http://localhost:18080/api/control/auth/session \
+  -H 'Authorization: Bearer sess_xxx'
+```
+
+`ANJING_SESSION_SECRET` 可用于多 command 本地拆分启动时共享 session 签名密钥。OAuth、密码、MFA 和外部 IdP 会在后续迭代接入。
+
+控制台开发态仍保留 demo bearer token 作为兜底：
 
 ```text
 Administrator -> dev-admin-token

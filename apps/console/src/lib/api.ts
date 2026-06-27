@@ -211,6 +211,25 @@ export interface SnapshotResult {
   source: "aggregate" | "granular" | "none";
 }
 
+export type AccessRole = "Administrator" | "User" | "Developer" | "Operator";
+
+export interface AuthPrincipal {
+  subject: string;
+  role: AccessRole;
+  method: string;
+}
+
+export interface AuthSession {
+  token: string;
+  principal: AuthPrincipal;
+  expiresAt: string;
+}
+
+export interface AuthSessionStatus {
+  authenticated: boolean;
+  principal: AuthPrincipal;
+}
+
 export interface CreateUserInput {
   email: string;
   org: string;
@@ -259,6 +278,15 @@ const demoTokens: Record<RoleId, string> = {
   developer: "dev-developer-token",
   operator: "dev-operator-token",
 };
+
+const demoLogins: Record<RoleId, { email: string; role: AccessRole }> = {
+  admin: { email: "lin.chen@anjing.ai", role: "Administrator" },
+  user: { email: "demo-user@anjing.ai", role: "User" },
+  developer: { email: "dev-api@anjing.ai", role: "Developer" },
+  operator: { email: "ops-console@anjing.ai", role: "Operator" },
+};
+
+const sessionTokens = new Map<RoleId, string>();
 
 const endpoints = {
   dashboard: "/api/ops/dashboard",
@@ -318,6 +346,28 @@ export async function loadPlatformSnapshot(role?: RoleId): Promise<SnapshotResul
     failed,
     source: loaded > 0 ? "granular" : "none",
   };
+}
+
+export async function loginSession(role: RoleId): Promise<AuthSession> {
+  const session = await requestJson<AuthSession>("/api/control/auth/login", {
+    method: "POST",
+    body: JSON.stringify(demoLogins[role]),
+  });
+  sessionTokens.set(role, session.token);
+  return session;
+}
+
+export function loadCurrentSession(role?: RoleId): Promise<AuthSessionStatus> {
+  return requestJson<AuthSessionStatus>("/api/control/auth/session", undefined, role);
+}
+
+export async function logoutSession(role: RoleId): Promise<{ revoked: boolean }> {
+  const result = await requestJson<{ revoked: boolean }>("/api/control/auth/logout", {
+    method: "POST",
+    body: JSON.stringify({}),
+  }, role);
+  sessionTokens.delete(role);
+  return result;
 }
 
 export function metricFromApi(metric: ApiMetric, tone: StatusTone = "neutral"): MetricItem {
@@ -479,6 +529,6 @@ function authHeaders(role?: RoleId): Record<string, string> {
   }
 
   return {
-    Authorization: `Bearer ${demoTokens[role]}`,
+    Authorization: `Bearer ${sessionTokens.get(role) ?? demoTokens[role]}`,
   };
 }

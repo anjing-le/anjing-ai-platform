@@ -15,6 +15,7 @@ func main() {
 	cfg := config.Load("billing-service", "1822")
 	logger := service.NewLogger()
 	st := store.NewSeedStore()
+	sessions := service.NewSessionManager()
 	billingRegister := billing.Register
 
 	if cfg.DatabaseURL != "" {
@@ -33,7 +34,8 @@ func main() {
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st, billingRegister)
-	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+	authConfig := service.AccessConfigWithSessions(sessions)
+	if err := service.ListenWithAccessConfig(logger, cfg.Addr, cfg.ServiceName, mux, authConfig); err != nil {
 		service.Fatal(logger, "service stopped", err)
 	}
 }

@@ -15,7 +15,10 @@ func main() {
 	cfg := config.Load("control-api", "1820")
 	logger := service.NewLogger()
 	st := store.NewSeedStore()
-	controlRegister := control.Register
+	sessions := service.NewSessionManager()
+	controlRegister := func(mux *http.ServeMux, st *store.Store) {
+		control.RegisterWithOptions(mux, st, control.Options{Sessions: sessions})
+	}
 
 	if cfg.DatabaseURL != "" {
 		pool, err := db.Open(context.Background(), cfg.DatabaseURL)
@@ -30,12 +33,13 @@ func main() {
 		repos.APIKeys = control.NewPostgresAPIKeyRepository(pool)
 		repos.Credentials = control.NewPostgresCredentialRepository(pool)
 		controlRegister = func(mux *http.ServeMux, st *store.Store) {
-			control.RegisterWithRepositories(mux, st, repos)
+			control.RegisterWithRepositoriesAndOptions(mux, st, repos, control.Options{Sessions: sessions})
 		}
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st, controlRegister)
-	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+	authConfig := service.AccessConfigWithSessions(sessions)
+	if err := service.ListenWithAccessConfig(logger, cfg.Addr, cfg.ServiceName, mux, authConfig); err != nil {
 		service.Fatal(logger, "service stopped", err)
 	}
 }

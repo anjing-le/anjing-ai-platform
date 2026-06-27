@@ -6,7 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/access"
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/session"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
 
@@ -218,5 +221,83 @@ func TestAPIKeyCanBeRevoked(t *testing.T) {
 	}
 	if !revoked.Success || revoked.Data.Status != "Revoked" {
 		t.Fatalf("expected revoked api key, got %+v", revoked)
+	}
+}
+
+func TestAuthSessionLifecycle(t *testing.T) {
+	st := store.NewSeedStore()
+	sessions := session.NewManager("test-secret", time.Hour)
+	mux := http.NewServeMux()
+	RegisterWithOptions(mux, st, Options{Sessions: sessions})
+	handler := access.Middleware(access.Config{
+		Mode:        access.ModeEnforced,
+		BearerToken: map[string]access.Principal{},
+		APIKey:      map[string]access.Principal{},
+		Session:     sessions.Principal,
+	}, mux)
+
+	loginReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/control/auth/login",
+		bytes.NewBufferString(`{"email":"lin.chen@anjing.ai"}`),
+	)
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginRec := httptest.NewRecorder()
+	handler.ServeHTTP(loginRec, loginReq)
+
+	if loginRec.Code != http.StatusOK {
+		t.Fatalf("expected login 200, got %d: %s", loginRec.Code, loginRec.Body.String())
+	}
+
+	var login struct {
+		Success bool            `json:"success"`
+		Data    session.Session `json:"data"`
+	}
+	if err := json.Unmarshal(loginRec.Body.Bytes(), &login); err != nil {
+		t.Fatalf("decode login response: %v", err)
+	}
+	if !login.Success || login.Data.Token == "" || login.Data.Principal.Role != access.RoleAdministrator {
+		t.Fatalf("unexpected login response: %+v", login)
+	}
+
+	sessionReq := httptest.NewRequest(http.MethodGet, "/api/control/auth/session", nil)
+	sessionReq.Header.Set("Authorization", "Bearer "+login.Data.Token)
+	sessionRec := httptest.NewRecorder()
+	handler.ServeHTTP(sessionRec, sessionReq)
+
+	if sessionRec.Code != http.StatusOK {
+		t.Fatalf("expected session 200, got %d: %s", sessionRec.Code, sessionRec.Body.String())
+	}
+
+	var current struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Authenticated bool             `json:"authenticated"`
+			Principal     access.Principal `json:"principal"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(sessionRec.Body.Bytes(), &current); err != nil {
+		t.Fatalf("decode session response: %v", err)
+	}
+	if !current.Success || !current.Data.Authenticated || current.Data.Principal.Subject != "lin.chen@anjing.ai" {
+		t.Fatalf("unexpected session response: %+v", current)
+	}
+
+	logoutReq := httptest.NewRequest(http.MethodPost, "/api/control/auth/logout", bytes.NewBufferString(`{}`))
+	logoutReq.Header.Set("Authorization", "Bearer "+login.Data.Token)
+	logoutRec := httptest.NewRecorder()
+	handler.ServeHTTP(logoutRec, logoutReq)
+
+	if logoutRec.Code != http.StatusOK {
+		t.Fatalf("expected logout 200, got %d: %s", logoutRec.Code, logoutRec.Body.String())
+	}
+
+	expiredReq := httptest.NewRequest(http.MethodGet, "/api/control/auth/session", nil)
+	expiredReq.Header.Set("Authorization", "Bearer "+login.Data.Token)
+	expiredRec := httptest.NewRecorder()
+	handler.ServeHTTP(expiredRec, expiredReq)
+
+	if expiredRec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected revoked session to return 401, got %d", expiredRec.Code)
 	}
 }

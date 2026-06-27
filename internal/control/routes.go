@@ -2,28 +2,50 @@ package control
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/session"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
 
+type Options struct {
+	Sessions *session.Manager
+}
+
 func Register(mux *http.ServeMux, st *store.Store) {
-	RegisterWithRepositories(mux, st, NewMemoryRepositories(st))
+	RegisterWithOptions(mux, st, Options{})
 }
 
 func RegisterWithUsers(mux *http.ServeMux, st *store.Store, users UserRepository) {
 	repos := NewMemoryRepositories(st)
 	repos.Users = users
-	RegisterWithRepositories(mux, st, repos)
+	RegisterWithRepositoriesAndOptions(mux, st, repos, Options{})
+}
+
+func RegisterWithOptions(mux *http.ServeMux, st *store.Store, options Options) {
+	RegisterWithRepositoriesAndOptions(mux, st, NewMemoryRepositories(st), options)
 }
 
 func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Repositories) {
+	RegisterWithRepositoriesAndOptions(mux, st, repos, Options{})
+}
+
+func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, repos Repositories, options Options) {
+	sessions := options.Sessions
+	if sessions == nil {
+		sessions = session.NewManagerFromEnv(12 * time.Hour)
+	}
+
 	mux.HandleFunc("/api/control/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
 			return
 		}
 		httpjson.OK(w, map[string]string{"service": "control-api", "status": "ok"})
 	})
+	mux.HandleFunc("/api/control/auth/login", authLoginHandler(repos.Users, sessions))
+	mux.HandleFunc("/api/control/auth/session", authSessionHandler())
+	mux.HandleFunc("/api/control/auth/logout", authLogoutHandler(sessions))
 	mux.HandleFunc("/api/control/users", usersHandler(repos.Users))
 	mux.HandleFunc("/api/control/users/activate", activateUserHandler(repos.Users))
 	mux.HandleFunc("/api/control/applications", applicationsHandler(repos.Applications))

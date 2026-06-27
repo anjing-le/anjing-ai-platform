@@ -272,6 +272,50 @@ func TestAPIKeyUsesUserRoleBoundary(t *testing.T) {
 	}
 }
 
+func TestSessionTokenUsesRoleBoundary(t *testing.T) {
+	cfg := testConfig()
+	cfg.Session = func(token string) (Principal, bool) {
+		if token != "session-test-token" {
+			return Principal{}, false
+		}
+		return Principal{
+			Subject: "dev-api@anjing.ai",
+			Role:    RoleDeveloper,
+			Method:  "session",
+		}, true
+	}
+	handler := Middleware(cfg, okHandler())
+
+	allowed := httptest.NewRequest(http.MethodPost, "/api/gateway/routes", nil)
+	allowed.Header.Set("Authorization", "Bearer session-test-token")
+	allowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(allowedRec, allowed)
+	if allowedRec.Code != http.StatusOK {
+		t.Fatalf("expected session gateway write to be allowed, got %d", allowedRec.Code)
+	}
+
+	denied := httptest.NewRequest(http.MethodPost, "/api/billing/plans", nil)
+	denied.Header.Set("Authorization", "Bearer session-test-token")
+	deniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(deniedRec, denied)
+	if deniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected session billing write to be forbidden, got %d", deniedRec.Code)
+	}
+}
+
+func TestLoginPathIsPublicInEnforcedMode(t *testing.T) {
+	handler := Middleware(testConfig(), okHandler())
+
+	req := httptest.NewRequest(http.MethodPost, "/api/control/auth/login", nil)
+	rec := httptest.NewRecorder()
+
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected public login path, got %d", rec.Code)
+	}
+}
+
 func testConfig() Config {
 	return Config{
 		Mode: ModeEnforced,

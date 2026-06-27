@@ -31,6 +31,8 @@
 ## V1.2：后端真实能力增强
 
 - [ ] 把 demo token 演进为真实登录、会话和 OAuth 接入。
+- [x] 本地 passwordless login、签名 session token、session 查询和 logout 闭环。
+- [ ] OAuth provider/callback、密码/MFA 或外部 IdP 接入。
 - [ ] 为 API Key 和 credentialRef 接入更完整的脱敏、轮换、吊销和审计链路。
 - [ ] 为网关增加真实上游代理、超时、重试、fallback 和流式响应。
 - [ ] 为 LLM 调用增加 provider adapter、模型路由策略和 token 用量计量。

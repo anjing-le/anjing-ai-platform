@@ -94,6 +94,83 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/HealthOK"
+  /api/control/auth/login:
+    post:
+      tags: [control]
+      operationId: loginControlSession
+      summary: Create a local console session.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthLoginRequest"
+      responses:
+        "200":
+          description: Session created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AuthSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/control/auth/session:
+    get:
+      tags: [control]
+      operationId: getControlSession
+      summary: Get the current console session.
+      x-anjing-roles: [Administrator, User, Developer, Operator]
+      responses:
+        "200":
+          description: Session returned.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AuthSessionStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/control/auth/logout:
+    post:
+      tags: [control]
+      operationId: logoutControlSession
+      summary: Revoke the current console session.
+      x-anjing-roles: [Administrator, User, Developer, Operator]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthLogoutRequest"
+      responses:
+        "200":
+          description: Session revoked.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/AuthLogoutResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
   /api/control/users:
     get:
       tags: [control]
@@ -1093,7 +1170,7 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: demo-token
+      bearerFormat: demo-token or session-token
     apiKeyAuth:
       type: apiKey
       in: header
@@ -1157,6 +1234,58 @@ components:
           examples: [bad_request, unauthorized, forbidden, not_found, internal_error]
         message:
           type: string
+    Principal:
+      type: object
+      required: [subject, role, method]
+      properties:
+        subject:
+          type: string
+        role:
+          type: string
+          enum: [Administrator, User, Developer, Operator]
+        method:
+          type: string
+          enum: [bearer, api_key, permissive, passwordless, session]
+    AuthLoginRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [Administrator, User, Developer, Operator]
+          description: Optional dev profile role when the email is not in the seed user store.
+    AuthSession:
+      type: object
+      required: [token, principal, expiresAt]
+      properties:
+        token:
+          type: string
+          description: Signed local session token.
+        principal:
+          $ref: "#/components/schemas/Principal"
+        expiresAt:
+          type: string
+          format: date-time
+    AuthSessionStatus:
+      type: object
+      required: [authenticated, principal]
+      properties:
+        authenticated:
+          type: boolean
+        principal:
+          $ref: "#/components/schemas/Principal"
+    AuthLogoutRequest:
+      type: object
+      additionalProperties: false
+    AuthLogoutResponse:
+      type: object
+      required: [revoked]
+      properties:
+        revoked:
+          type: boolean
     HealthResponse:
       allOf:
         - $ref: "#/components/schemas/SuccessEnvelope"

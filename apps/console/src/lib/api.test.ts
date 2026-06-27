@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { loadPlatformSnapshot, type PlatformSnapshot } from "./api";
+import {
+  loadCurrentSession,
+  loadPlatformSnapshot,
+  loginSession,
+  logoutSession,
+  type AuthSession,
+  type PlatformSnapshot,
+} from "./api";
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -80,5 +87,45 @@ describe("console API client", () => {
     expect(result).toMatchObject({ ok: false, loaded: 0, failed: 13, source: "none" });
     expect(result.snapshot).toEqual({});
     expect(fetchMock.mock.calls[0][0]).toBe("/api/ops/platform-snapshot");
+  });
+
+  it("uses session tokens after login and clears them on logout", async () => {
+    const session: AuthSession = {
+      token: "sess_test",
+      principal: {
+        subject: "lin.chen@anjing.ai",
+        role: "Administrator",
+        method: "session",
+      },
+      expiresAt: "2026-06-28T00:00:00Z",
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (input === "/api/control/auth/login") {
+        return jsonResponse({ success: true, data: session });
+      }
+      if (input === "/api/control/auth/session") {
+        return jsonResponse({
+          success: true,
+          data: { authenticated: true, principal: session.principal },
+        });
+      }
+      if (input === "/api/control/auth/logout") {
+        return jsonResponse({ success: true, data: { revoked: true } });
+      }
+      return jsonResponse({ success: false, error: { code: "not_found", message: "missing" } }, 404);
+    });
+
+    await loginSession("admin");
+    const current = await loadCurrentSession("admin");
+    const logout = await logoutSession("admin");
+
+    expect(current.principal.subject).toBe("lin.chen@anjing.ai");
+    expect(logout.revoked).toBe(true);
+    expect(fetchMock.mock.calls[1][1]?.headers).toMatchObject({
+      Authorization: "Bearer sess_test",
+    });
+    expect(fetchMock.mock.calls[2][1]?.headers).toMatchObject({
+      Authorization: "Bearer sess_test",
+    });
   });
 });

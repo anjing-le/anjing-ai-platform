@@ -19,6 +19,7 @@ func main() {
 	cfg := config.Load("ops-api", "1823")
 	logger := service.NewLogger()
 	st := store.NewSeedStore()
+	sessions := service.NewSessionManager()
 	opsRegister := ops.Register
 
 	if cfg.DatabaseURL != "" {
@@ -54,7 +55,8 @@ func main() {
 	}
 
 	mux := service.NewMux(cfg.ServiceName, st, opsRegister)
-	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+	authConfig := service.AccessConfigWithSessions(sessions)
+	if err := service.ListenWithAccessConfig(logger, cfg.Addr, cfg.ServiceName, mux, authConfig); err != nil {
 		service.Fatal(logger, "service stopped", err)
 	}
 }

@@ -65,6 +65,15 @@ for (const operation of operations) {
     continue;
   }
 
+  if (operation.method === "POST" && !/^      requestBody:$/m.test(text)) {
+    errors.push(`${label} is missing requestBody.`);
+  }
+
+  const isPublicOperation = /^      security: \[\]$/m.test(text);
+  if (isPublicOperation) {
+    continue;
+  }
+
   if (!/^      x-anjing-roles: \[[^\]]+\]$/m.test(text)) {
     errors.push(`${label} is missing x-anjing-roles.`);
   }
@@ -77,9 +86,6 @@ for (const operation of operations) {
     errors.push(`${label} is missing 403 response.`);
   }
 
-  if (operation.method === "POST" && !/^      requestBody:$/m.test(text)) {
-    errors.push(`${label} is missing requestBody.`);
-  }
 }
 
 if (errors.length > 0) {

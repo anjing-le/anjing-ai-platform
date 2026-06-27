@@ -20,7 +20,10 @@ func main() {
 	cfg := config.Load("platform-all", "18080")
 	logger := service.NewLogger()
 	st := store.NewSeedStore()
-	controlRegister := control.Register
+	sessions := service.NewSessionManager()
+	controlRegister := func(mux *http.ServeMux, st *store.Store) {
+		control.RegisterWithOptions(mux, st, control.Options{Sessions: sessions})
+	}
 	gatewayRegister := gateway.Register
 	billingRegister := billing.Register
 	opsRegister := ops.Register
@@ -38,7 +41,7 @@ func main() {
 		controlRepos.APIKeys = control.NewPostgresAPIKeyRepository(pool)
 		controlRepos.Credentials = control.NewPostgresCredentialRepository(pool)
 		controlRegister = func(mux *http.ServeMux, st *store.Store) {
-			control.RegisterWithRepositories(mux, st, controlRepos)
+			control.RegisterWithRepositoriesAndOptions(mux, st, controlRepos, control.Options{Sessions: sessions})
 		}
 		gatewayRepos := gateway.NewMemoryRepositories(st)
 		gatewayRepos.Routes = gateway.NewPostgresRouteRepository(pool)
@@ -89,7 +92,8 @@ func main() {
 		opsRegister,
 	)
 	consoleweb.Register(mux, cfg.StaticDir)
-	if err := service.ListenWithLogger(logger, cfg.Addr, cfg.ServiceName, mux); err != nil {
+	authConfig := service.AccessConfigWithSessions(sessions)
+	if err := service.ListenWithAccessConfig(logger, cfg.Addr, cfg.ServiceName, mux, authConfig); err != nil {
 		service.Fatal(logger, "service stopped", err)
 	}
 }

@@ -15,9 +15,10 @@ for (const file of commandDirs) {
   if (
     !file.includes("migrate-db") &&
     !file.includes("seed-db") &&
-    !source.includes("service.ListenWithLogger(")
+    !source.includes("service.ListenWithLogger(") &&
+    !source.includes("service.ListenWithAccessConfig(")
   ) {
-    errors.push(`${file} must start HTTP services with service.ListenWithLogger.`);
+    errors.push(`${file} must start HTTP services with service.ListenWithLogger or service.ListenWithAccessConfig.`);
   }
 }
 

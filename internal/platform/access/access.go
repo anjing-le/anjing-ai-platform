@@ -39,6 +39,7 @@ type Config struct {
 	Mode        Mode
 	BearerToken map[string]Principal
 	APIKey      map[string]Principal
+	Session     func(token string) (Principal, bool)
 }
 
 func LoadConfig() Config {
@@ -88,7 +89,7 @@ func LoadConfig() Config {
 
 func Middleware(cfg Config, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasPrefix(r.URL.Path, "/api/") || isHealthPath(r.URL.Path) {
+		if !strings.HasPrefix(r.URL.Path, "/api/") || isHealthPath(r.URL.Path) || isPublicAuthPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -126,6 +127,9 @@ func Allowed(role Role, method, path string) bool {
 	if method == http.MethodOptions || isHealthPath(path) {
 		return true
 	}
+	if isAuthenticatedAuthPath(method, path) {
+		return true
+	}
 	if role == RoleAdministrator {
 		return true
 	}
@@ -143,9 +147,14 @@ func Allowed(role Role, method, path string) bool {
 }
 
 func authenticate(cfg Config, r *http.Request) (Principal, bool) {
-	if token := bearerToken(r.Header.Get("Authorization")); token != "" {
+	if token := BearerToken(r.Header.Get("Authorization")); token != "" {
 		if principal, ok := cfg.BearerToken[token]; ok {
 			return principal, true
+		}
+		if cfg.Session != nil {
+			if principal, ok := cfg.Session(token); ok {
+				return principal, true
+			}
 		}
 	}
 
@@ -218,12 +227,21 @@ func allowOperator(method, path string) bool {
 	return false
 }
 
-func bearerToken(header string) string {
+func BearerToken(header string) string {
 	const prefix = "Bearer "
 	if !strings.HasPrefix(header, prefix) {
 		return ""
 	}
 	return strings.TrimSpace(strings.TrimPrefix(header, prefix))
+}
+
+func isPublicAuthPath(path string) bool {
+	return path == "/api/control/auth/login"
+}
+
+func isAuthenticatedAuthPath(method, path string) bool {
+	return (method == http.MethodGet && path == "/api/control/auth/session") ||
+		(method == http.MethodPost && path == "/api/control/auth/logout")
 }
 
 func isHealthPath(path string) bool {

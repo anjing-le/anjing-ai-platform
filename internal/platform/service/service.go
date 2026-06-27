@@ -8,8 +8,11 @@ import (
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/access"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
+	"github.com/anjing-le/anjing-ai-platform/internal/platform/session"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
+
+const DefaultSessionTTL = 12 * time.Hour
 
 type RegisterFunc func(mux *http.ServeMux, st *store.Store)
 
@@ -42,6 +45,11 @@ func ListenWithLogger(logger *slog.Logger, addr, serviceName string, handler htt
 	return http.ListenAndServe(addr, WithMiddleware(logger, serviceName, handler))
 }
 
+func ListenWithAccessConfig(logger *slog.Logger, addr, serviceName string, handler http.Handler, cfg access.Config) error {
+	logger.Info("service starting", "service", serviceName, "addr", addr)
+	return http.ListenAndServe(addr, WithMiddlewareConfig(logger, serviceName, handler, cfg))
+}
+
 func NewLogger() *slog.Logger {
 	return slog.New(slog.NewJSONHandler(os.Stdout, nil))
 }
@@ -53,6 +61,22 @@ func Fatal(logger *slog.Logger, message string, err error) {
 
 func WithMiddleware(logger *slog.Logger, serviceName string, next http.Handler) http.Handler {
 	return cors(requestLog(logger, serviceName, access.Middleware(access.LoadConfig(), next)))
+}
+
+func WithMiddlewareConfig(logger *slog.Logger, serviceName string, next http.Handler, cfg access.Config) http.Handler {
+	return cors(requestLog(logger, serviceName, access.Middleware(cfg, next)))
+}
+
+func NewSessionManager() *session.Manager {
+	return session.NewManagerFromEnv(DefaultSessionTTL)
+}
+
+func AccessConfigWithSessions(sessions *session.Manager) access.Config {
+	cfg := access.LoadConfig()
+	if sessions != nil {
+		cfg.Session = sessions.Principal
+	}
+	return cfg
 }
 
 func cors(next http.Handler) http.Handler {
