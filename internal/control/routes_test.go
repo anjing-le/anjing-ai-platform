@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	neturl "net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -484,5 +485,149 @@ func TestOAuthAuthorizationCodeFlowCreatesSession(t *testing.T) {
 
 	if replayRec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected consumed oauth state to return 401, got %d: %s", replayRec.Code, replayRec.Body.String())
+	}
+}
+
+func TestOAuthAuthorizationCodeFlowUsesProviderUserInfo(t *testing.T) {
+	st := store.NewSeedStore()
+	sessions := session.NewManager("test-secret", time.Hour)
+	states := NewOAuthStateStore()
+
+	var tokenCalls int32
+	var userInfoCalls int32
+	providerServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/oauth/token":
+			atomic.AddInt32(&tokenCalls, 1)
+			if r.Method != http.MethodPost {
+				t.Fatalf("expected token request POST, got %s", r.Method)
+			}
+			if err := r.ParseForm(); err != nil {
+				t.Fatalf("parse token form: %v", err)
+			}
+			if r.Form.Get("grant_type") != "authorization_code" ||
+				r.Form.Get("code") != "provider-code" ||
+				r.Form.Get("client_id") != "anjing-client" ||
+				r.Form.Get("client_secret") != "anjing-secret" ||
+				r.Form.Get("redirect_uri") != "https://console.anjing.ai/oauth/callback" {
+				t.Fatalf("unexpected token form: %v", r.Form)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"access_token":"provider-token","token_type":"Bearer"}`))
+
+		case "/oauth/userinfo":
+			atomic.AddInt32(&userInfoCalls, 1)
+			if r.Method != http.MethodGet {
+				t.Fatalf("expected userinfo request GET, got %s", r.Method)
+			}
+			if r.Header.Get("Authorization") != "Bearer provider-token" {
+				t.Fatalf("unexpected userinfo authorization header: %s", r.Header.Get("Authorization"))
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"email":"dev-api@anjing.ai","email_verified":true}`))
+
+		default:
+			t.Fatalf("unexpected provider path: %s", r.URL.Path)
+		}
+	}))
+	defer providerServer.Close()
+
+	mux := http.NewServeMux()
+	RegisterWithOptions(mux, st, Options{
+		Sessions:    sessions,
+		OAuthStates: states,
+		OAuthProviders: map[string]OAuthProvider{
+			"github": {
+				Name:             "github",
+				AuthorizationURL: providerServer.URL + "/oauth/authorize",
+				TokenURL:         providerServer.URL + "/oauth/token",
+				UserInfoURL:      providerServer.URL + "/oauth/userinfo",
+				ClientID:         "anjing-client",
+				ClientSecret:     "anjing-secret",
+				RedirectURI:      "https://console.anjing.ai/oauth/callback",
+				Scopes:           []string{"read:user", "user:email"},
+				DefaultRole:      access.RoleDeveloper,
+				Enabled:          true,
+			},
+		},
+	})
+	handler := access.Middleware(access.Config{
+		Mode:        access.ModeEnforced,
+		BearerToken: map[string]access.Principal{},
+		APIKey:      map[string]access.Principal{},
+		Session:     sessions.Principal,
+	}, mux)
+
+	providersReq := httptest.NewRequest(http.MethodGet, "/api/control/auth/oauth/providers", nil)
+	providersRec := httptest.NewRecorder()
+	handler.ServeHTTP(providersRec, providersReq)
+
+	if providersRec.Code != http.StatusOK {
+		t.Fatalf("expected providers 200, got %d: %s", providersRec.Code, providersRec.Body.String())
+	}
+	var providers struct {
+		Success bool                   `json:"success"`
+		Data    []OAuthProviderSummary `json:"data"`
+	}
+	if err := json.Unmarshal(providersRec.Body.Bytes(), &providers); err != nil {
+		t.Fatalf("decode providers response: %v", err)
+	}
+	if !providers.Success || len(providers.Data) != 1 || !providers.Data[0].TokenExchange {
+		t.Fatalf("expected token exchange provider summary, got %+v", providers)
+	}
+
+	startReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/control/auth/oauth/start",
+		bytes.NewBufferString(`{"provider":"github","redirectTo":"/console"}`),
+	)
+	startReq.Header.Set("Content-Type", "application/json")
+	startRec := httptest.NewRecorder()
+	handler.ServeHTTP(startRec, startReq)
+
+	if startRec.Code != http.StatusOK {
+		t.Fatalf("expected oauth start 200, got %d: %s", startRec.Code, startRec.Body.String())
+	}
+	var started struct {
+		Success bool `json:"success"`
+		Data    struct {
+			State string `json:"state"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(startRec.Body.Bytes(), &started); err != nil {
+		t.Fatalf("decode start response: %v", err)
+	}
+	if !started.Success || started.Data.State == "" {
+		t.Fatalf("unexpected start response: %+v", started)
+	}
+
+	callbackReq := httptest.NewRequest(
+		http.MethodGet,
+		"/api/control/auth/oauth/callback?provider=github&state="+neturl.QueryEscape(started.Data.State)+"&code=provider-code",
+		nil,
+	)
+	callbackRec := httptest.NewRecorder()
+	handler.ServeHTTP(callbackRec, callbackReq)
+
+	if callbackRec.Code != http.StatusOK {
+		t.Fatalf("expected oauth callback 200, got %d: %s", callbackRec.Code, callbackRec.Body.String())
+	}
+	var callback struct {
+		Success bool            `json:"success"`
+		Data    session.Session `json:"data"`
+	}
+	if err := json.Unmarshal(callbackRec.Body.Bytes(), &callback); err != nil {
+		t.Fatalf("decode callback response: %v", err)
+	}
+	if !callback.Success ||
+		callback.Data.Principal.Subject != "dev-api@anjing.ai" ||
+		callback.Data.Principal.Role != access.RoleDeveloper ||
+		callback.Data.Principal.Method != "oauth" {
+		t.Fatalf("unexpected callback response: %+v", callback)
+	}
+	if atomic.LoadInt32(&tokenCalls) != 1 || atomic.LoadInt32(&userInfoCalls) != 1 {
+		t.Fatalf("expected one token and userinfo call, got token=%d userinfo=%d", tokenCalls, userInfoCalls)
 	}
 }

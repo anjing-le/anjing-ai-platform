@@ -198,8 +198,8 @@ paths:
             type: string
         - name: email
           in: query
-          required: true
-          description: Temporary userinfo stand-in until provider token exchange is configured.
+          required: false
+          description: Development fallback used only when provider token and userinfo exchange is not configured.
           schema:
             type: string
             format: email
@@ -1765,7 +1765,7 @@ components:
           description: Optional dev profile role when the email is not in the seed user store.
     OAuthProviderSummary:
       type: object
-      required: [name, scopes, defaultRole, enabled]
+      required: [name, scopes, defaultRole, enabled, tokenExchange]
       properties:
         name:
           type: string
@@ -1778,6 +1778,9 @@ components:
           enum: [Administrator, User, Developer, Operator]
         enabled:
           type: boolean
+        tokenExchange:
+          type: boolean
+          description: Whether callback exchanges the authorization code for provider userinfo.
     OAuthStartRequest:
       type: object
       required: [provider]

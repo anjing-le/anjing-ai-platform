@@ -33,7 +33,8 @@
 - [x] 把 demo token 演进为真实登录、会话和 OAuth 接入的最小闭环。
 - [x] 本地 passwordless login、签名 session token、session 查询和 logout 闭环。
 - [x] OAuth provider/callback state + session 最小闭环。
-- [ ] 密码/MFA、外部 IdP token exchange 和生产级用户信息同步。
+- [x] 外部 IdP token exchange + userinfo 最小闭环。
+- [ ] 密码/MFA 和生产级用户信息同步。
 - [x] 为 API Key 和 credentialRef 接入脱敏展示、轮换、吊销和审计链路。
 - [x] 为网关增加真实上游代理、超时、重试和 fallback 最小闭环。
 - [x] 为网关增加已发布 route 运行时限流。

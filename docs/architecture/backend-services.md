@@ -86,7 +86,7 @@ internal/platform/
 | `Developer` | 运营只读、网关与模型配置、API Key / credentialRef 只读、计费只读、LLM 调用 |
 | `Operator` | 运营处理、服务健康、审计、计费只读、日志导出和保留清理；不看网关配置 |
 
-V1.2 已具备本地 passwordless login、签名 session token、session 查询、logout 和 provider-agnostic OAuth2 authorization code flow 最小闭环。登录优先匹配 seed 用户邮箱；开发态也可以在请求体中指定角色来生成本地 session。多 command 拆分启动时，用相同的 `ANJING_SESSION_SECRET` 共享 session 签名密钥。OAuth callback 当前用 `email` query 作为 provider userinfo exchange 占位，后续再接真实 token exchange、userinfo 和外部 IdP 账号同步。
+V1.2 已具备本地 passwordless login、签名 session token、session 查询、logout 和 provider-agnostic OAuth2 authorization code flow 最小闭环。登录优先匹配 seed 用户邮箱；开发态也可以在请求体中指定角色来生成本地 session。多 command 拆分启动时，用相同的 `ANJING_SESSION_SECRET` 共享 session 签名密钥。OAuth callback 在配置 token / userinfo endpoint 后会完成 authorization code exchange 并读取外部用户邮箱；未配置时保留 `email` query 作为本地联调 fallback。
 
 ```bash
 curl -X POST http://localhost:18080/api/control/auth/login \
@@ -99,7 +99,10 @@ OAuth provider 可用环境变量配置：
 ```bash
 ANJING_OAUTH_PROVIDER=github
 ANJING_OAUTH_AUTHORIZATION_URL=https://github.com/login/oauth/authorize
+ANJING_OAUTH_TOKEN_URL=https://github.com/login/oauth/access_token
+ANJING_OAUTH_USERINFO_URL=https://api.github.com/user
 ANJING_OAUTH_CLIENT_ID=anjing-client
+ANJING_OAUTH_CLIENT_SECRET=...
 ANJING_OAUTH_REDIRECT_URI=http://localhost:5173/oauth/callback
 ANJING_OAUTH_SCOPES="read:user user:email"
 ANJING_OAUTH_DEFAULT_ROLE=Developer
@@ -112,6 +115,12 @@ curl -X POST http://localhost:18080/api/control/auth/oauth/start \
   -H 'Content-Type: application/json' \
   -d '{"provider":"github","redirectTo":"/console"}'
 ```
+
+```bash
+curl "http://localhost:18080/api/control/auth/oauth/callback?provider=github&state=<state>&code=<code>"
+```
+
+本地未配置 `ANJING_OAUTH_TOKEN_URL` / `ANJING_OAUTH_USERINFO_URL` 时，可以继续用 fallback 邮箱完成联调：
 
 ```bash
 curl "http://localhost:18080/api/control/auth/oauth/callback?provider=github&state=<state>&code=<code>&email=dev-api@anjing.ai"
