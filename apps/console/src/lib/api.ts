@@ -376,6 +376,10 @@ export interface CreateModelRouteInput {
   fallback: string;
 }
 
+export interface UpdateModelRouteInput extends CreateModelRouteInput {
+  id: string;
+}
+
 export interface CreateSkillBindingInput {
   name: string;
   protocol: string;
@@ -579,6 +583,13 @@ export function proxyGatewayRequest(input: GatewayProxyRequest, role?: RoleId): 
 
 export function createModelRoute(input: CreateModelRouteInput, role?: RoleId): Promise<ModelRoute> {
   return requestJson<ModelRoute>("/api/gateway/model-routes", {
+    method: "POST",
+    body: JSON.stringify(input),
+  }, role);
+}
+
+export function updateModelRoute(input: UpdateModelRouteInput, role?: RoleId): Promise<ModelRoute> {
+  return requestJson<ModelRoute>("/api/gateway/model-routes/update", {
     method: "POST",
     body: JSON.stringify(input),
   }, role);

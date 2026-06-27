@@ -5,6 +5,7 @@ import {
   loadPlatformSnapshot,
   loginSession,
   logoutSession,
+  updateModelRoute,
   updateRoute,
   type AuthSession,
   type PlatformSnapshot,
@@ -157,6 +158,35 @@ describe("console API client", () => {
 
     expect(result.id).toBe("route_llm");
     expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/routes/update");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
+    expect(fetchMock.mock.calls[0][1]?.body).toBe(JSON.stringify(input));
+  });
+
+  it("updates a model route policy", async () => {
+    const route = {
+      id: "model_route_agent",
+      alias: "agent-default",
+      scenario: "Agent",
+      primary: "gpt-4.1-mini",
+      fallback: "local-fallback",
+      status: "Draft",
+      updatedAt: "2026-06-27T00:00:00Z",
+    };
+    const input = {
+      id: "model_route_agent",
+      alias: "agent-premium",
+      scenario: "Premium Agent",
+      primary: "gpt-4.1",
+      fallback: "claude-haiku",
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ success: true, data: route }),
+    );
+
+    const result = await updateModelRoute(input, "developer");
+
+    expect(result.id).toBe("model_route_agent");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/model-routes/update");
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
     expect(fetchMock.mock.calls[0][1]?.body).toBe(JSON.stringify(input));
   });

@@ -37,6 +37,7 @@ import {
   revokeAPIKey,
   rotateApplicationKey,
   updateRoute,
+  updateModelRoute,
   type APIKey,
   type Application,
   type BudgetAlert,
@@ -52,6 +53,7 @@ import {
   type SkillInvokeInput,
   type SkillInvokeResponse,
   type SkillBinding,
+  type UpdateModelRouteInput,
 } from "./lib/api";
 import {
   canAccessRoute,
@@ -660,7 +662,24 @@ function App() {
       setSelectedModelRouteId(modelRoute.id);
       setNotice(`已创建模型路由：${modelRoute.alias}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "模型路由创建失败");
+      const message = actionErrorMessage(error, "模型路由创建失败");
+      setNotice(message);
+      throw new Error(message);
+    }
+  }
+
+  async function handleModelRouteUpdate(input: UpdateModelRouteInput) {
+    setNotice("");
+
+    try {
+      const modelRoute = await updateModelRoute(input, role);
+      await refreshSnapshot();
+      setSelectedModelRouteId(modelRoute.id);
+      setNotice(`已更新模型路由：${modelRoute.alias}`);
+    } catch (error) {
+      const message = actionErrorMessage(error, "模型路由更新失败");
+      setNotice(message);
+      throw new Error(message);
     }
   }
 
@@ -965,6 +984,7 @@ function App() {
             onLLMInvoked={refreshSnapshot}
             onModelRouteCreate={handleModelRouteCreate}
             onModelRoutePublish={handleModelRoutePublish}
+            onModelRouteUpdate={handleModelRouteUpdate}
             onBudgetAlertResolve={handleBudgetAlertResolve}
             onPlanActivate={handlePlanActivate}
             onRouteEdit={handleRouteEdit}
@@ -1702,6 +1722,7 @@ function ModulePage({
   onLLMInvoked,
   onModelRouteCreate,
   onModelRoutePublish,
+  onModelRouteUpdate,
   onPlanActivate,
   onPrimaryAction,
   onRouteEdit,
@@ -1741,6 +1762,7 @@ function ModulePage({
   onLLMInvoked: () => Promise<unknown>;
   onModelRouteCreate: (input: CreateModelRouteInput) => Promise<void>;
   onModelRoutePublish: (id: string) => Promise<void>;
+  onModelRouteUpdate: (input: UpdateModelRouteInput) => Promise<void>;
   onPlanActivate: (id: string) => Promise<void>;
   onPrimaryAction: (pageId: ConsoleRoute) => Promise<void>;
   onRouteEdit: (route: GatewayRoute) => void;
@@ -2594,6 +2616,7 @@ function ModulePage({
               modelRoute={selectedModelRoute}
               onCreate={onModelRouteCreate}
               onPublish={onModelRoutePublish}
+              onUpdate={onModelRouteUpdate}
               publishing={publishingModelRouteId === selectedModelRoute?.id}
               role={role}
             />
@@ -3469,15 +3492,18 @@ function ModelRoutePanel({
   modelRoute,
   onCreate,
   onPublish,
+  onUpdate,
   publishing,
   role,
 }: {
   modelRoute?: ModelRoute;
   onCreate: (input: CreateModelRouteInput) => Promise<void>;
   onPublish: (id: string) => Promise<void>;
+  onUpdate: (input: UpdateModelRouteInput) => Promise<void>;
   publishing: boolean;
   role: RoleId;
 }) {
+  const [mode, setMode] = useState<"create" | "edit">("create");
   const [alias, setAlias] = useState("agent-default");
   const [scenario, setScenario] = useState("Agent");
   const [primary, setPrimary] = useState("gpt-4.1-mini");
@@ -3485,6 +3511,45 @@ function ModelRoutePanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const aliasInputRef = useInitialFocus<HTMLInputElement>(role !== "operator");
+  const isEditing = mode === "edit" && Boolean(modelRoute);
+
+  useEffect(() => {
+    if (mode !== "edit") {
+      return;
+    }
+    if (!modelRoute) {
+      setMode("create");
+      return;
+    }
+
+    setAlias(modelRoute.alias);
+    setScenario(modelRoute.scenario);
+    setPrimary(modelRoute.primary);
+    setFallback(modelRoute.fallback);
+  }, [mode, modelRoute?.id]);
+
+  function resetForm() {
+    setMode("create");
+    setAlias("agent-default");
+    setScenario("Agent");
+    setPrimary("gpt-4.1-mini");
+    setFallback("local-fallback");
+    setError("");
+  }
+
+  function startEdit() {
+    if (!modelRoute || role === "operator") {
+      return;
+    }
+
+    setMode("edit");
+    setAlias(modelRoute.alias);
+    setScenario(modelRoute.scenario);
+    setPrimary(modelRoute.primary);
+    setFallback(modelRoute.fallback);
+    setError("");
+    window.setTimeout(() => aliasInputRef.current?.focus(), 0);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3492,10 +3557,15 @@ function ModelRoutePanel({
     setError("");
 
     try {
-      await onCreate({ alias, scenario, primary, fallback });
-      setAlias(`${alias}-next`);
+      if (isEditing && modelRoute) {
+        await onUpdate({ id: modelRoute.id, alias, scenario, primary, fallback });
+        resetForm();
+      } else {
+        await onCreate({ alias, scenario, primary, fallback });
+        setAlias(`${alias}-next`);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "模型路由创建失败");
+      setError(err instanceof Error ? err.message : isEditing ? "模型路由更新失败" : "模型路由创建失败");
     } finally {
       setBusy(false);
     }
@@ -3510,12 +3580,21 @@ function ModelRoutePanel({
           ? `正在发布模型路由 ${modelRoute.alias}`
           : `发布模型路由 ${modelRoute.alias}`
     : undefined;
-  const createLabel =
+  const editLabel = modelRoute
+    ? role === "operator"
+      ? `无法编辑模型路由 ${modelRoute.alias}，需要管理员或开发人员`
+      : `编辑模型路由 ${modelRoute.alias}`
+    : undefined;
+  const submitLabel =
     role === "operator"
       ? "无法创建模型路由，需要管理员或开发人员"
       : busy
-        ? `正在创建模型路由 ${alias}`
-        : `创建模型路由 ${alias}`;
+        ? isEditing
+          ? `正在保存模型路由 ${alias}`
+          : `正在创建模型路由 ${alias}`
+        : isEditing
+          ? `保存模型路由 ${alias}`
+          : `创建模型路由 ${alias}`;
 
   return (
     <Panel eyebrow="Model Route" title="模型路由">
@@ -3547,6 +3626,17 @@ function ModelRoutePanel({
 
           <div className="application-actions">
             <button
+              aria-label={editLabel}
+              className="button"
+              disabled={busy || role === "operator"}
+              onClick={startEdit}
+              title={role === "operator" ? "运维人员只读模型路由配置" : undefined}
+              type="button"
+            >
+              编辑策略
+              <ArrowRight aria-hidden="true" size={16} />
+            </button>
+            <button
               aria-label={publishLabel}
               className="button button--primary"
               disabled={publishing || modelRoute.status === "Active" || role === "operator"}
@@ -3557,7 +3647,7 @@ function ModelRoutePanel({
               {modelRoute.status === "Active" ? "已发布" : publishing ? "发布中" : "发布模型路由"}
               <ChevronRight aria-hidden="true" size={16} />
             </button>
-            {role === "operator" ? <ActionHint>需要管理员或开发人员发布模型路由。</ActionHint> : null}
+            {role === "operator" ? <ActionHint>需要管理员或开发人员编辑或发布模型路由。</ActionHint> : null}
           </div>
         </>
       ) : (
@@ -3565,6 +3655,10 @@ function ModelRoutePanel({
       )}
 
       <form aria-busy={busy} className="model-route-form" onSubmit={handleSubmit}>
+        <div className="model-route-form__head">
+          <span>{isEditing ? "Edit Draft" : "New Alias"}</span>
+          <strong>{isEditing ? `编辑 ${modelRoute?.alias}` : "创建模型路由"}</strong>
+        </div>
         <fieldset disabled={busy || role === "operator"}>
           <label>
             <span>别名</span>
@@ -3588,17 +3682,24 @@ function ModelRoutePanel({
             {error}
           </p>
         ) : null}
-        <button
-          aria-label={createLabel}
-          aria-live="polite"
-          className="button button--primary"
-          disabled={busy || role === "operator"}
-          title={role === "operator" ? "运维人员只读模型路由创建配置" : undefined}
-          type="submit"
-        >
-          {busy ? "创建中" : "创建模型路由"}
-        </button>
-        {role === "operator" ? <ActionHint>需要管理员或开发人员创建模型路由。</ActionHint> : null}
+        <div className="model-route-form__actions">
+          <button
+            aria-label={submitLabel}
+            aria-live="polite"
+            className="button button--primary"
+            disabled={busy || role === "operator"}
+            title={role === "operator" ? "运维人员只读模型路由配置" : undefined}
+            type="submit"
+          >
+            {busy ? (isEditing ? "保存中" : "创建中") : isEditing ? "保存模型路由" : "创建模型路由"}
+          </button>
+          {isEditing ? (
+            <button className="button" disabled={busy} onClick={resetForm} type="button">
+              取消编辑
+            </button>
+          ) : null}
+        </div>
+        {role === "operator" ? <ActionHint>需要管理员或开发人员创建或编辑模型路由。</ActionHint> : null}
       </form>
     </Panel>
   );

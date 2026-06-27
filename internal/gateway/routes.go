@@ -117,6 +117,7 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 	mux.HandleFunc("/api/gateway/routes/health-check", routeHealthCheckHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/routes/preflight", routePreflightHandler(repos.Routes))
 	mux.HandleFunc("/api/gateway/model-routes", modelRoutesHandler(repos.ModelRoutes))
+	mux.HandleFunc("/api/gateway/model-routes/update", updateModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/model-routes/publish", publishModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/skills", skillsHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skills/publish", publishSkillBindingHandler(repos.Skills))
@@ -675,6 +676,68 @@ func modelRoutesHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {
 		default:
 			httpjson.MethodNotAllowed(w)
 		}
+	}
+}
+
+func updateModelRouteHandler(modelRoutes ModelRouteRepository) http.HandlerFunc {
+	type updateModelRouteRequest struct {
+		ID       string `json:"id"`
+		Alias    string `json:"alias"`
+		Scenario string `json:"scenario"`
+		Primary  string `json:"primary"`
+		Fallback string `json:"fallback"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+
+		var req updateModelRouteRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		req.ID = strings.TrimSpace(req.ID)
+		req.Alias = strings.TrimSpace(req.Alias)
+		req.Scenario = strings.TrimSpace(req.Scenario)
+		req.Primary = strings.TrimSpace(req.Primary)
+		req.Fallback = strings.TrimSpace(req.Fallback)
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+		if req.Alias == "" {
+			httpjson.BadRequest(w, "alias is required")
+			return
+		}
+		if req.Scenario == "" {
+			req.Scenario = "General"
+		}
+		if req.Primary == "" {
+			req.Primary = "gpt-4.1-mini"
+		}
+		if req.Fallback == "" {
+			req.Fallback = "local-fallback"
+		}
+
+		route, ok, err := modelRoutes.UpdateModelRoute(r.Context(), UpdateModelRouteInput{
+			ID:       req.ID,
+			Alias:    req.Alias,
+			Scenario: req.Scenario,
+			Primary:  req.Primary,
+			Fallback: req.Fallback,
+		})
+		if err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		if !ok {
+			httpjson.NotFound(w, "model route not found")
+			return
+		}
+
+		httpjson.OK(w, route)
 	}
 }
 

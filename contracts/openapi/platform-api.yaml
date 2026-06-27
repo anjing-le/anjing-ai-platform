@@ -60,6 +60,7 @@ x-anjing-service-boundaries:
       - /api/gateway/routes/health-check
       - /api/gateway/routes/preflight
       - /api/gateway/model-routes
+      - /api/gateway/model-routes/update
       - /api/gateway/proxy
       - /api/gateway/llm/invoke
       - /api/gateway/llm/stream
@@ -863,6 +864,38 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/model-routes/update:
+    post:
+      tags: [gateway]
+      operationId: updateModelRoute
+      summary: Update a model route alias draft.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateModelRouteRequest"
+      responses:
+        "200":
+          description: Model route updated and reset to Draft.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ModelRoute"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/gateway/model-routes/publish:
     post:
       tags: [gateway]
@@ -2452,6 +2485,24 @@ components:
         primary:
           type: string
           examples: [gpt-4.1-mini]
+        fallback:
+          type: string
+          default: local-fallback
+    UpdateModelRouteRequest:
+      type: object
+      required: [id, alias]
+      properties:
+        id:
+          type: string
+        alias:
+          type: string
+          examples: [chat-default]
+        scenario:
+          type: string
+          default: General
+        primary:
+          type: string
+          default: gpt-4.1-mini
         fallback:
           type: string
           default: local-fallback

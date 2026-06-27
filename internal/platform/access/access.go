@@ -209,6 +209,7 @@ func allowDeveloper(method, path string) bool {
 			path == "/api/gateway/routes/health-check" ||
 			path == "/api/gateway/routes/preflight" ||
 			path == "/api/gateway/model-routes" ||
+			path == "/api/gateway/model-routes/update" ||
 			path == "/api/gateway/model-routes/publish" ||
 			path == "/api/gateway/skills" ||
 			path == "/api/gateway/skills/publish" ||

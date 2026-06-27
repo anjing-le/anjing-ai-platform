@@ -135,6 +135,14 @@ type ModelRoute struct {
 	UpdatedAt string `json:"updatedAt"`
 }
 
+type ModelRouteUpdateInput struct {
+	ID       string
+	Alias    string
+	Scenario string
+	Primary  string
+	Fallback string
+}
+
 type SkillBinding struct {
 	ID            string `json:"id"`
 	Name          string `json:"name"`
@@ -696,6 +704,35 @@ func (s *Store) CreateModelRoute(alias, scenario, primary, fallback string) Mode
 	s.modelRoutes = append([]ModelRoute{route}, s.modelRoutes...)
 	s.addAuditLocked("网关与模型", "create model route", alias, "Success")
 	return route
+}
+
+func (s *Store) UpdateModelRoute(input ModelRouteUpdateInput) (ModelRoute, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.modelRoutes {
+		if s.modelRoutes[index].ID != input.ID {
+			continue
+		}
+
+		s.modelRoutes[index].Alias = input.Alias
+		s.modelRoutes[index].Scenario = input.Scenario
+		s.modelRoutes[index].Primary = input.Primary
+		s.modelRoutes[index].Fallback = input.Fallback
+		s.modelRoutes[index].Status = "Draft"
+		s.modelRoutes[index].UpdatedAt = nowLabel()
+		s.requestLogs = append([]RequestLog{{
+			ID:        nextID("req"),
+			Request:   "UPDATE model:" + input.Alias,
+			Consumer:  input.Scenario,
+			Latency:   "29ms",
+			Result:    "200",
+			Status:    "Success",
+			CreatedAt: nowLabel(),
+		}}, s.requestLogs...)
+		s.addAuditLocked("网关与模型", "update model route", input.Alias, "Success")
+		return s.modelRoutes[index], true
+	}
+	return ModelRoute{}, false
 }
 
 func (s *Store) PublishModelRoute(id string) (ModelRoute, bool) {

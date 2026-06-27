@@ -1632,6 +1632,51 @@ func TestCreateModelRouteAddsDraftAlias(t *testing.T) {
 	}
 }
 
+func TestUpdateModelRouteReturnsDraftAlias(t *testing.T) {
+	st := store.NewSeedStore()
+	created := st.CreateModelRoute("agent-default", "Agent", "gpt-4.1-mini", "local-fallback")
+	if _, ok := st.PublishModelRoute(created.ID); !ok {
+		t.Fatalf("expected seed model route to publish")
+	}
+
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{
+		"id":"` + created.ID + `",
+		"alias":"agent-premium",
+		"scenario":"Premium Agent",
+		"primary":"gpt-4.1",
+		"fallback":"claude-haiku"
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/model-routes/update", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool             `json:"success"`
+		Data    store.ModelRoute `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success {
+		t.Fatalf("expected success response, got %+v", payload)
+	}
+	if payload.Data.ID != created.ID || payload.Data.Alias != "agent-premium" || payload.Data.Status != "Draft" {
+		t.Fatalf("expected updated draft model route, got %+v", payload.Data)
+	}
+	if payload.Data.Primary != "gpt-4.1" || payload.Data.Fallback != "claude-haiku" || payload.Data.Scenario != "Premium Agent" {
+		t.Fatalf("expected updated model route policy, got %+v", payload.Data)
+	}
+}
+
 func TestCreateSkillBindingAddsDraftSkill(t *testing.T) {
 	st := store.NewSeedStore()
 	mux := http.NewServeMux()

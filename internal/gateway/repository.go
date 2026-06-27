@@ -43,6 +43,14 @@ type CreateModelRouteInput struct {
 	Fallback string
 }
 
+type UpdateModelRouteInput struct {
+	ID       string
+	Alias    string
+	Scenario string
+	Primary  string
+	Fallback string
+}
+
 type CreateSkillBindingInput struct {
 	Name          string
 	Protocol      string
@@ -96,6 +104,7 @@ type RouteRepository interface {
 type ModelRouteRepository interface {
 	ListModelRoutes(ctx context.Context) ([]store.ModelRoute, error)
 	CreateModelRoute(ctx context.Context, input CreateModelRouteInput) (store.ModelRoute, error)
+	UpdateModelRoute(ctx context.Context, input UpdateModelRouteInput) (store.ModelRoute, bool, error)
 	PublishModelRoute(ctx context.Context, id string) (store.ModelRoute, bool, error)
 }
 
@@ -199,6 +208,17 @@ func (repo MemoryModelRouteRepository) ListModelRoutes(context.Context) ([]store
 
 func (repo MemoryModelRouteRepository) CreateModelRoute(_ context.Context, input CreateModelRouteInput) (store.ModelRoute, error) {
 	return repo.store.CreateModelRoute(input.Alias, input.Scenario, input.Primary, input.Fallback), nil
+}
+
+func (repo MemoryModelRouteRepository) UpdateModelRoute(_ context.Context, input UpdateModelRouteInput) (store.ModelRoute, bool, error) {
+	route, ok := repo.store.UpdateModelRoute(store.ModelRouteUpdateInput{
+		ID:       input.ID,
+		Alias:    input.Alias,
+		Scenario: input.Scenario,
+		Primary:  input.Primary,
+		Fallback: input.Fallback,
+	})
+	return route, ok, nil
 }
 
 func (repo MemoryModelRouteRepository) PublishModelRoute(_ context.Context, id string) (store.ModelRoute, bool, error) {
@@ -568,6 +588,59 @@ func (repo PostgresModelRouteRepository) CreateModelRoute(ctx context.Context, i
 
 	item.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
 	return item, nil
+}
+
+func (repo PostgresModelRouteRepository) UpdateModelRoute(ctx context.Context, input UpdateModelRouteInput) (store.ModelRoute, bool, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("begin update model route: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
+		update model_routes
+		set alias = $2,
+			scenario = $3,
+			primary_model = $4,
+			fallback_model = $5,
+			status = 'Draft',
+			updated_at = now()
+		where id = $1
+		returning id, alias, scenario, primary_model, fallback_model, status, updated_at
+	`, input.ID, input.Alias, input.Scenario, input.Primary, input.Fallback)
+	if err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("update model route: %w", err)
+	}
+	defer rows.Close()
+
+	route, err := pgx.CollectOneRow(rows, scanModelRoute)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.ModelRoute{}, false, nil
+		}
+		return store.ModelRoute{}, false, fmt.Errorf("collect updated model route: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "UPDATE model:"+route.Alias, route.Scenario, "29ms", "200", "Success"); err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("insert model route update request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "update model route", route.Alias, "Success", nextID("req")); err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("insert model route update audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.ModelRoute{}, false, fmt.Errorf("commit update model route: %w", err)
+	}
+
+	return route, true, nil
 }
 
 func (repo PostgresModelRouteRepository) PublishModelRoute(ctx context.Context, id string) (store.ModelRoute, bool, error) {
