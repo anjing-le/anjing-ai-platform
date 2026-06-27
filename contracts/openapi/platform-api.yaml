@@ -775,6 +775,45 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /api/gateway/skills/invoke:
+    post:
+      tags: [gateway]
+      operationId: invokeSkill
+      summary: Invoke a published skill binding.
+      description: >
+        V1 resolves a Published skill binding by name and executes it through a
+        replaceable adapter. The endpoint records request logs and successful
+        skill-call usage so the console can validate integration flow before
+        real Skill provider protocols are wired in.
+      x-anjing-roles: [Administrator, User, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkillInvokeRequest"
+      responses:
+        "200":
+          description: Skill invocation completed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SkillInvokeResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
   /api/gateway/request-logs:
     get:
       tags: [gateway]
@@ -1790,6 +1829,40 @@ components:
       properties:
         id:
           type: string
+    SkillInvokeRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          examples: [search-knowledge]
+        input:
+          type: object
+          additionalProperties: true
+    SkillUsage:
+      type: object
+      required: [skillCalls]
+      properties:
+        skillCalls:
+          type: integer
+          minimum: 0
+    SkillInvokeResponse:
+      type: object
+      required: [id, name, protocol, route, output, usage]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        protocol:
+          type: string
+        route:
+          type: string
+        output:
+          type: object
+          additionalProperties: true
+        usage:
+          $ref: "#/components/schemas/SkillUsage"
     RequestLog:
       type: object
       required: [id, request, consumer, latency, result, status, createdAt]

@@ -84,6 +84,14 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 		t.Fatalf("expected skill binding publish to be allowed, got %d", skillPublishAllowedRec.Code)
 	}
 
+	skillInvokeAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/invoke", nil)
+	skillInvokeAllowed.Header.Set("Authorization", "Bearer developer-test-token")
+	skillInvokeAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(skillInvokeAllowedRec, skillInvokeAllowed)
+	if skillInvokeAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected skill invocation to be allowed, got %d", skillInvokeAllowedRec.Code)
+	}
+
 	proxyAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", nil)
 	proxyAllowed.Header.Set("Authorization", "Bearer developer-test-token")
 	proxyAllowedRec := httptest.NewRecorder()
@@ -251,6 +259,14 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 		t.Fatalf("expected gateway proxy to be forbidden for operator, got %d", proxyDeniedRec.Code)
 	}
 
+	skillInvokeDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/invoke", nil)
+	skillInvokeDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	skillInvokeDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(skillInvokeDeniedRec, skillInvokeDenied)
+	if skillInvokeDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected skill invocation to be forbidden for operator, got %d", skillInvokeDeniedRec.Code)
+	}
+
 	appDenied := httptest.NewRequest(http.MethodGet, "/api/control/applications", nil)
 	appDenied.Header.Set("Authorization", "Bearer operator-test-token")
 	appDeniedRec := httptest.NewRecorder()
@@ -279,7 +295,7 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 func TestAPIKeyUsesUserRoleBoundary(t *testing.T) {
 	handler := Middleware(testConfig(), okHandler())
 
-	for _, path := range []string{"/api/gateway/llm/invoke", "/api/gateway/proxy"} {
+	for _, path := range []string{"/api/gateway/llm/invoke", "/api/gateway/skills/invoke", "/api/gateway/proxy"} {
 		allowed := httptest.NewRequest(http.MethodPost, path, nil)
 		allowed.Header.Set("X-API-Key", "customer-test-key")
 		allowedRec := httptest.NewRecorder()

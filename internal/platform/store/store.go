@@ -154,6 +154,16 @@ type LLMInvocationRecord struct {
 	Status      string
 }
 
+type SkillInvocationRecord struct {
+	ID         string
+	Name       string
+	Protocol   string
+	Route      string
+	SkillCalls int
+	Result     string
+	Status     string
+}
+
 type GatewayProxyRecord struct {
 	Request  string
 	Consumer string
@@ -708,6 +718,44 @@ func (s *Store) RecordLLMInvocation(record LLMInvocationRecord) {
 		}}, s.usageRecords...)
 	}
 	s.addAuditLocked("网关与模型", "invoke llm", record.ModelAlias, status)
+}
+
+func (s *Store) RecordSkillInvocation(record SkillInvocationRecord) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := nowLabel()
+	status := record.Status
+	if status == "" {
+		status = "Success"
+	}
+	result := record.Result
+	if result == "" {
+		result = "200"
+		if status == "Failed" {
+			result = "502"
+		}
+	}
+	s.requestLogs = append([]RequestLog{{
+		ID:        "req_" + record.ID,
+		Request:   "POST /skills/invoke " + record.Route,
+		Consumer:  record.Name,
+		Latency:   "64ms",
+		Result:    result,
+		Status:    status,
+		CreatedAt: now,
+	}}, s.requestLogs...)
+	if status != "Failed" && record.SkillCalls > 0 {
+		s.usageRecords = append([]UsageRecord{{
+			ID:         "usage_" + record.ID,
+			Project:    record.Name,
+			Tokens:     "0",
+			SkillCalls: fmt.Sprintf("%d", record.SkillCalls),
+			Cost:       "$0.0000",
+			Status:     "Normal",
+			UpdatedAt:  now,
+		}}, s.usageRecords...)
+	}
+	s.addAuditLocked("网关与模型", "invoke skill", record.Name, status)
 }
 
 func (s *Store) RecordGatewayProxy(record GatewayProxyRecord) {

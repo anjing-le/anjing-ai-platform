@@ -165,6 +165,26 @@ export interface LLMInvokeInput {
   input: string;
 }
 
+export interface SkillInvokeResponse {
+  id: string;
+  name: string;
+  protocol: string;
+  route: string;
+  output: {
+    summary?: string;
+    inputKeys?: string[];
+    [key: string]: unknown;
+  };
+  usage: {
+    skillCalls: number;
+  };
+}
+
+export interface SkillInvokeInput {
+  name: string;
+  input: Record<string, unknown>;
+}
+
 export interface BillingPlan {
   id: string;
   name: string;
@@ -459,6 +479,13 @@ export function publishSkillBinding(id: string, role?: RoleId): Promise<SkillBin
   return requestJson<SkillBinding>("/api/gateway/skills/publish", {
     method: "POST",
     body: JSON.stringify({ id }),
+  }, role);
+}
+
+export function invokeSkill(input: SkillInvokeInput, role?: RoleId): Promise<SkillInvokeResponse> {
+  return requestJson<SkillInvokeResponse>("/api/gateway/skills/invoke", {
+    method: "POST",
+    body: JSON.stringify(input),
   }, role);
 }
 

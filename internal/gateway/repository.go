@@ -41,6 +41,16 @@ type LLMInvocationInput struct {
 	Status      string
 }
 
+type SkillInvocationInput struct {
+	ID         string
+	Name       string
+	Protocol   string
+	Route      string
+	SkillCalls int
+	Result     string
+	Status     string
+}
+
 type ProxyRequestLogInput struct {
 	Request  string
 	Consumer string
@@ -81,6 +91,7 @@ type RequestLogRepository interface {
 
 type InvocationRecorder interface {
 	RecordLLMInvocation(ctx context.Context, input LLMInvocationInput) error
+	RecordSkillInvocation(ctx context.Context, input SkillInvocationInput) error
 }
 
 type ProxyRecorder interface {
@@ -203,6 +214,19 @@ func (repo MemoryInvocationRecorder) RecordLLMInvocation(_ context.Context, inpu
 		TotalTokens: input.TotalTokens,
 		Result:      input.Result,
 		Status:      input.Status,
+	})
+	return nil
+}
+
+func (repo MemoryInvocationRecorder) RecordSkillInvocation(_ context.Context, input SkillInvocationInput) error {
+	repo.store.RecordSkillInvocation(store.SkillInvocationRecord{
+		ID:         input.ID,
+		Name:       input.Name,
+		Protocol:   input.Protocol,
+		Route:      input.Route,
+		SkillCalls: input.SkillCalls,
+		Result:     input.Result,
+		Status:     input.Status,
 	})
 	return nil
 }
@@ -732,6 +756,55 @@ func (repo PostgresInvocationRecorder) RecordLLMInvocation(ctx context.Context, 
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit llm invocation record: %w", err)
+	}
+
+	return nil
+}
+
+func (repo PostgresInvocationRecorder) RecordSkillInvocation(ctx context.Context, input SkillInvocationInput) error {
+	status := input.Status
+	if status == "" {
+		status = "Success"
+	}
+	result := input.Result
+	if result == "" {
+		result = "200"
+		if status == "Failed" {
+			result = "502"
+		}
+	}
+
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin skill invocation record: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, "req_"+input.ID, "POST /skills/invoke "+input.Route, input.Name, "64ms", result, status); err != nil {
+		return fmt.Errorf("insert skill request log: %w", err)
+	}
+
+	if status != "Failed" && input.SkillCalls > 0 {
+		if _, err := tx.Exec(ctx, `
+			insert into usage_records(id, project, tokens, skill_calls, cost, status)
+			values($1, $2, $3, $4, $5, $6)
+		`, "usage_"+input.ID, input.Name, "0", fmt.Sprintf("%d", input.SkillCalls), "$0.0000", "Normal"); err != nil {
+			return fmt.Errorf("insert skill usage record: %w", err)
+		}
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, "audit_"+input.ID, "网关与模型", "invoke skill", input.Name, status, "req_"+input.ID); err != nil {
+		return fmt.Errorf("insert skill audit event: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit skill invocation record: %w", err)
 	}
 
 	return nil

@@ -483,6 +483,118 @@ func TestCreateSkillBindingAddsDraftSkill(t *testing.T) {
 	}
 }
 
+func TestInvokeSkillUsesPublishedBinding(t *testing.T) {
+	st := store.NewSeedStore()
+	initialLogs := len(st.ListRequestLogs())
+	initialUsage := len(st.ListUsage())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"name":"search-knowledge","input":{"query":"退款政策"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/invoke", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Name     string `json:"name"`
+			Protocol string `json:"protocol"`
+			Route    string `json:"route"`
+			Output   struct {
+				Summary   string   `json:"summary"`
+				InputKeys []string `json:"inputKeys"`
+			} `json:"output"`
+			Usage struct {
+				SkillCalls int `json:"skillCalls"`
+			} `json:"usage"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Name != "search-knowledge" || payload.Data.Protocol != "MCP" {
+		t.Fatalf("unexpected payload: %+v", payload)
+	}
+	if payload.Data.Route != "/api/v1/skills/search" || !strings.Contains(payload.Data.Output.Summary, "search-knowledge") {
+		t.Fatalf("expected skill output, got %+v", payload.Data)
+	}
+	if len(payload.Data.Output.InputKeys) != 1 || payload.Data.Output.InputKeys[0] != "query" || payload.Data.Usage.SkillCalls != 1 {
+		t.Fatalf("expected skill usage and input keys, got %+v", payload.Data)
+	}
+	if logs := st.ListRequestLogs(); len(logs) != initialLogs+1 || logs[0].Consumer != "search-knowledge" || logs[0].Status != "Success" || logs[0].Result != "200" {
+		t.Fatalf("expected skill request log to be appended, got %+v", logs)
+	}
+	if usage := st.ListUsage(); len(usage) != initialUsage+1 || usage[0].Project != "search-knowledge" || usage[0].Tokens != "0" || usage[0].SkillCalls != "1" {
+		t.Fatalf("expected skill usage record to be appended, got %+v", usage)
+	}
+}
+
+func TestInvokeSkillRejectsDraftBinding(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"name":"send-message","input":{"text":"hello"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/invoke", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestInvokeSkillRecordsFailedInvocation(t *testing.T) {
+	st := store.NewSeedStore()
+	skill := st.CreateSkillBinding("fail-skill", "HTTP", "/api/v1/skills/fail", "8s")
+	if _, ok := st.PublishSkillBinding(skill.ID); !ok {
+		t.Fatalf("expected skill binding to publish")
+	}
+	initialLogs := len(st.ListRequestLogs())
+	initialUsage := len(st.ListUsage())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"name":"fail-skill","input":{"text":"hello"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/invoke", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Error   struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Success || payload.Error.Code != "skill_unavailable" {
+		t.Fatalf("expected skill_unavailable error, got %+v", payload)
+	}
+	if logs := st.ListRequestLogs(); len(logs) != initialLogs+1 || logs[0].Consumer != "fail-skill" || logs[0].Status != "Failed" || logs[0].Result != "502" {
+		t.Fatalf("expected failed skill request log, got %+v", logs)
+	}
+	if usage := st.ListUsage(); len(usage) != initialUsage {
+		t.Fatalf("expected failed skill invocation not to create usage, got %+v", usage)
+	}
+}
+
 func TestInvokeLLMRejectsUnknownModelRoute(t *testing.T) {
 	st := store.NewSeedStore()
 	mux := http.NewServeMux()

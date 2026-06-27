@@ -38,7 +38,8 @@
 - [ ] 为网关增加流式响应和更完整的上游治理。
 - [x] 为 LLM 调用增加 provider adapter、模型路由策略和 token 用量计量最小闭环。
 - [ ] 为 LLM 调用接入真实 provider SDK、流式输出和精确 token 计量。
-- [ ] 为 Skill 增加 schema 校验、版本管理、调用测试和治理策略。
+- [x] 为 Skill 增加 adapter、发布绑定、调用测试和 Skill call 用量计量最小闭环。
+- [ ] 为 Skill 增加 schema 校验、版本管理、真实 HTTP/MCP 适配和治理策略。
 - [x] 为计费增加幂等用量事件。
 - [ ] 为计费增加预算阈值和账单聚合。
 - [x] 为审计和请求日志增加基础查询条件。

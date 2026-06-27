@@ -26,6 +26,7 @@ import {
   createSkillBinding,
   createUser,
   invokeLLM,
+  invokeSkill,
   loadPlatformSnapshot,
   publishModelRoute,
   publishRoute,
@@ -47,6 +48,7 @@ import {
   type LLMInvokeResponse,
   type ModelRoute,
   type PlatformSnapshot,
+  type SkillInvokeResponse,
   type SkillBinding,
 } from "./lib/api";
 import {
@@ -2530,13 +2532,14 @@ function ModulePage({
           {page.id === "gateway" && activeTab === "Skill 调用" ? (
             <SkillBindingPanel
               onCreate={onSkillBindingCreate}
+              onInvoked={onLLMInvoked}
               onPublish={onSkillBindingPublish}
               publishing={publishingSkillId === selectedSkill?.id}
               role={role}
               skill={selectedSkill}
             />
           ) : null}
-          {page.id === "gateway" && (activeTab === "模型路由" || activeTab === "Skill 调用") ? (
+          {page.id === "gateway" && activeTab === "模型路由" ? (
             <LLMInvokePanel modelRoutes={snapshot?.modelRoutes} onInvoked={onLLMInvoked} role={role} />
           ) : null}
           {page.id === "gateway" && activeTab === "请求日志" ? (
@@ -3476,12 +3479,14 @@ function ModelRoutePanel({
 
 function SkillBindingPanel({
   onCreate,
+  onInvoked,
   onPublish,
   publishing,
   role,
   skill,
 }: {
   onCreate: (input: CreateSkillBindingInput) => Promise<void>;
+  onInvoked: () => Promise<unknown>;
   onPublish: (id: string) => Promise<void>;
   publishing: boolean;
   role: RoleId;
@@ -3493,6 +3498,10 @@ function SkillBindingPanel({
   const [timeout, setTimeoutValue] = useState("8s");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [invokeText, setInvokeText] = useState("查询客户退款政策");
+  const [invokeBusy, setInvokeBusy] = useState(false);
+  const [invokeError, setInvokeError] = useState("");
+  const [invokeResult, setInvokeResult] = useState<SkillInvokeResponse>();
   const nameInputRef = useInitialFocus<HTMLInputElement>(role !== "operator");
   const publishLabel = skill
     ? role === "operator"
@@ -3509,6 +3518,24 @@ function SkillBindingPanel({
       : busy
         ? `正在创建 Skill 绑定 ${name}`
         : `创建 Skill 绑定 ${name}`;
+  const canInvokeSkill = Boolean(skill && skill.status === "Published" && role !== "operator");
+  const invokeDisabledReason = !skill
+    ? "暂无可调用 Skill"
+    : role === "operator"
+      ? "运维人员只读 Skill 调用结果与日志"
+      : skill.status !== "Published"
+        ? "发布后才能调用 Skill"
+        : undefined;
+  const invokeLabel = !skill
+    ? "暂无可调用 Skill"
+    : invokeBusy
+      ? `正在调用 Skill ${skill.name}`
+      : `调用 Skill ${skill.name}`;
+  const invokeSummary =
+    typeof invokeResult?.output.summary === "string" ? invokeResult.output.summary : "Skill 调用已完成";
+  const invokeInputKeys = Array.isArray(invokeResult?.output.inputKeys)
+    ? invokeResult.output.inputKeys.filter((key): key is string => typeof key === "string").join(", ")
+    : "";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3522,6 +3549,26 @@ function SkillBindingPanel({
       setError(err instanceof Error ? err.message : "Skill 绑定创建失败");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleInvokeSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!skill || !canInvokeSkill) {
+      return;
+    }
+
+    setInvokeBusy(true);
+    setInvokeError("");
+
+    try {
+      const response = await invokeSkill({ name: skill.name, input: { text: invokeText } }, role);
+      setInvokeResult(response);
+      await onInvoked();
+    } catch (err) {
+      setInvokeError(err instanceof Error ? err.message : "Skill 调用失败");
+    } finally {
+      setInvokeBusy(false);
     }
   }
 
@@ -3567,6 +3614,48 @@ function SkillBindingPanel({
             </button>
             {role === "operator" ? <ActionHint>需要管理员或开发人员发布 Skill。</ActionHint> : null}
           </div>
+
+          <form aria-busy={invokeBusy} className="skill-invoke-form" onSubmit={handleInvokeSubmit}>
+            <fieldset disabled={invokeBusy || !canInvokeSkill}>
+              <label>
+                <span>调用输入</span>
+                <textarea onChange={(event) => setInvokeText(event.target.value)} rows={3} value={invokeText} />
+              </label>
+            </fieldset>
+            {invokeError ? (
+              <p aria-live="polite" className="form-error" role="alert">
+                {invokeError}
+              </p>
+            ) : null}
+            <button
+              aria-label={invokeLabel}
+              aria-live="polite"
+              className="button button--primary"
+              disabled={invokeBusy || !canInvokeSkill}
+              title={invokeDisabledReason}
+              type="submit"
+            >
+              {invokeBusy ? "调用中" : "调用 Skill"}
+              <ChevronRight aria-hidden="true" size={16} />
+            </button>
+            {invokeDisabledReason ? <ActionHint>{invokeDisabledReason}</ActionHint> : null}
+          </form>
+
+          {invokeResult ? (
+            <div
+              aria-label={`Skill 调用结果：${invokeResult.name} ${invokeResult.protocol}，${invokeResult.usage.skillCalls} calls`}
+              className="invoke-result"
+              role="status"
+            >
+              <span>{invokeResult.protocol}</span>
+              <strong>{invokeResult.name}</strong>
+              <p>{invokeSummary}</p>
+              <small>
+                {invokeResult.route} · {invokeResult.usage.skillCalls} calls
+                {invokeInputKeys ? ` · ${invokeInputKeys}` : ""}
+              </small>
+            </div>
+          ) : null}
         </>
       ) : (
         <EmptyPanel description="创建 Skill 绑定后，网关会把它纳入统一调用和治理入口。" title="暂无 Skill" />

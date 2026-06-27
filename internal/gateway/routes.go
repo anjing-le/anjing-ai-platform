@@ -32,6 +32,7 @@ func RegisterWithRepositories(mux *http.ServeMux, st *store.Store, repos Reposit
 	mux.HandleFunc("/api/gateway/model-routes/publish", publishModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/skills", skillsHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skills/publish", publishSkillBindingHandler(repos.Skills))
+	mux.HandleFunc("/api/gateway/skills/invoke", skillInvokeHandler(repos.Skills, repos.Invocations))
 	mux.HandleFunc("/api/gateway/request-logs", requestLogsHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/proxy", proxyHandler(repos.Routes, repos.ProxyRequests))
 	mux.HandleFunc("/api/gateway/llm/invoke", llmInvokeHandler(repos.ModelRoutes, repos.Invocations))
