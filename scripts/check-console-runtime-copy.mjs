@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 const errors = [];
 const appSource = readFileSync("apps/console/src/App.tsx", "utf8");
 const actionDialogSource = readFileSync("apps/console/src/components/ActionDialog.tsx", "utf8");
+const confirmDialogSource = readFileSync("apps/console/src/components/ConfirmDialog.tsx", "utf8");
 const accessSource = readFileSync("apps/console/src/lib/access.ts", "utf8");
 const dataSource = readFileSync("apps/console/src/data/console.ts", "utf8");
 const hydrateSource = readFileSync("apps/console/src/lib/hydrate.ts", "utf8");
@@ -323,6 +324,27 @@ if (!actionDialogSource.includes("autoFocus={index === 0}")) {
 
 if (!actionDialogSource.includes("aria-busy={busy}") || !actionDialogSource.includes("aria-live=\"polite\"")) {
   errors.push("Console action dialog must expose busy submit state to assistive technology.");
+}
+
+if (
+  !confirmDialogSource.includes("aria-describedby=\"confirm-dialog-description\"") ||
+  !confirmDialogSource.includes("aria-busy={busy}") ||
+  !confirmDialogSource.includes("role=\"alert\"") ||
+  !confirmDialogSource.includes("event.key === \"Escape\"") ||
+  !confirmDialogSource.includes("disabled={busy}")
+) {
+  errors.push("Console confirm dialog must expose description, busy state, alert errors and safe dismissal.");
+}
+
+if (
+  !appSource.includes("type ConfirmIntentType") ||
+  !appSource.includes("executeConfirmedAction") ||
+  !appSource.includes("runAPIKeyRevoke") ||
+  !appSource.includes("失败时 API Key 会保持当前状态") ||
+  !appSource.includes("失败时会保留当前路由状态") ||
+  !appSource.includes("失败时会保留当前 Skill 绑定状态")
+) {
+  errors.push("Console critical actions must use confirmation intents with recovery copy before executing.");
 }
 
 for (const formClass of ["model-route-form", "skill-binding-form", "invoke-form"]) {

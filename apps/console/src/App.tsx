@@ -10,6 +10,7 @@ import {
 import { type FormEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ActionDialog, type ActionMode, type ActionValues } from "./components/ActionDialog";
+import { ConfirmDialog, type ConfirmDialogCopy } from "./components/ConfirmDialog";
 import { backendPlan, consoleServiceMap, modulePages, navItems, roles, todos } from "./data/console";
 import {
   activateApplication,
@@ -65,6 +66,22 @@ import type {
 } from "./types";
 
 type ApiState = "loading" | "live" | "fallback";
+
+type ConfirmIntentType =
+  | "application-key-rotate"
+  | "route-publish"
+  | "model-route-publish"
+  | "skill-binding-publish"
+  | "plan-activate"
+  | "budget-alert-resolve"
+  | "credential-rotate"
+  | "api-key-revoke";
+
+interface ConfirmIntent extends ConfirmDialogCopy {
+  fallbackError: string;
+  id: string;
+  type: ConfirmIntentType;
+}
 
 interface WorkflowStep {
   label: string;
@@ -154,6 +171,10 @@ function useInitialFocus<T extends HTMLElement>(enabled = true) {
   return ref;
 }
 
+function actionErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 function App() {
   const [route, setRoute] = useState<ConsoleRoute | "landing">(parseRoute);
   const [role, setRole] = useState<RoleId>("admin");
@@ -166,6 +187,9 @@ function App() {
   const [actionMode, setActionMode] = useState<ActionMode | null>(null);
   const [actionError, setActionError] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
+  const [confirmIntent, setConfirmIntent] = useState<ConfirmIntent | null>(null);
+  const [confirmError, setConfirmError] = useState("");
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [activatingUserId, setActivatingUserId] = useState("");
   const [activatingApplicationId, setActivatingApplicationId] = useState("");
   const [rotatingApplicationId, setRotatingApplicationId] = useState("");
@@ -393,6 +417,61 @@ function App() {
     }
   }
 
+  function openConfirm(intent: ConfirmIntent) {
+    setNotice("");
+    setConfirmError("");
+    setConfirmIntent(intent);
+  }
+
+  async function executeConfirmedAction() {
+    if (!confirmIntent) {
+      return;
+    }
+
+    setConfirmBusy(true);
+    setConfirmError("");
+
+    try {
+      if (confirmIntent.type === "application-key-rotate") {
+        await runApplicationKeyRotate(confirmIntent.id);
+      }
+
+      if (confirmIntent.type === "route-publish") {
+        await runRoutePublish(confirmIntent.id);
+      }
+
+      if (confirmIntent.type === "model-route-publish") {
+        await runModelRoutePublish(confirmIntent.id);
+      }
+
+      if (confirmIntent.type === "skill-binding-publish") {
+        await runSkillBindingPublish(confirmIntent.id);
+      }
+
+      if (confirmIntent.type === "plan-activate") {
+        await runPlanActivate(confirmIntent.id);
+      }
+
+      if (confirmIntent.type === "budget-alert-resolve") {
+        await runBudgetAlertResolve(confirmIntent.id);
+      }
+
+      if (confirmIntent.type === "credential-rotate") {
+        await runCredentialRotate(confirmIntent.id);
+      }
+
+      if (confirmIntent.type === "api-key-revoke") {
+        await runAPIKeyRevoke(confirmIntent.id);
+      }
+
+      setConfirmIntent(null);
+    } catch (error) {
+      setConfirmError(actionErrorMessage(error, confirmIntent.fallbackError));
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
+
   async function handleUserActivate(id: string) {
     setNotice("");
     setActivatingUserId(id);
@@ -425,6 +504,26 @@ function App() {
   }
 
   async function handleApplicationKeyRotate(id: string) {
+    const application = snapshot?.applications?.find((item) => item.id === id);
+
+    openConfirm({
+      confirmLabel: "确认轮换",
+      description: `确认轮换 ${application?.name || "该应用"} 的接入 API Key。`,
+      details: [
+        `负责人：${application?.owner || "以后端记录为准"}`,
+        `环境：${application?.environment || "以后端记录为准"}`,
+        `默认路由：${application?.defaultRoute || "以后端记录为准"}`,
+      ],
+      fallbackError: "API Key 轮换失败",
+      id,
+      recovery: "失败时会保留当前 API Key 状态；请确认 Go API 在线、权限有效后重试。",
+      title: "轮换应用 API Key",
+      tone: "warning",
+      type: "application-key-rotate",
+    });
+  }
+
+  async function runApplicationKeyRotate(id: string) {
     setNotice("");
     setRotatingApplicationId(id);
 
@@ -434,13 +533,35 @@ function App() {
       setSelectedApplicationId(application.id);
       setNotice(`已轮换 API Key：${application.name}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "API Key 轮换失败");
+      const message = actionErrorMessage(error, "API Key 轮换失败");
+      setNotice(message);
+      throw new Error(message);
     } finally {
       setRotatingApplicationId("");
     }
   }
 
   async function handleRoutePublish(id: string) {
+    const route = snapshot?.routes?.find((item) => item.id === id);
+
+    openConfirm({
+      confirmLabel: "确认发布",
+      description: `确认发布 ${route?.route || "该 API 路由"} 到统一网关入口。`,
+      details: [
+        `上游目标：${route?.upstream || "以后端记录为准"}`,
+        `鉴权策略：${route?.auth || "以后端记录为准"}`,
+        `限流策略：${route?.limit || "以后端记录为准"}`,
+      ],
+      fallbackError: "路由发布失败",
+      id,
+      recovery: "失败时会保留当前路由状态；请检查上游配置、角色权限和 Go API 连接后重试。",
+      title: "发布 API 路由",
+      tone: "warning",
+      type: "route-publish",
+    });
+  }
+
+  async function runRoutePublish(id: string) {
     setNotice("");
     setPublishingRouteId(id);
 
@@ -450,7 +571,9 @@ function App() {
       setSelectedRouteId(route.id);
       setNotice(`已发布路由：${route.route}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "路由发布失败");
+      const message = actionErrorMessage(error, "路由发布失败");
+      setNotice(message);
+      throw new Error(message);
     } finally {
       setPublishingRouteId("");
     }
@@ -470,6 +593,26 @@ function App() {
   }
 
   async function handleModelRoutePublish(id: string) {
+    const modelRoute = snapshot?.modelRoutes?.find((item) => item.id === id);
+
+    openConfirm({
+      confirmLabel: "确认发布",
+      description: `确认发布模型路由 ${modelRoute?.alias || "该模型路由"}。`,
+      details: [
+        `场景：${modelRoute?.scenario || "以后端记录为准"}`,
+        `主模型：${modelRoute?.primary || "以后端记录为准"}`,
+        `兜底模型：${modelRoute?.fallback || "以后端记录为准"}`,
+      ],
+      fallbackError: "模型路由发布失败",
+      id,
+      recovery: "失败时不会切换当前模型路由；请确认供应商配置、Key 池和网关连接后重试。",
+      title: "发布模型路由",
+      tone: "warning",
+      type: "model-route-publish",
+    });
+  }
+
+  async function runModelRoutePublish(id: string) {
     setNotice("");
     setPublishingModelRouteId(id);
 
@@ -479,7 +622,9 @@ function App() {
       setSelectedModelRouteId(modelRoute.id);
       setNotice(`已发布模型路由：${modelRoute.alias}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "模型路由发布失败");
+      const message = actionErrorMessage(error, "模型路由发布失败");
+      setNotice(message);
+      throw new Error(message);
     } finally {
       setPublishingModelRouteId("");
     }
@@ -499,6 +644,26 @@ function App() {
   }
 
   async function handleSkillBindingPublish(id: string) {
+    const skill = snapshot?.skills?.find((item) => item.id === id);
+
+    openConfirm({
+      confirmLabel: "确认发布",
+      description: `确认发布 Skill 绑定 ${skill?.name || "该 Skill"}。`,
+      details: [
+        `协议：${skill?.protocol || "以后端记录为准"}`,
+        `调用路由：${skill?.route || "以后端记录为准"}`,
+        `超时：${skill?.timeout || "以后端记录为准"}`,
+      ],
+      fallbackError: "Skill 绑定发布失败",
+      id,
+      recovery: "失败时会保留当前 Skill 绑定状态；请检查协议适配、路由配置和权限后重试。",
+      title: "发布 Skill 绑定",
+      tone: "warning",
+      type: "skill-binding-publish",
+    });
+  }
+
+  async function runSkillBindingPublish(id: string) {
     setNotice("");
     setPublishingSkillId(id);
 
@@ -508,7 +673,9 @@ function App() {
       setSelectedSkillId(skill.id);
       setNotice(`已发布 Skill 绑定：${skill.name}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Skill 绑定发布失败");
+      const message = actionErrorMessage(error, "Skill 绑定发布失败");
+      setNotice(message);
+      throw new Error(message);
     } finally {
       setPublishingSkillId("");
     }
@@ -541,6 +708,26 @@ function App() {
   }
 
   async function handlePlanActivate(id: string) {
+    const plan = snapshot?.plans?.find((item) => item.id === id);
+
+    openConfirm({
+      confirmLabel: "确认启用",
+      description: `确认启用套餐 ${plan?.name || "该套餐"}。`,
+      details: [
+        `目标范围：${plan?.target || "以后端记录为准"}`,
+        `RPS：${plan?.rps || "以后端记录为准"}`,
+        `每日 Token：${plan?.tokenPerDay || "以后端记录为准"}`,
+      ],
+      fallbackError: "套餐启用失败",
+      id,
+      recovery: "失败时不会切换当前套餐状态；请确认计费服务连接、权限和配额字段后重试。",
+      title: "启用计费套餐",
+      tone: "warning",
+      type: "plan-activate",
+    });
+  }
+
+  async function runPlanActivate(id: string) {
     setNotice("");
     setActivatingPlanId(id);
 
@@ -550,13 +737,34 @@ function App() {
       setSelectedPlanId(plan.id);
       setNotice(`已启用套餐：${plan.name}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "套餐启用失败");
+      const message = actionErrorMessage(error, "套餐启用失败");
+      setNotice(message);
+      throw new Error(message);
     } finally {
       setActivatingPlanId("");
     }
   }
 
   async function handleBudgetAlertResolve(id: string) {
+    const alert = snapshot?.budgetAlerts?.find((item) => item.id === id);
+
+    openConfirm({
+      confirmLabel: "确认处理",
+      description: `确认将 ${alert?.project || "该项目"} 的预算告警标记为已处理。`,
+      details: [
+        `预算：${alert?.budget || "以后端记录为准"}`,
+        `当前用量：${alert?.current || "以后端记录为准"}`,
+        `阈值：${alert?.threshold || "以后端记录为准"}`,
+      ],
+      fallbackError: "预算告警处理失败",
+      id,
+      recovery: "失败时告警会保持未处理状态；请确认计费服务在线后重新处理。",
+      title: "处理预算告警",
+      type: "budget-alert-resolve",
+    });
+  }
+
+  async function runBudgetAlertResolve(id: string) {
     setNotice("");
     setResolvingBudgetAlertId(id);
 
@@ -566,13 +774,35 @@ function App() {
       setSelectedBudgetAlertId(alert.id);
       setNotice(`已处理预算告警：${alert.project}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "预算告警处理失败");
+      const message = actionErrorMessage(error, "预算告警处理失败");
+      setNotice(message);
+      throw new Error(message);
     } finally {
       setResolvingBudgetAlertId("");
     }
   }
 
   async function handleCredentialRotate(id: string) {
+    const credential = snapshot?.credentials?.find((item) => item.id === id);
+
+    openConfirm({
+      confirmLabel: "确认轮换",
+      description: `确认轮换凭据引用 ${credential?.ref || "该凭据"}。`,
+      details: [
+        `用途：${credential?.purpose || "以后端记录为准"}`,
+        `绑定范围：${credential?.scope || "以后端记录为准"}`,
+        `到期时间：${credential?.expiresAt || "以后端记录为准"}`,
+      ],
+      fallbackError: "凭据轮换失败",
+      id,
+      recovery: "失败时原凭据引用会保留；请确认供应商 Key、权限和审计链路后重试。",
+      title: "轮换凭据引用",
+      tone: "warning",
+      type: "credential-rotate",
+    });
+  }
+
+  async function runCredentialRotate(id: string) {
     setNotice("");
     setRotatingCredentialId(id);
 
@@ -582,13 +812,35 @@ function App() {
       setSelectedCredentialId(credential.id);
       setNotice(`已轮换凭据：${credential.ref}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "凭据轮换失败");
+      const message = actionErrorMessage(error, "凭据轮换失败");
+      setNotice(message);
+      throw new Error(message);
     } finally {
       setRotatingCredentialId("");
     }
   }
 
   async function handleAPIKeyRevoke(id: string) {
+    const apiKey = snapshot?.apiKeys?.find((item) => item.id === id);
+
+    openConfirm({
+      confirmLabel: "确认撤销",
+      description: `确认撤销 API Key ${apiKey?.name || "该密钥"}。`,
+      details: [
+        `项目：${apiKey?.project || "以后端记录为准"}`,
+        `授权范围：${apiKey?.scope || "以后端记录为准"}`,
+        `到期时间：${apiKey?.expiresAt || "以后端记录为准"}`,
+      ],
+      fallbackError: "API Key 撤销失败",
+      id,
+      recovery: "失败时 API Key 会保持当前状态；如调用已受影响，请查看审计日志并重试。",
+      title: "撤销 API Key",
+      tone: "danger",
+      type: "api-key-revoke",
+    });
+  }
+
+  async function runAPIKeyRevoke(id: string) {
     setNotice("");
     setRevokingAPIKeyId(id);
 
@@ -598,7 +850,9 @@ function App() {
       setSelectedAPIKeyId(key.id);
       setNotice(`已撤销 API Key：${key.name}`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "API Key 撤销失败");
+      const message = actionErrorMessage(error, "API Key 撤销失败");
+      setNotice(message);
+      throw new Error(message);
     } finally {
       setRevokingAPIKeyId("");
     }
@@ -678,6 +932,15 @@ function App() {
           mode={actionMode}
           onClose={() => setActionMode(null)}
           onSubmit={handleActionSubmit}
+        />
+      ) : null}
+      {confirmIntent ? (
+        <ConfirmDialog
+          busy={confirmBusy}
+          copy={confirmIntent}
+          error={confirmError}
+          onCancel={() => setConfirmIntent(null)}
+          onConfirm={executeConfirmedAction}
         />
       ) : null}
     </>
