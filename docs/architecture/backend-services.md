@@ -276,7 +276,7 @@ go run ./cmd/console-web      # :1818
 
 `POST /api/gateway/llm/stream` 在同一套模型路由、fallback、审计和用量记录之上提供 SSE 最小流式输出契约：先发送 `meta`，再发送多个 `delta`，最后以 `done` 输出完成原因和用量。当前仍使用 mock provider adapter，真实 provider SDK、provider-native stream 和精确 token 计量保留到后续迭代。
 
-`POST /api/gateway/skills/invoke` 已提供 V1 可替换 Skill adapter 最小闭环：按名称解析 Published Skill 绑定，按 `schemaVersion` 校验内置 Skill 输入，执行调用、返回协议/路由/输出摘要，写入请求日志、审计和成功 Skill call 用量记录；更完整的 schema registry、版本管理和真实 HTTP/MCP 适配保留到后续迭代。
+`POST /api/gateway/skills/invoke` 已提供 V1 可替换 Skill adapter 最小闭环：按名称解析 Published Skill 绑定，按 `schemaVersion` 校验内置 Skill 输入；当 `Protocol=HTTP` 且 `Route` 是 `http/https` 绝对地址时，会发起真实 JSON POST 调用并解析返回的 `output`，MCP 和相对 HTTP 路由继续走开发 adapter；调用结果会写入请求日志、审计和成功 Skill call 用量记录。更完整的 schema registry、版本管理、MCP 真实适配和治理策略保留到后续迭代。
 
 `GET /api/gateway/request-logs` 支持 `q`、`consumer`、`status` 和 `limit` 查询参数，用于控制台按调用方、状态和关键词查看近期请求链路。`GET /api/gateway/request-logs/export` 复用同一套查询参数导出 CSV，默认最多导出 500 条。`POST /api/gateway/request-logs/retention/purge` 按 `olderThanDays` 清理过期请求日志，默认保留 30 天，面向 Administrator 和 Operator。
 

@@ -785,9 +785,11 @@ paths:
       description: >
         V1 resolves a Published skill binding by name and executes it through a
         replaceable adapter. Built-in bindings validate input against the
-        declared schemaVersion before dispatch. The endpoint records request
-        logs and successful skill-call usage so the console can validate
-        integration flow before real Skill provider protocols are wired in.
+        declared schemaVersion before dispatch. HTTP bindings with an absolute
+        http/https route are dispatched as JSON POST calls; MCP bindings and
+        relative HTTP routes continue to use the development adapter. The
+        endpoint records request logs and successful skill-call usage so the
+        console can validate integration flow.
       x-anjing-roles: [Administrator, User, Developer]
       requestBody:
         required: true

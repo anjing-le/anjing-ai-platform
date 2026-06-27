@@ -746,6 +746,88 @@ func TestInvokeSkillUsesPublishedBinding(t *testing.T) {
 	}
 }
 
+func TestInvokeSkillCallsHTTPBinding(t *testing.T) {
+	st := store.NewSeedStore()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("expected POST, got %s", r.Method)
+		}
+		if r.Header.Get("Content-Type") != "application/json" || r.Header.Get("Accept") != "application/json" {
+			t.Fatalf("expected json headers, got content-type=%q accept=%q", r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		}
+		if r.Header.Get("X-Anjing-Skill-Name") != "search-knowledge" || r.Header.Get("X-Anjing-Skill-Schema") != "0.1" {
+			t.Fatalf("expected skill headers, got name=%q schema=%q", r.Header.Get("X-Anjing-Skill-Name"), r.Header.Get("X-Anjing-Skill-Schema"))
+		}
+		if r.Header.Get("X-Anjing-Skill-Call-ID") == "" {
+			t.Fatalf("expected call id header")
+		}
+
+		var req struct {
+			ID    string         `json:"id"`
+			Name  string         `json:"name"`
+			Input map[string]any `json:"input"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode upstream request: %v", err)
+		}
+		if req.ID == "" || req.Name != "search-knowledge" || req.Input["query"] != "退款政策" {
+			t.Fatalf("unexpected upstream request: %+v", req)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"output":{"summary":"HTTP skill handled query","provider":"http-adapter"}}`))
+	}))
+	defer upstream.Close()
+
+	skill := st.CreateSkillBinding("search-knowledge", "HTTP", upstream.URL+"/skills/search", "1s", "0.1")
+	if _, ok := st.PublishSkillBinding(skill.ID); !ok {
+		t.Fatalf("expected skill binding to publish")
+	}
+	initialLogs := len(st.ListRequestLogs())
+	initialUsage := len(st.ListUsage())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"name":"search-knowledge","input":{"query":"退款政策"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/skills/invoke", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Name     string         `json:"name"`
+			Protocol string         `json:"protocol"`
+			Route    string         `json:"route"`
+			Output   map[string]any `json:"output"`
+			Usage    struct {
+				SkillCalls int `json:"skillCalls"`
+			} `json:"usage"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Protocol != "HTTP" || payload.Data.Route != upstream.URL+"/skills/search" {
+		t.Fatalf("unexpected payload: %+v", payload)
+	}
+	if payload.Data.Output["summary"] != "HTTP skill handled query" || payload.Data.Output["provider"] != "http-adapter" || payload.Data.Usage.SkillCalls != 1 {
+		t.Fatalf("expected HTTP adapter output and usage, got %+v", payload.Data)
+	}
+	if logs := st.ListRequestLogs(); len(logs) != initialLogs+1 || logs[0].Consumer != "search-knowledge" || logs[0].Status != "Success" || logs[0].Result != "200" {
+		t.Fatalf("expected skill request log to be appended, got %+v", logs)
+	}
+	if usage := st.ListUsage(); len(usage) != initialUsage+1 || usage[0].Project != "search-knowledge" || usage[0].SkillCalls != "1" {
+		t.Fatalf("expected skill usage record to be appended, got %+v", usage)
+	}
+}
+
 func TestInvokeSkillRejectsInvalidInputSchema(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())

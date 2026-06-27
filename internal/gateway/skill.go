@@ -1,16 +1,23 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/httpjson"
 	"github.com/anjing-le/anjing-ai-platform/internal/platform/store"
 )
+
+const maxSkillHTTPResponseBytes = 1 << 20
 
 type skillInvokeRequest struct {
 	Name  string         `json:"name"`
@@ -45,8 +52,15 @@ type skillAdapter interface {
 
 type mockSkillAdapter struct{}
 
+type routingSkillAdapter struct {
+	mock mockSkillAdapter
+	http httpSkillAdapter
+}
+
+type httpSkillAdapter struct{}
+
 func skillInvokeHandler(skills SkillRepository, recorder InvocationRecorder) http.HandlerFunc {
-	adapter := mockSkillAdapter{}
+	adapter := routingSkillAdapter{mock: mockSkillAdapter{}, http: httpSkillAdapter{}}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodPost) {
@@ -131,6 +145,57 @@ func executeSkillInvocation(ctx context.Context, skill store.SkillBinding, req s
 	}, record, nil
 }
 
+func (adapter routingSkillAdapter) Invoke(ctx context.Context, skill store.SkillBinding, req skillAdapterRequest) (skillAdapterResponse, error) {
+	if strings.EqualFold(strings.TrimSpace(skill.Protocol), "HTTP") && isHTTPRoute(skill.Route) {
+		return adapter.http.Invoke(ctx, skill, req)
+	}
+	return adapter.mock.Invoke(ctx, skill, req)
+}
+
+func (httpSkillAdapter) Invoke(ctx context.Context, skill store.SkillBinding, req skillAdapterRequest) (skillAdapterResponse, error) {
+	timeout := normalizeSkillTimeout(skill.Timeout)
+	callCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	body, err := json.Marshal(map[string]any{
+		"id":    req.ID,
+		"name":  skill.Name,
+		"input": req.Input,
+	})
+	if err != nil {
+		return skillAdapterResponse{}, fmt.Errorf("encode request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(callCtx, http.MethodPost, strings.TrimSpace(skill.Route), bytes.NewReader(body))
+	if err != nil {
+		return skillAdapterResponse{}, fmt.Errorf("build request: %w", err)
+	}
+	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-Anjing-Skill-Call-ID", req.ID)
+	httpReq.Header.Set("X-Anjing-Skill-Name", skill.Name)
+	httpReq.Header.Set("X-Anjing-Skill-Schema", skill.SchemaVersion)
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return skillAdapterResponse{}, fmt.Errorf("call upstream: %w", err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(io.LimitReader(resp.Body, maxSkillHTTPResponseBytes))
+	if err != nil {
+		return skillAdapterResponse{}, fmt.Errorf("read upstream response: %w", err)
+	}
+	if resp.StatusCode >= http.StatusInternalServerError {
+		return skillAdapterResponse{}, fmt.Errorf("upstream returned %d", resp.StatusCode)
+	}
+	if resp.StatusCode >= http.StatusBadRequest {
+		return skillAdapterResponse{}, fmt.Errorf("upstream rejected request with %d", resp.StatusCode)
+	}
+
+	return skillAdapterResponse{Output: normalizeSkillHTTPOutput(resp.StatusCode, responseBody)}, nil
+}
+
 func findPublishedSkill(ctx context.Context, skills SkillRepository, name string) (store.SkillBinding, bool, error) {
 	items, err := skills.ListSkills(ctx)
 	if err != nil {
@@ -142,6 +207,48 @@ func findPublishedSkill(ctx context.Context, skills SkillRepository, name string
 		}
 	}
 	return store.SkillBinding{}, false, nil
+}
+
+func isHTTPRoute(route string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(route))
+	if err != nil {
+		return false
+	}
+	return parsed.Host != "" && (parsed.Scheme == "http" || parsed.Scheme == "https")
+}
+
+func normalizeSkillTimeout(value string) time.Duration {
+	const (
+		defaultTimeout = 8 * time.Second
+		maxTimeout     = 30 * time.Second
+	)
+	timeout, err := time.ParseDuration(strings.TrimSpace(value))
+	if err != nil || timeout <= 0 {
+		return defaultTimeout
+	}
+	if timeout > maxTimeout {
+		return maxTimeout
+	}
+	return timeout
+}
+
+func normalizeSkillHTTPOutput(statusCode int, body []byte) map[string]any {
+	if len(bytes.TrimSpace(body)) == 0 {
+		return map[string]any{"statusCode": statusCode}
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(body, &decoded); err == nil {
+		if output, ok := decoded["output"].(map[string]any); ok {
+			return output
+		}
+		return decoded
+	}
+
+	return map[string]any{
+		"statusCode": statusCode,
+		"body":       string(body),
+	}
 }
 
 func (mockSkillAdapter) Invoke(ctx context.Context, skill store.SkillBinding, req skillAdapterRequest) (skillAdapterResponse, error) {

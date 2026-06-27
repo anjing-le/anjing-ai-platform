@@ -43,7 +43,8 @@
 - [ ] 为 LLM 调用接入真实 provider SDK、provider-native stream 和精确 token 计量。
 - [x] 为 Skill 增加 adapter、发布绑定、调用测试和 Skill call 用量计量最小闭环。
 - [x] 为 Skill 调用增加按 `schemaVersion` 的输入校验。
-- [ ] 为 Skill 增加 schema registry、版本管理、真实 HTTP/MCP 适配和治理策略。
+- [x] 为 Skill 增加真实 HTTP adapter 最小闭环。
+- [ ] 为 Skill 增加 schema registry、版本管理、MCP 真实适配和治理策略。
 - [x] 为计费增加幂等用量事件。
 - [x] 为计费增加账单聚合。
 - [x] 为计费增加预算阈值。
