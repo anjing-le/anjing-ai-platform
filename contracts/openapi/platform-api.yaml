@@ -1112,8 +1112,9 @@ paths:
       summary: Proxy an HTTP request through a configured gateway route or explicit upstream.
       description: >
         Executes the V1 gateway runtime path with timeout, bounded retries,
-        optional upstream candidates, ordered or round-robin strategy, fallback
-        upstream, published route rate limits, route-level circuit breaker
+        optional upstream candidates, ordered, round-robin or weighted strategy,
+        request-level canary header routing, fallback upstream, published route
+        rate limits, route-level circuit breaker
         cooldown and request log recording. When request `stream` is true, the
         endpoint returns the upstream response stream directly instead of the
         JSON envelope.
@@ -2245,11 +2246,27 @@ components:
           description: Optional explicit upstream candidate list. Takes precedence over route configuration when provided.
           items:
             type: string
+        upstreamWeights:
+          type: object
+          description: Optional per-upstream positive integer weights used by the weighted strategy.
+          additionalProperties:
+            type: integer
+            minimum: 1
+            maximum: 10000
         strategy:
           type: string
-          enum: [ordered, round_robin]
+          enum: [ordered, round_robin, weighted]
           default: ordered
           description: Candidate upstream selection strategy before retries and fallback handling.
+        canaryHeader:
+          type: string
+          description: Optional request header name used to select a canary upstream.
+        canaryValue:
+          type: string
+          description: Optional header value required for canary selection. When omitted, any non-empty header value matches.
+        canaryUpstream:
+          type: string
+          description: Optional http/https upstream that is tried first when the canary header rule matches.
         fallbackUpstream:
           type: string
           description: Optional fallback upstream used after primary retries fail.
@@ -2283,11 +2300,13 @@ components:
           type: string
         strategy:
           type: string
-          enum: [ordered, round_robin]
+          enum: [ordered, round_robin, weighted]
         candidateUpstreams:
           type: array
           items:
             type: string
+        canaryMatched:
+          type: boolean
         statusCode:
           type: integer
         attempts:

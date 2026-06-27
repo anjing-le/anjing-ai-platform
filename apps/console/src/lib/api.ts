@@ -144,15 +144,19 @@ export interface GatewayRoutePreflight {
   health?: GatewayRouteHealthCheck;
 }
 
-export type GatewayProxyStrategy = "ordered" | "round_robin";
+export type GatewayProxyStrategy = "ordered" | "round_robin" | "weighted";
 
 export interface GatewayProxyRequest {
   route: string;
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   upstream?: string;
   upstreams?: string[];
+  upstreamWeights?: Record<string, number>;
   fallbackUpstream?: string;
   strategy?: GatewayProxyStrategy;
+  canaryHeader?: string;
+  canaryValue?: string;
+  canaryUpstream?: string;
   timeoutMs?: number;
   retries?: number;
   headers?: Record<string, string>;
@@ -165,6 +169,7 @@ export interface GatewayProxyResponse {
   upstream: string;
   strategy?: GatewayProxyStrategy;
   candidateUpstreams?: string[];
+  canaryMatched?: boolean;
   statusCode: number;
   attempts: number;
   fallback: boolean;

@@ -948,6 +948,109 @@ func TestProxyGatewayFallsBackAcrossExplicitUpstreams(t *testing.T) {
 	}
 }
 
+func TestProxyGatewayUsesWeightedUpstreams(t *testing.T) {
+	st := store.NewSeedStore()
+	firstUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`first`))
+	}))
+	defer firstUpstream.Close()
+	secondUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`second`))
+	}))
+	defer secondUpstream.Close()
+	mux := http.NewServeMux()
+	Register(mux, st)
+	gatewayProxyStrategyCursor.Store(0)
+
+	countByUpstream := map[string]int{}
+	for i := 0; i < 12; i++ {
+		body := bytes.NewBufferString(`{"route":"/api/v1/weighted","method":"GET","upstreams":["` + firstUpstream.URL + `","` + secondUpstream.URL + `"],"upstreamWeights":{"` + firstUpstream.URL + `":1,"` + secondUpstream.URL + `":100},"strategy":"weighted","timeoutMs":1000}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+		}
+		var payload struct {
+			Success bool `json:"success"`
+			Data    struct {
+				Upstream           string   `json:"upstream"`
+				Strategy           string   `json:"strategy"`
+				CandidateUpstreams []string `json:"candidateUpstreams"`
+				StatusCode         int      `json:"statusCode"`
+				Attempts           int      `json:"attempts"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode response: %v", err)
+		}
+		if !payload.Success || payload.Data.Strategy != "weighted" || payload.Data.StatusCode != http.StatusOK {
+			t.Fatalf("unexpected weighted proxy payload: %+v", payload)
+		}
+		if len(payload.Data.CandidateUpstreams) != 2 || payload.Data.Attempts != 1 {
+			t.Fatalf("expected two candidates and single attempt, got %+v", payload.Data)
+		}
+		countByUpstream[payload.Data.Upstream]++
+	}
+
+	if countByUpstream[secondUpstream.URL] < 10 {
+		t.Fatalf("expected weighted strategy to prefer second upstream, got counts %+v", countByUpstream)
+	}
+}
+
+func TestProxyGatewayCanaryHeaderOverridesPrimaryUpstream(t *testing.T) {
+	st := store.NewSeedStore()
+	primary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`primary`))
+	}))
+	defer primary.Close()
+	canary := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`canary`))
+	}))
+	defer canary.Close()
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	body := bytes.NewBufferString(`{"route":"/api/v1/canary","method":"GET","upstreams":["` + primary.URL + `"],"canaryHeader":"X-Release-Cohort","canaryValue":"beta","canaryUpstream":"` + canary.URL + `","headers":{"X-Release-Cohort":"beta"},"timeoutMs":1000}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Success bool `json:"success"`
+		Data    struct {
+			Upstream           string   `json:"upstream"`
+			Strategy           string   `json:"strategy"`
+			CandidateUpstreams []string `json:"candidateUpstreams"`
+			CanaryMatched      bool     `json:"canaryMatched"`
+			StatusCode         int      `json:"statusCode"`
+			Attempts           int      `json:"attempts"`
+			Body               string   `json:"body"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if !payload.Success || payload.Data.Upstream != canary.URL || payload.Data.StatusCode != http.StatusOK {
+		t.Fatalf("unexpected canary proxy payload: %+v", payload)
+	}
+	if !payload.Data.CanaryMatched || payload.Data.Body != "canary" || payload.Data.Attempts != 1 {
+		t.Fatalf("expected canary match to use canary upstream once, got %+v", payload.Data)
+	}
+	if len(payload.Data.CandidateUpstreams) != 2 || payload.Data.CandidateUpstreams[0] != canary.URL {
+		t.Fatalf("expected canary upstream to be first candidate, got %+v", payload.Data.CandidateUpstreams)
+	}
+}
+
 func TestProxyGatewayStreamsUpstreamResponse(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())
