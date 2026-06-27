@@ -939,8 +939,8 @@ paths:
       summary: Proxy an HTTP request through a configured gateway route or explicit upstream.
       description: >
         Executes the V1 gateway runtime path with timeout, bounded retries,
-        optional fallback upstream and request log recording. Streaming remains
-        on the V1.2 backlog.
+        optional fallback upstream, published route rate limits and request log
+        recording. Streaming remains on the V1.2 backlog.
       x-anjing-roles: [Administrator, User, Developer]
       requestBody:
         required: true
@@ -968,6 +968,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
         "502":
           $ref: "#/components/responses/BadGateway"
   /api/gateway/llm/invoke:
@@ -1545,6 +1547,12 @@ components:
             $ref: "#/components/schemas/ErrorEnvelope"
     NotFound:
       description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    TooManyRequests:
+      description: Request exceeded the configured route rate limit.
       content:
         application/json:
           schema:

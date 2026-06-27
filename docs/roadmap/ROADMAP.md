@@ -35,6 +35,7 @@
 - [ ] OAuth provider/callback、密码/MFA 或外部 IdP 接入。
 - [x] 为 API Key 和 credentialRef 接入脱敏展示、轮换、吊销和审计链路。
 - [x] 为网关增加真实上游代理、超时、重试和 fallback 最小闭环。
+- [x] 为网关增加已发布 route 运行时限流。
 - [ ] 为网关增加流式响应和更完整的上游治理。
 - [x] 为 LLM 调用增加 provider adapter、模型路由策略和 token 用量计量最小闭环。
 - [ ] 为 LLM 调用接入真实 provider SDK、流式输出和精确 token 计量。

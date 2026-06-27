@@ -438,6 +438,61 @@ func TestProxyGatewayResolvesPublishedRoute(t *testing.T) {
 	}
 }
 
+func TestProxyGatewayEnforcesPublishedRouteLimit(t *testing.T) {
+	st := store.NewSeedStore()
+	hits := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`ok`))
+	}))
+	defer upstream.Close()
+
+	draft := st.CreateRoute("/api/v1/limited/**", upstream.URL, "1/min")
+	if _, ok := st.PublishRoute(draft.ID); !ok {
+		t.Fatalf("expected route to publish")
+	}
+	initialLogs := len(st.ListRequestLogs())
+	mux := http.NewServeMux()
+	Register(mux, st)
+
+	proxyOnce := func() *httptest.ResponseRecorder {
+		body := bytes.NewBufferString(`{"route":"/api/v1/limited/ping","method":"GET","timeoutMs":1000}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec
+	}
+
+	first := proxyOnce()
+	if first.Code != http.StatusOK {
+		t.Fatalf("expected first request to pass, got %d: %s", first.Code, first.Body.String())
+	}
+
+	second := proxyOnce()
+	if second.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected second request to be rate limited, got %d: %s", second.Code, second.Body.String())
+	}
+	if second.Header().Get("Retry-After") == "" {
+		t.Fatalf("expected Retry-After header")
+	}
+	if hits != 1 {
+		t.Fatalf("expected only one upstream hit, got %d", hits)
+	}
+
+	logs := st.ListRequestLogs()
+	if len(logs) != initialLogs+2 {
+		t.Fatalf("expected two proxy logs, got %+v", logs)
+	}
+	if logs[0].Status != "RateLimited" || logs[0].Result != "429" {
+		t.Fatalf("expected latest request log to be rate limited, got %+v", logs[0])
+	}
+	if logs[1].Status != "Success" || logs[1].Result != "200" {
+		t.Fatalf("expected first request log to be successful, got %+v", logs[1])
+	}
+}
+
 func TestCreateModelRouteAddsDraftAlias(t *testing.T) {
 	st := store.NewSeedStore()
 	mux := http.NewServeMux()

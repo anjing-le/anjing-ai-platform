@@ -45,7 +45,18 @@ type gatewayProxyResponse struct {
 	Body       string              `json:"body"`
 }
 
+type resolvedProxyRoute struct {
+	Upstream     string
+	RoutePattern string
+	Limit        string
+}
+
 func proxyHandler(routes RouteRepository, recorder ProxyRecorder) http.HandlerFunc {
+	limiter := newGatewayRouteLimiter(time.Now)
+	return proxyHandlerWithLimiter(routes, recorder, limiter)
+}
+
+func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, limiter *gatewayRouteLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodPost) {
 			return
@@ -76,7 +87,7 @@ func proxyHandler(routes RouteRepository, recorder ProxyRecorder) http.HandlerFu
 			return
 		}
 
-		upstream, err := resolveProxyUpstream(r.Context(), routes, req.Route, req.Upstream)
+		resolved, err := resolveProxyRoute(r.Context(), routes, req.Route, req.Upstream)
 		if err != nil {
 			if errors.Is(err, errActiveRouteNotFound) {
 				httpjson.NotFound(w, err.Error())
@@ -87,7 +98,26 @@ func proxyHandler(routes RouteRepository, recorder ProxyRecorder) http.HandlerFu
 		}
 
 		req.Method = method
-		req.Upstream = upstream
+		req.Upstream = resolved.Upstream
+		if decision := limiter.Allow(resolved.RoutePattern, resolved.Limit); !decision.Allowed {
+			retryAfter := int(decision.RetryAfter.Seconds())
+			if retryAfter < 1 {
+				retryAfter = 1
+			}
+			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+			result := gatewayProxyResponse{
+				Route:      req.Route,
+				Upstream:   req.Upstream,
+				StatusCode: http.StatusTooManyRequests,
+				Headers:    map[string][]string{},
+			}
+			if logErr := recordProxyRequest(r.Context(), recorder, req, result, "RateLimited"); logErr != nil {
+				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", logErr.Error())
+				return
+			}
+			httpjson.Fail(w, http.StatusTooManyRequests, "rate_limited", fmt.Sprintf("route limit %s exceeded", resolved.Limit))
+			return
+		}
 		result, err := executeGatewayProxy(r.Context(), req)
 		status := proxyLogStatus(result, err)
 		if logErr := recordProxyRequest(r.Context(), recorder, req, result, status); logErr != nil {
@@ -194,25 +224,37 @@ func sendGatewayProxyAttempt(ctx context.Context, client http.Client, req gatewa
 	}, nil
 }
 
-func resolveProxyUpstream(ctx context.Context, routes RouteRepository, route string, upstreamOverride string) (string, error) {
+func resolveProxyRoute(ctx context.Context, routes RouteRepository, route string, upstreamOverride string) (resolvedProxyRoute, error) {
 	upstream := strings.TrimSpace(upstreamOverride)
 	if upstream != "" {
-		return validateProxyUpstream(upstream)
+		validated, err := validateProxyUpstream(upstream)
+		if err != nil {
+			return resolvedProxyRoute{}, err
+		}
+		return resolvedProxyRoute{Upstream: validated}, nil
 	}
 
 	items, err := routes.ListRoutes(ctx)
 	if err != nil {
-		return "", fmt.Errorf("list gateway routes: %w", err)
+		return resolvedProxyRoute{}, fmt.Errorf("list gateway routes: %w", err)
 	}
 	for _, item := range items {
 		if item.Status != "Active" {
 			continue
 		}
 		if routeMatches(item.Route, route) {
-			return validateProxyUpstream(item.Upstream)
+			validated, err := validateProxyUpstream(item.Upstream)
+			if err != nil {
+				return resolvedProxyRoute{}, err
+			}
+			return resolvedProxyRoute{
+				Upstream:     validated,
+				RoutePattern: item.Route,
+				Limit:        item.Limit,
+			}, nil
 		}
 	}
-	return "", errActiveRouteNotFound
+	return resolvedProxyRoute{}, errActiveRouteNotFound
 }
 
 func validateProxyUpstream(upstream string) (string, error) {

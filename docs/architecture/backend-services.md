@@ -269,7 +269,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/proxy`
 - `POST /api/gateway/llm/invoke`
 
-`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、`timeout`、有限 `retry`、`fallback`、请求日志和审计记录；流式响应保留到后续迭代。
+`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、按已发布 route 的 `limit` 做轻量内存限流、`timeout`、有限 `retry`、`fallback`、请求日志和审计记录；流式响应、Redis 分布式限流和更完整的上游治理保留到后续迭代。
 
 `POST /api/gateway/llm/invoke` 已提供 V1 可替换 provider adapter 最小闭环：解析 Active 模型别名、按 primary/fallback 尝试模型、返回是否走兜底、估算 token、写入请求日志、审计和成功用量记录；真实 provider SDK、流式响应和精确 token 计量保留到后续迭代。
 
