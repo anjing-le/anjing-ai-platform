@@ -302,7 +302,7 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/llm/invoke`
 - `POST /api/gateway/llm/stream`
 
-`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、按已发布 route 的 `limit` 做固定窗口限流、`timeout`、有限 `retry`、`fallback`、请求日志和审计记录；当请求设置 `stream: true` 时，网关会直接透传上游流式响应。默认限流后端是进程内内存，适合本地轻启动；设置 `ANJING_RATE_LIMIT_BACKEND=redis` 和 `ANJING_REDIS_ADDR` 后，可用 Redis 做多实例共享计数，Redis 不可用时会回退到本机限流。更完整的上游治理保留到后续迭代。
+`POST /api/gateway/proxy` 已提供 V1 真实 HTTP 上游代理最小闭环：显式 `upstream` 或已发布 `route` 解析、按已发布 route 的 `limit` 做固定窗口限流、`timeout`、有限 `retry`、`fallback`、route 级熔断冷却、请求日志和审计记录；当请求设置 `stream: true` 时，网关会直接透传上游流式响应。默认限流后端是进程内内存，适合本地轻启动；设置 `ANJING_RATE_LIMIT_BACKEND=redis` 和 `ANJING_REDIS_ADDR` 后，可用 Redis 做多实例共享计数，Redis 不可用时会回退到本机限流。主动健康检查、负载策略和更细粒度治理保留到后续迭代。
 
 `POST /api/gateway/llm/invoke` 已提供 V1 可替换 provider adapter 最小闭环：解析 Active 模型别名、按 primary/fallback 尝试模型、返回是否走兜底、估算 token、写入请求日志、审计和成功用量记录。
 

@@ -640,6 +640,71 @@ func TestProxyGatewayUsesInjectedRouteLimiter(t *testing.T) {
 	}
 }
 
+func TestProxyGatewayOpensCircuitAfterFailures(t *testing.T) {
+	st := store.NewSeedStore()
+	hits := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		http.Error(w, "temporary outage", http.StatusBadGateway)
+	}))
+	defer upstream.Close()
+
+	draft := st.CreateRoute("/api/v1/circuit/**", upstream.URL, "100/min")
+	if _, ok := st.PublishRoute(draft.ID); !ok {
+		t.Fatalf("expected route to publish")
+	}
+
+	now := time.Date(2026, 6, 27, 10, 0, 0, 0, time.UTC)
+	breaker := newMemoryRouteCircuitBreakerWithClock(RouteCircuitBreakerConfig{
+		FailureThreshold: 1,
+		Cooldown:         time.Minute,
+	}, func() time.Time {
+		return now
+	})
+	initialLogs := len(st.ListRequestLogs())
+	mux := http.NewServeMux()
+	RegisterWithRepositoriesAndOptions(mux, st, NewMemoryRepositories(st), Options{CircuitBreaker: breaker})
+
+	proxyOnce := func() *httptest.ResponseRecorder {
+		body := bytes.NewBufferString(`{"route":"/api/v1/circuit/ping","method":"GET","timeoutMs":1000}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", body)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec
+	}
+
+	first := proxyOnce()
+	if first.Code != http.StatusBadGateway {
+		t.Fatalf("expected first request to fail through upstream, got %d: %s", first.Code, first.Body.String())
+	}
+
+	second := proxyOnce()
+	if second.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected second request to be denied by circuit breaker, got %d: %s", second.Code, second.Body.String())
+	}
+	if second.Header().Get("Retry-After") != "60" {
+		t.Fatalf("expected Retry-After 60, got %q", second.Header().Get("Retry-After"))
+	}
+	if !strings.Contains(second.Body.String(), "upstream_circuit_open") {
+		t.Fatalf("expected circuit open response body, got %s", second.Body.String())
+	}
+	if hits != 1 {
+		t.Fatalf("expected circuit-open request not to hit upstream, got %d hits", hits)
+	}
+
+	logs := st.ListRequestLogs()
+	if len(logs) != initialLogs+2 {
+		t.Fatalf("expected two proxy logs, got %+v", logs)
+	}
+	if logs[0].Status != "CircuitOpen" || logs[0].Result != "503" {
+		t.Fatalf("expected latest request log to be circuit-open, got %+v", logs[0])
+	}
+	if logs[1].Status != "Failed" || logs[1].Result != "502" {
+		t.Fatalf("expected first request log to be upstream failure, got %+v", logs[1])
+	}
+}
+
 func TestRedisRouteLimiterFallsBackWhenRedisUnavailable(t *testing.T) {
 	fallback := &recordingRouteLimiter{
 		decision: RateLimitDecision{Allowed: false, RetryAfter: 3 * time.Second},
@@ -661,6 +726,45 @@ func TestRedisRouteLimiterFallsBackWhenRedisUnavailable(t *testing.T) {
 	}
 	if fallback.calls != 1 || fallback.routePattern != "/api/v1/redis/**" || fallback.limitValue != "1/min" {
 		t.Fatalf("expected fallback limiter to be called with route metadata, got %+v", fallback)
+	}
+}
+
+func TestRouteCircuitBreakerAllowsAfterCooldown(t *testing.T) {
+	now := time.Date(2026, 6, 27, 10, 0, 0, 0, time.UTC)
+	breaker := newMemoryRouteCircuitBreakerWithClock(RouteCircuitBreakerConfig{
+		FailureThreshold: 1,
+		Cooldown:         time.Minute,
+	}, func() time.Time {
+		return now
+	})
+	key := "/api/v1/circuit/** -> http://upstream"
+
+	if decision := breaker.Allow(key); !decision.Allowed {
+		t.Fatalf("expected initial request to be allowed, got %+v", decision)
+	}
+	breaker.Record(key, true)
+
+	denied := breaker.Allow(key)
+	if denied.Allowed || denied.RetryAfter != time.Minute {
+		t.Fatalf("expected open circuit for one minute, got %+v", denied)
+	}
+
+	now = now.Add(time.Minute + time.Second)
+	if decision := breaker.Allow(key); !decision.Allowed {
+		t.Fatalf("expected request to be allowed after cooldown, got %+v", decision)
+	}
+	breaker.Record(key, true)
+	if decision := breaker.Allow(key); decision.Allowed {
+		t.Fatalf("expected failed half-open probe to reopen circuit, got %+v", decision)
+	}
+
+	now = now.Add(time.Minute + time.Second)
+	if decision := breaker.Allow(key); !decision.Allowed {
+		t.Fatalf("expected second probe after cooldown to be allowed, got %+v", decision)
+	}
+	breaker.Record(key, false)
+	if decision := breaker.Allow(key); !decision.Allowed {
+		t.Fatalf("expected successful probe to reset circuit, got %+v", decision)
 	}
 }
 

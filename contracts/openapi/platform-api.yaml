@@ -1044,9 +1044,10 @@ paths:
       summary: Proxy an HTTP request through a configured gateway route or explicit upstream.
       description: >
         Executes the V1 gateway runtime path with timeout, bounded retries,
-        optional fallback upstream, published route rate limits and request log
-        recording. When request `stream` is true, the endpoint returns the
-        upstream response stream directly instead of the JSON envelope.
+        optional fallback upstream, published route rate limits, route-level
+        circuit breaker cooldown and request log recording. When request
+        `stream` is true, the endpoint returns the upstream response stream
+        directly instead of the JSON envelope.
       x-anjing-roles: [Administrator, User, Developer]
       requestBody:
         required: true
@@ -1082,6 +1083,8 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "502":
           $ref: "#/components/responses/BadGateway"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /api/gateway/llm/invoke:
     post:
       tags: [gateway]
@@ -1708,6 +1711,12 @@ components:
             $ref: "#/components/schemas/ErrorEnvelope"
     BadGateway:
       description: Upstream request failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ServiceUnavailable:
+      description: Upstream route is temporarily unavailable.
       content:
         application/json:
           schema:

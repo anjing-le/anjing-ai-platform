@@ -12,7 +12,8 @@ import (
 )
 
 type Options struct {
-	RateLimiter RouteLimiter
+	RateLimiter    RouteLimiter
+	CircuitBreaker RouteCircuitBreaker
 }
 
 func Register(mux *http.ServeMux, st *store.Store) {
@@ -38,6 +39,10 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 	if limiter == nil {
 		limiter = NewMemoryRouteLimiter()
 	}
+	breaker := options.CircuitBreaker
+	if breaker == nil {
+		breaker = NewMemoryRouteCircuitBreaker()
+	}
 
 	mux.HandleFunc("/api/gateway/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodGet) {
@@ -55,7 +60,7 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 	mux.HandleFunc("/api/gateway/request-logs", requestLogsHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/request-logs/export", requestLogsExportHandler(repos.RequestLogs))
 	mux.HandleFunc("/api/gateway/request-logs/retention/purge", requestLogsRetentionPurgeHandler(repos.RequestLogs))
-	mux.HandleFunc("/api/gateway/proxy", proxyHandlerWithLimiter(repos.Routes, repos.ProxyRequests, limiter))
+	mux.HandleFunc("/api/gateway/proxy", proxyHandlerWithGovernance(repos.Routes, repos.ProxyRequests, limiter, breaker))
 	mux.HandleFunc("/api/gateway/llm/invoke", llmInvokeHandler(repos.ModelRoutes, repos.Invocations))
 	mux.HandleFunc("/api/gateway/llm/stream", llmStreamHandler(repos.ModelRoutes, repos.Invocations))
 }

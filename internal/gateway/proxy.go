@@ -58,8 +58,15 @@ func proxyHandler(routes RouteRepository, recorder ProxyRecorder) http.HandlerFu
 }
 
 func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, limiter RouteLimiter) http.HandlerFunc {
+	return proxyHandlerWithGovernance(routes, recorder, limiter, NewMemoryRouteCircuitBreaker())
+}
+
+func proxyHandlerWithGovernance(routes RouteRepository, recorder ProxyRecorder, limiter RouteLimiter, breaker RouteCircuitBreaker) http.HandlerFunc {
 	if limiter == nil {
 		limiter = NewMemoryRouteLimiter()
+	}
+	if breaker == nil {
+		breaker = NewMemoryRouteCircuitBreaker()
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !httpjson.RequireMethod(w, r, http.MethodPost) {
@@ -103,12 +110,9 @@ func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, lim
 
 		req.Method = method
 		req.Upstream = resolved.Upstream
+		circuitKey := proxyCircuitBreakerKey(req, resolved)
 		if decision := limiter.Allow(r.Context(), resolved.RoutePattern, resolved.Limit); !decision.Allowed {
-			retryAfter := int(decision.RetryAfter.Seconds())
-			if retryAfter < 1 {
-				retryAfter = 1
-			}
-			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+			w.Header().Set("Retry-After", strconv.Itoa(proxyRetryAfterSeconds(decision.RetryAfter)))
 			result := gatewayProxyResponse{
 				Route:      req.Route,
 				Upstream:   req.Upstream,
@@ -122,9 +126,25 @@ func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, lim
 			httpjson.Fail(w, http.StatusTooManyRequests, "rate_limited", fmt.Sprintf("route limit %s exceeded", resolved.Limit))
 			return
 		}
+		if decision := breaker.Allow(circuitKey); !decision.Allowed {
+			w.Header().Set("Retry-After", strconv.Itoa(proxyRetryAfterSeconds(decision.RetryAfter)))
+			result := gatewayProxyResponse{
+				Route:      req.Route,
+				Upstream:   req.Upstream,
+				StatusCode: http.StatusServiceUnavailable,
+				Headers:    map[string][]string{},
+			}
+			if logErr := recordProxyRequest(r.Context(), recorder, req, result, "CircuitOpen"); logErr != nil {
+				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", logErr.Error())
+				return
+			}
+			httpjson.Fail(w, http.StatusServiceUnavailable, "upstream_circuit_open", "route circuit is cooling down")
+			return
+		}
 
 		if req.Stream {
 			result, err := streamGatewayProxy(r.Context(), w, req)
+			breaker.Record(circuitKey, proxyRequestFailed(result, err))
 			status := proxyLogStatus(result, err)
 			if logErr := recordProxyRequest(r.Context(), recorder, req, result, status); logErr != nil && !result.Streamed {
 				httpjson.Fail(w, http.StatusInternalServerError, "internal_error", logErr.Error())
@@ -137,6 +157,7 @@ func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, lim
 		}
 
 		result, err := executeGatewayProxy(r.Context(), req)
+		breaker.Record(circuitKey, proxyRequestFailed(result, err))
 		status := proxyLogStatus(result, err)
 		if logErr := recordProxyRequest(r.Context(), recorder, req, result, status); logErr != nil {
 			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", logErr.Error())
@@ -149,6 +170,39 @@ func proxyHandlerWithLimiter(routes RouteRepository, recorder ProxyRecorder, lim
 
 		httpjson.OK(w, result)
 	}
+}
+
+func proxyCircuitBreakerKey(req gatewayProxyRequest, resolved resolvedProxyRoute) string {
+	routeKey := strings.TrimSpace(resolved.RoutePattern)
+	if routeKey == "" {
+		routeKey = strings.SplitN(strings.TrimSpace(req.Route), "?", 2)[0]
+	}
+	upstream := strings.TrimSpace(resolved.Upstream)
+	if upstream == "" {
+		upstream = strings.TrimSpace(req.Upstream)
+	}
+	if routeKey == "" {
+		return upstream
+	}
+	if upstream == "" {
+		return routeKey
+	}
+	return routeKey + " -> " + upstream
+}
+
+func proxyRequestFailed(result gatewayProxyResponse, err error) bool {
+	return err != nil || result.StatusCode >= http.StatusInternalServerError
+}
+
+func proxyRetryAfterSeconds(duration time.Duration) int {
+	if duration <= 0 {
+		return 1
+	}
+	seconds := int((duration + time.Second - 1) / time.Second)
+	if seconds < 1 {
+		return 1
+	}
+	return seconds
 }
 
 func executeGatewayProxy(ctx context.Context, req gatewayProxyRequest) (gatewayProxyResponse, error) {
