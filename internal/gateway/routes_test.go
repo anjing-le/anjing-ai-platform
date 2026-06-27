@@ -1808,6 +1808,75 @@ func TestListSkillSchemasReturnsRegistry(t *testing.T) {
 	}
 }
 
+func TestUpdateAndPublishSkillSchema(t *testing.T) {
+	st := store.NewSeedStore()
+	mux := http.NewServeMux()
+	Register(mux, st)
+	schema := st.ListSkillSchemas()[0]
+
+	body := bytes.NewBufferString(`{
+		"id":"` + schema.ID + `",
+		"skillName":"` + schema.SkillName + `",
+		"version":"0.2",
+		"description":"Updated input contract",
+		"requiredFields":[{"name":"query","type":"string","description":"Search query"}],
+		"optionalFields":[{"name":"filters","type":"object","description":"Structured filters"}]
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/gateway/skill-schemas/update", body)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var updatePayload struct {
+		Success bool              `json:"success"`
+		Data    store.SkillSchema `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&updatePayload); err != nil {
+		t.Fatalf("decode update response: %v", err)
+	}
+	if !updatePayload.Success {
+		t.Fatalf("expected success response, got %+v", updatePayload)
+	}
+	if updatePayload.Data.ID != schema.ID || updatePayload.Data.Version != "0.2" || updatePayload.Data.Status != "Draft" {
+		t.Fatalf("expected updated draft skill schema, got %+v", updatePayload.Data)
+	}
+	if updatePayload.Data.Description != "Updated input contract" || len(updatePayload.Data.RequiredFields) != 1 || len(updatePayload.Data.OptionalFields) != 1 {
+		t.Fatalf("expected updated schema fields, got %+v", updatePayload.Data)
+	}
+
+	publishBody := bytes.NewBufferString(`{"id":"` + schema.ID + `"}`)
+	publishReq := httptest.NewRequest(http.MethodPost, "/api/gateway/skill-schemas/publish", publishBody)
+	publishReq.Header.Set("Content-Type", "application/json")
+	publishRec := httptest.NewRecorder()
+
+	mux.ServeHTTP(publishRec, publishReq)
+
+	if publishRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", publishRec.Code, publishRec.Body.String())
+	}
+
+	var publishPayload struct {
+		Success bool              `json:"success"`
+		Data    store.SkillSchema `json:"data"`
+	}
+	if err := json.NewDecoder(publishRec.Body).Decode(&publishPayload); err != nil {
+		t.Fatalf("decode publish response: %v", err)
+	}
+	if !publishPayload.Success || publishPayload.Data.Status != "Published" {
+		t.Fatalf("expected published skill schema, got %+v", publishPayload)
+	}
+
+	logs := st.ListRequestLogs()
+	if len(logs) == 0 || logs[0].Request != "PUBLISH skill schema:"+schema.SkillName {
+		t.Fatalf("expected publish request log, got %+v", logs)
+	}
+}
+
 func TestInvokeSkillUsesPublishedBinding(t *testing.T) {
 	st := store.NewSeedStore()
 	initialLogs := len(st.ListRequestLogs())

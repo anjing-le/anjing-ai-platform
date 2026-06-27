@@ -121,6 +121,8 @@ func RegisterWithRepositoriesAndOptions(mux *http.ServeMux, st *store.Store, rep
 	mux.HandleFunc("/api/gateway/model-routes/publish", publishModelRouteHandler(repos.ModelRoutes))
 	mux.HandleFunc("/api/gateway/skills", skillsHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skill-schemas", skillSchemasHandler(repos.SkillSchemas))
+	mux.HandleFunc("/api/gateway/skill-schemas/update", updateSkillSchemaHandler(repos.SkillSchemas))
+	mux.HandleFunc("/api/gateway/skill-schemas/publish", publishSkillSchemaHandler(repos.SkillSchemas))
 	mux.HandleFunc("/api/gateway/skills/update", updateSkillBindingHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skills/publish", publishSkillBindingHandler(repos.Skills))
 	mux.HandleFunc("/api/gateway/skills/invoke", skillInvokeHandler(repos.Skills, repos.SkillSchemas, repos.Invocations))
@@ -853,6 +855,153 @@ func skillSchemasHandler(schemas SkillSchemaRepository) http.HandlerFunc {
 		}
 		httpjson.OK(w, items)
 	}
+}
+
+func updateSkillSchemaHandler(schemas SkillSchemaRepository) http.HandlerFunc {
+	type updateSkillSchemaRequest struct {
+		ID             string                   `json:"id"`
+		SkillName      string                   `json:"skillName"`
+		Version        string                   `json:"version"`
+		Description    string                   `json:"description"`
+		RequiredFields []store.SkillSchemaField `json:"requiredFields"`
+		OptionalFields []store.SkillSchemaField `json:"optionalFields"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+		if schemas == nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", "skill schema repository is not configured")
+			return
+		}
+
+		var req updateSkillSchemaRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+
+		req.ID = strings.TrimSpace(req.ID)
+		req.SkillName = strings.TrimSpace(req.SkillName)
+		req.Version = strings.TrimSpace(req.Version)
+		req.Description = strings.TrimSpace(req.Description)
+		if req.Version == "" {
+			req.Version = "0.1"
+		}
+
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+		if req.SkillName == "" {
+			httpjson.BadRequest(w, "skillName is required")
+			return
+		}
+
+		requiredFields, optionalFields, err := normalizeSkillSchemaFields(req.RequiredFields, req.OptionalFields)
+		if err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+
+		schema, ok, err := schemas.UpdateSkillSchema(r.Context(), UpdateSkillSchemaInput{
+			ID:             req.ID,
+			SkillName:      req.SkillName,
+			Version:        req.Version,
+			Description:    req.Description,
+			RequiredFields: requiredFields,
+			OptionalFields: optionalFields,
+		})
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.Fail(w, http.StatusNotFound, "not_found", "skill schema not found")
+			return
+		}
+
+		httpjson.OK(w, schema)
+	}
+}
+
+func publishSkillSchemaHandler(schemas SkillSchemaRepository) http.HandlerFunc {
+	type publishSkillSchemaRequest struct {
+		ID string `json:"id"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !httpjson.RequireMethod(w, r, http.MethodPost) {
+			return
+		}
+		if schemas == nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", "skill schema repository is not configured")
+			return
+		}
+
+		var req publishSkillSchemaRequest
+		if err := httpjson.Decode(r, &req); err != nil {
+			httpjson.BadRequest(w, err.Error())
+			return
+		}
+		req.ID = strings.TrimSpace(req.ID)
+		if req.ID == "" {
+			httpjson.BadRequest(w, "id is required")
+			return
+		}
+
+		schema, ok, err := schemas.PublishSkillSchema(r.Context(), req.ID)
+		if err != nil {
+			httpjson.Fail(w, http.StatusInternalServerError, "internal_error", err.Error())
+			return
+		}
+		if !ok {
+			httpjson.Fail(w, http.StatusNotFound, "not_found", "skill schema not found")
+			return
+		}
+
+		httpjson.OK(w, schema)
+	}
+}
+
+func normalizeSkillSchemaFields(requiredFields []store.SkillSchemaField, optionalFields []store.SkillSchemaField) ([]store.SkillSchemaField, []store.SkillSchemaField, error) {
+	seen := make(map[string]string, len(requiredFields)+len(optionalFields))
+	required, err := normalizeSkillSchemaFieldGroup("requiredFields", requiredFields, seen)
+	if err != nil {
+		return nil, nil, err
+	}
+	optional, err := normalizeSkillSchemaFieldGroup("optionalFields", optionalFields, seen)
+	if err != nil {
+		return nil, nil, err
+	}
+	return required, optional, nil
+}
+
+func normalizeSkillSchemaFieldGroup(group string, fields []store.SkillSchemaField, seen map[string]string) ([]store.SkillSchemaField, error) {
+	normalized := make([]store.SkillSchemaField, 0, len(fields))
+	for index, field := range fields {
+		name := strings.TrimSpace(field.Name)
+		if name == "" {
+			return nil, errors.New(group + "[" + strconv.Itoa(index) + "].name is required")
+		}
+		inputType, ok := skillInputTypeFromString(field.Type)
+		if !ok {
+			return nil, errors.New(group + "[" + strconv.Itoa(index) + "].type is unsupported")
+		}
+
+		normalizedName := strings.ToLower(name)
+		if previous, exists := seen[normalizedName]; exists {
+			return nil, errors.New(group + "[" + strconv.Itoa(index) + "].name duplicates " + previous)
+		}
+		seen[normalizedName] = group
+		normalized = append(normalized, store.SkillSchemaField{
+			Name:        name,
+			Type:        string(inputType),
+			Description: strings.TrimSpace(field.Description),
+		})
+	}
+	return normalized, nil
 }
 
 func updateSkillBindingHandler(skills SkillRepository) http.HandlerFunc {

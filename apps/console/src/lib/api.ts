@@ -221,6 +221,15 @@ export interface SkillSchema {
   updatedAt: string;
 }
 
+export interface UpdateSkillSchemaInput {
+  id: string;
+  skillName: string;
+  version: string;
+  description: string;
+  requiredFields: SkillSchemaField[];
+  optionalFields: SkillSchemaField[];
+}
+
 export interface RequestLog {
   id: string;
   request: string;
@@ -648,6 +657,20 @@ export function publishSkillBinding(id: string, role?: RoleId): Promise<SkillBin
 
 export function fetchSkillSchemas(role?: RoleId): Promise<SkillSchema[]> {
   return requestJson<SkillSchema[]>("/api/gateway/skill-schemas", undefined, role);
+}
+
+export function updateSkillSchema(input: UpdateSkillSchemaInput, role?: RoleId): Promise<SkillSchema> {
+  return requestJson<SkillSchema>("/api/gateway/skill-schemas/update", {
+    method: "POST",
+    body: JSON.stringify(input),
+  }, role);
+}
+
+export function publishSkillSchema(id: string, role?: RoleId): Promise<SkillSchema> {
+  return requestJson<SkillSchema>("/api/gateway/skill-schemas/publish", {
+    method: "POST",
+    body: JSON.stringify({ id }),
+  }, role);
 }
 
 export function invokeSkill(input: SkillInvokeInput, role?: RoleId): Promise<SkillInvokeResponse> {

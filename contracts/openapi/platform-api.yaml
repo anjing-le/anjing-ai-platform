@@ -63,6 +63,8 @@ x-anjing-service-boundaries:
       - /api/gateway/model-routes/update
       - /api/gateway/skills
       - /api/gateway/skill-schemas
+      - /api/gateway/skill-schemas/update
+      - /api/gateway/skill-schemas/publish
       - /api/gateway/skills/update
       - /api/gateway/skills/publish
       - /api/gateway/skills/invoke
@@ -1013,6 +1015,70 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /api/gateway/skill-schemas/update:
+    post:
+      tags: [gateway]
+      operationId: updateSkillSchema
+      summary: Update a skill input schema draft.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSkillSchemaRequest"
+      responses:
+        "200":
+          description: Skill schema updated.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SkillSchema"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/gateway/skill-schemas/publish:
+    post:
+      tags: [gateway]
+      operationId: publishSkillSchema
+      summary: Publish a skill input schema draft.
+      x-anjing-roles: [Administrator, Developer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishSkillSchemaRequest"
+      responses:
+        "200":
+          description: Skill schema published.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/SkillSchema"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/gateway/skills/update:
     post:
       tags: [gateway]
@@ -2631,6 +2697,33 @@ components:
         status:
           type: string
         updatedAt:
+          type: string
+    UpdateSkillSchemaRequest:
+      type: object
+      required: [id, skillName, version]
+      properties:
+        id:
+          type: string
+        skillName:
+          type: string
+        version:
+          type: string
+          default: "0.1"
+        description:
+          type: string
+        requiredFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillSchemaField"
+        optionalFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillSchemaField"
+    PublishSkillSchemaRequest:
+      type: object
+      required: [id]
+      properties:
+        id:
           type: string
     CreateSkillBindingRequest:
       type: object

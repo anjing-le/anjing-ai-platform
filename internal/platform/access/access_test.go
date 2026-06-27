@@ -140,6 +140,22 @@ func TestDeveloperCanConfigureGatewayButCannotChangeBillingPlans(t *testing.T) {
 		t.Fatalf("expected skill schema registry to be allowed, got %d", skillSchemaAllowedRec.Code)
 	}
 
+	skillSchemaUpdateAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/skill-schemas/update", nil)
+	skillSchemaUpdateAllowed.Header.Set("Authorization", "Bearer developer-test-token")
+	skillSchemaUpdateAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(skillSchemaUpdateAllowedRec, skillSchemaUpdateAllowed)
+	if skillSchemaUpdateAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected skill schema update to be allowed, got %d", skillSchemaUpdateAllowedRec.Code)
+	}
+
+	skillSchemaPublishAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/skill-schemas/publish", nil)
+	skillSchemaPublishAllowed.Header.Set("Authorization", "Bearer developer-test-token")
+	skillSchemaPublishAllowedRec := httptest.NewRecorder()
+	handler.ServeHTTP(skillSchemaPublishAllowedRec, skillSchemaPublishAllowed)
+	if skillSchemaPublishAllowedRec.Code != http.StatusOK {
+		t.Fatalf("expected skill schema publish to be allowed, got %d", skillSchemaPublishAllowedRec.Code)
+	}
+
 	proxyAllowed := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", nil)
 	proxyAllowed.Header.Set("Authorization", "Bearer developer-test-token")
 	proxyAllowedRec := httptest.NewRecorder()
@@ -361,6 +377,22 @@ func TestOperatorCanHandleOpsButCannotReadGatewayConfig(t *testing.T) {
 	handler.ServeHTTP(skillSchemaDeniedRec, skillSchemaDenied)
 	if skillSchemaDeniedRec.Code != http.StatusForbidden {
 		t.Fatalf("expected skill schema registry to be forbidden for operator, got %d", skillSchemaDeniedRec.Code)
+	}
+
+	skillSchemaUpdateDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/skill-schemas/update", nil)
+	skillSchemaUpdateDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	skillSchemaUpdateDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(skillSchemaUpdateDeniedRec, skillSchemaUpdateDenied)
+	if skillSchemaUpdateDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected skill schema update to be forbidden for operator, got %d", skillSchemaUpdateDeniedRec.Code)
+	}
+
+	skillSchemaPublishDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/skill-schemas/publish", nil)
+	skillSchemaPublishDenied.Header.Set("Authorization", "Bearer operator-test-token")
+	skillSchemaPublishDeniedRec := httptest.NewRecorder()
+	handler.ServeHTTP(skillSchemaPublishDeniedRec, skillSchemaPublishDenied)
+	if skillSchemaPublishDeniedRec.Code != http.StatusForbidden {
+		t.Fatalf("expected skill schema publish to be forbidden for operator, got %d", skillSchemaPublishDeniedRec.Code)
 	}
 
 	proxyDenied := httptest.NewRequest(http.MethodPost, "/api/gateway/proxy", nil)

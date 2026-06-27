@@ -31,12 +31,14 @@ import {
   publishModelRoute,
   publishRoute,
   publishSkillBinding,
+  publishSkillSchema,
   resolveBudgetAlert,
   resolveTodo,
   rotateCredential,
   revokeAPIKey,
   rotateApplicationKey,
   updateSkillBinding,
+  updateSkillSchema,
   updateRoute,
   updateModelRoute,
   type APIKey,
@@ -57,6 +59,7 @@ import {
   type SkillBinding,
   type UpdateModelRouteInput,
   type UpdateSkillBindingInput,
+  type UpdateSkillSchemaInput,
 } from "./lib/api";
 import {
   canAccessRoute,
@@ -91,6 +94,7 @@ type ConfirmIntentType =
   | "route-publish"
   | "model-route-publish"
   | "skill-binding-publish"
+  | "skill-schema-publish"
   | "plan-activate"
   | "budget-alert-resolve"
   | "credential-rotate"
@@ -248,6 +252,7 @@ function App() {
   const [publishingRouteId, setPublishingRouteId] = useState("");
   const [publishingModelRouteId, setPublishingModelRouteId] = useState("");
   const [publishingSkillId, setPublishingSkillId] = useState("");
+  const [publishingSkillSchemaId, setPublishingSkillSchemaId] = useState("");
   const [selectedRouteId, setSelectedRouteId] = useState("");
   const [editingRoute, setEditingRoute] = useState<GatewayRoute | null>(null);
   const [selectedModelRouteId, setSelectedModelRouteId] = useState("");
@@ -504,6 +509,10 @@ function App() {
 
       if (confirmIntent.type === "skill-binding-publish") {
         await runSkillBindingPublish(confirmIntent.id);
+      }
+
+      if (confirmIntent.type === "skill-schema-publish") {
+        await runSkillSchemaPublish(confirmIntent.id);
       }
 
       if (confirmIntent.type === "plan-activate") {
@@ -792,6 +801,57 @@ function App() {
     }
   }
 
+  async function handleSkillSchemaUpdate(input: UpdateSkillSchemaInput) {
+    setNotice("");
+
+    try {
+      const schema = await updateSkillSchema(input, role);
+      await refreshSnapshot();
+      setNotice(`已保存 Skill Schema 草稿：${schema.skillName}@${schema.version}`);
+    } catch (error) {
+      const message = actionErrorMessage(error, "Skill Schema 保存失败");
+      setNotice(message);
+      throw new Error(message);
+    }
+  }
+
+  async function handleSkillSchemaPublish(id: string) {
+    const schema = snapshot?.skillSchemas?.find((item) => item.id === id);
+
+    openConfirm({
+      confirmLabel: "确认发布",
+      description: `确认发布 Skill Schema ${schema ? `${schema.skillName}@${schema.version}` : "该 Schema"}。`,
+      details: [
+        `状态：${schema?.status || "以后端记录为准"}`,
+        `必填字段：${schema?.requiredFields?.length ?? 0}`,
+        `可选字段：${schema?.optionalFields?.length ?? 0}`,
+      ],
+      fallbackError: "Skill Schema 发布失败",
+      id,
+      recovery: "失败时会保留当前草稿状态；请检查字段定义、版本号和权限后重试。",
+      title: "发布 Skill Schema",
+      tone: "warning",
+      type: "skill-schema-publish",
+    });
+  }
+
+  async function runSkillSchemaPublish(id: string) {
+    setNotice("");
+    setPublishingSkillSchemaId(id);
+
+    try {
+      const schema = await publishSkillSchema(id, role);
+      await refreshSnapshot();
+      setNotice(`已发布 Skill Schema：${schema.skillName}@${schema.version}`);
+    } catch (error) {
+      const message = actionErrorMessage(error, "Skill Schema 发布失败");
+      setNotice(message);
+      throw new Error(message);
+    } finally {
+      setPublishingSkillSchemaId("");
+    }
+  }
+
   async function handleTodoResolve(todo: { id: string; title: string; status?: string }) {
     setNotice("");
 
@@ -1012,6 +1072,8 @@ function App() {
             onSkillBindingCreate={handleSkillBindingCreate}
             onSkillBindingPublish={handleSkillBindingPublish}
             onSkillBindingUpdate={handleSkillBindingUpdate}
+            onSkillSchemaPublish={handleSkillSchemaPublish}
+            onSkillSchemaUpdate={handleSkillSchemaUpdate}
             onUserActivate={handleUserActivate}
             activatingApplicationId={activatingApplicationId}
             activatingPlanId={activatingPlanId}
@@ -1020,6 +1082,7 @@ function App() {
             page={activePage}
             publishingModelRouteId={publishingModelRouteId}
             publishingRouteId={publishingRouteId}
+            publishingSkillSchemaId={publishingSkillSchemaId}
             publishingSkillId={publishingSkillId}
             resolvingBudgetAlertId={resolvingBudgetAlertId}
             role={role}
@@ -1751,12 +1814,15 @@ function ModulePage({
   onSkillBindingCreate,
   onSkillBindingPublish,
   onSkillBindingUpdate,
+  onSkillSchemaPublish,
+  onSkillSchemaUpdate,
   onUserActivate,
   page,
   activatingUserId,
   activatingPlanId,
   publishingRouteId,
   publishingModelRouteId,
+  publishingSkillSchemaId,
   publishingSkillId,
   resolvingBudgetAlertId,
   revokingAPIKeyId,
@@ -1792,11 +1858,14 @@ function ModulePage({
   onSkillBindingCreate: (input: CreateSkillBindingInput) => Promise<void>;
   onSkillBindingPublish: (id: string) => Promise<void>;
   onSkillBindingUpdate: (input: UpdateSkillBindingInput) => Promise<void>;
+  onSkillSchemaPublish: (id: string) => Promise<void>;
+  onSkillSchemaUpdate: (input: UpdateSkillSchemaInput) => Promise<void>;
   onUserActivate: (id: string) => Promise<void>;
   activatingPlanId: string;
   page: ModulePageDefinition;
   publishingModelRouteId: string;
   publishingRouteId: string;
+  publishingSkillSchemaId: string;
   publishingSkillId: string;
   resolvingBudgetAlertId: string;
   revokingAPIKeyId: string;
@@ -2649,8 +2718,11 @@ function ModulePage({
               onCreate={onSkillBindingCreate}
               onInvoked={onLLMInvoked}
               onPublish={onSkillBindingPublish}
+              onSchemaPublish={onSkillSchemaPublish}
+              onSchemaUpdate={onSkillSchemaUpdate}
               onUpdate={onSkillBindingUpdate}
               publishing={publishingSkillId === selectedSkill?.id}
+              publishingSchemaId={publishingSkillSchemaId}
               role={role}
               schemas={snapshot?.skillSchemas}
               skill={selectedSkill}
@@ -3745,8 +3817,11 @@ function SkillBindingPanel({
   onCreate,
   onInvoked,
   onPublish,
+  onSchemaPublish,
+  onSchemaUpdate,
   onUpdate,
   publishing,
+  publishingSchemaId,
   role,
   schemas,
   skill,
@@ -3754,8 +3829,11 @@ function SkillBindingPanel({
   onCreate: (input: CreateSkillBindingInput) => Promise<void>;
   onInvoked: () => Promise<unknown>;
   onPublish: (id: string) => Promise<void>;
+  onSchemaPublish: (id: string) => Promise<void>;
+  onSchemaUpdate: (input: UpdateSkillSchemaInput) => Promise<void>;
   onUpdate: (input: UpdateSkillBindingInput) => Promise<void>;
   publishing: boolean;
+  publishingSchemaId: string;
   role: RoleId;
   schemas?: SkillSchema[];
   skill?: SkillBinding;
@@ -3772,6 +3850,9 @@ function SkillBindingPanel({
   const [invokeBusy, setInvokeBusy] = useState(false);
   const [invokeError, setInvokeError] = useState("");
   const [invokeResult, setInvokeResult] = useState<SkillInvokeResponse>();
+  const [schemaDescription, setSchemaDescription] = useState("");
+  const [schemaBusy, setSchemaBusy] = useState(false);
+  const [schemaError, setSchemaError] = useState("");
   const nameInputRef = useInitialFocus<HTMLInputElement>(role !== "operator");
   const isEditing = mode === "edit" && Boolean(skill);
 
@@ -3816,6 +3897,14 @@ function SkillBindingPanel({
     window.setTimeout(() => nameInputRef.current?.focus(), 0);
   }
 
+  const activeSchema = useMemo(
+    () =>
+      schemas?.find(
+        (item) => item.skillName === skill?.name && item.version === (skill?.schemaVersion || "0.1"),
+      ),
+    [schemas, skill?.name, skill?.schemaVersion],
+  );
+
   const publishLabel = skill
     ? role === "operator"
       ? `无法发布 Skill ${skill.name}，需要管理员或开发人员`
@@ -3840,6 +3929,22 @@ function SkillBindingPanel({
         : isEditing
           ? `保存 Skill 绑定 ${name}`
           : `创建 Skill 绑定 ${name}`;
+  const schemaSubmitLabel = activeSchema
+    ? role === "operator"
+      ? `无法保存 Skill Schema ${activeSchema.skillName}，需要管理员或开发人员`
+      : schemaBusy
+        ? `正在保存 Skill Schema ${activeSchema.skillName}`
+        : `保存 Skill Schema ${activeSchema.skillName}`
+    : undefined;
+  const schemaPublishLabel = activeSchema
+    ? role === "operator"
+      ? `无法发布 Skill Schema ${activeSchema.skillName}，需要管理员或开发人员`
+      : activeSchema.status === "Published"
+        ? `Skill Schema ${activeSchema.skillName} 已发布`
+        : publishingSchemaId === activeSchema.id
+          ? `正在发布 Skill Schema ${activeSchema.skillName}`
+          : `发布 Skill Schema ${activeSchema.skillName}`
+    : undefined;
   const canInvokeSkill = Boolean(skill && skill.status === "Published" && role !== "operator");
   const invokeDisabledReason = !skill
     ? "暂无可调用 Skill"
@@ -3858,13 +3963,12 @@ function SkillBindingPanel({
   const invokeInputKeys = Array.isArray(invokeResult?.output.inputKeys)
     ? invokeResult.output.inputKeys.filter((key): key is string => typeof key === "string").join(", ")
     : "";
-  const activeSchema = useMemo(
-    () =>
-      schemas?.find(
-        (item) => item.skillName === skill?.name && item.version === (skill?.schemaVersion || "0.1"),
-      ),
-    [schemas, skill?.name, skill?.schemaVersion],
-  );
+
+  useEffect(() => {
+    setSchemaDescription(activeSchema?.description || "");
+    setSchemaError("");
+  }, [activeSchema?.id, activeSchema?.description]);
+
   const schemaFields = useMemo(
     () =>
       activeSchema
@@ -3875,6 +3979,32 @@ function SkillBindingPanel({
         : [],
     [activeSchema],
   );
+
+  async function handleSchemaSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!activeSchema || role === "operator") {
+      return;
+    }
+
+    setSchemaBusy(true);
+    setSchemaError("");
+
+    try {
+      await onSchemaUpdate({
+        id: activeSchema.id,
+        skillName: activeSchema.skillName,
+        version: activeSchema.version || "0.1",
+        description: schemaDescription,
+        requiredFields: activeSchema.requiredFields,
+        optionalFields: activeSchema.optionalFields,
+      });
+    } catch (err) {
+      setSchemaError(err instanceof Error ? err.message : "Skill Schema 保存失败");
+    } finally {
+      setSchemaBusy(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -3957,8 +4087,15 @@ function SkillBindingPanel({
             className="skill-schema-registry"
           >
             <div className="skill-schema-registry__head">
-              <span>Schema Registry</span>
-              <strong>{activeSchema ? `${activeSchema.skillName}@${activeSchema.version}` : "未匹配到 Schema"}</strong>
+              <div className="skill-schema-registry__title">
+                <div>
+                  <span>Schema Registry</span>
+                  <strong>
+                    {activeSchema ? `${activeSchema.skillName}@${activeSchema.version}` : "未匹配到 Schema"}
+                  </strong>
+                </div>
+                {activeSchema ? <StatusBadge tone={toneForStatus(activeSchema.status)}>{activeSchema.status}</StatusBadge> : null}
+              </div>
               <p>{activeSchema?.description || "当前绑定还没有可展示的输入字段定义，调用时只做发布状态校验。"}</p>
             </div>
             {schemaFields.length ? (
@@ -3976,6 +4113,51 @@ function SkillBindingPanel({
             ) : (
               <p className="skill-schema-empty">Schema registry 暂无字段。</p>
             )}
+            {activeSchema ? (
+              <form aria-busy={schemaBusy} className="skill-schema-form" onSubmit={handleSchemaSubmit}>
+                <fieldset disabled={schemaBusy || role === "operator"}>
+                  <label>
+                    <span>契约说明</span>
+                    <textarea
+                      onChange={(event) => setSchemaDescription(event.target.value)}
+                      rows={2}
+                      value={schemaDescription}
+                    />
+                  </label>
+                </fieldset>
+                {schemaError ? <p className="action-hint action-hint--error">{schemaError}</p> : null}
+                <div className="skill-schema-form__actions">
+                  <button
+                    aria-label={schemaSubmitLabel}
+                    className="button"
+                    disabled={schemaBusy || role === "operator"}
+                    type="submit"
+                  >
+                    {schemaBusy ? "保存中" : "保存草稿"}
+                  </button>
+                  <button
+                    aria-label={schemaPublishLabel}
+                    className="button button--primary"
+                    disabled={
+                      schemaBusy ||
+                      publishingSchemaId === activeSchema.id ||
+                      activeSchema.status === "Published" ||
+                      role === "operator"
+                    }
+                    onClick={() => void onSchemaPublish(activeSchema.id)}
+                    type="button"
+                  >
+                    {activeSchema.status === "Published"
+                      ? "已发布"
+                      : publishingSchemaId === activeSchema.id
+                        ? "发布中"
+                        : "发布 Schema"}
+                    <ChevronRight aria-hidden="true" size={16} />
+                  </button>
+                </div>
+                {role === "operator" ? <ActionHint>需要管理员或开发人员维护 Skill Schema。</ActionHint> : null}
+              </form>
+            ) : null}
           </div>
 
           <div className="application-actions">

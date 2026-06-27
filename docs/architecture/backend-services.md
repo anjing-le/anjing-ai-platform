@@ -17,7 +17,7 @@
 | --- | --- | --- | --- |
 | 运营总览 | observability / audit / ops | `ops-api` | `/api/ops/platform-snapshot`, `/api/ops/dashboard`, `/api/ops/todos`, `/api/ops/audit-events`, `/api/ops/audit-events/export`, `/api/ops/audit-events/retention/purge` |
 | 用户与权限 | iam / api key / credential | `control-api` | `/api/control/users`, `/api/control/applications`, `/api/control/api-keys` |
-| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/routes/update`, `/api/gateway/routes/health-check`, `/api/gateway/routes/preflight`, `/api/gateway/model-routes`, `/api/gateway/model-routes/update`, `/api/gateway/skills`, `/api/gateway/skill-schemas`, `/api/gateway/skills/update`, `/api/gateway/skills/publish`, `/api/gateway/skills/invoke`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/llm/stream`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
+| 网关与模型 | api gateway / llm gateway / skill hub | `gateway-api` | `/api/gateway/routes`, `/api/gateway/routes/update`, `/api/gateway/routes/health-check`, `/api/gateway/routes/preflight`, `/api/gateway/model-routes`, `/api/gateway/model-routes/update`, `/api/gateway/skills`, `/api/gateway/skill-schemas`, `/api/gateway/skill-schemas/update`, `/api/gateway/skill-schemas/publish`, `/api/gateway/skills/update`, `/api/gateway/skills/publish`, `/api/gateway/skills/invoke`, `/api/gateway/proxy`, `/api/gateway/llm/invoke`, `/api/gateway/llm/stream`, `/api/gateway/request-logs`, `/api/gateway/request-logs/export`, `/api/gateway/request-logs/retention/purge` |
 | 计费与配额 | quota / billing / usage | `billing-service` | `/api/billing/plans`, `/api/billing/usage`, `/api/billing/invoices`, `/api/billing/usage-events`, `/api/billing/budget-alerts` |
 | 帮助文档 | docs / examples / quickstart | `console-web` 静态元数据 + 对应业务 API | `/`, `/api/*` |
 
@@ -297,6 +297,8 @@ go run ./cmd/console-web      # :1818
 - `POST /api/gateway/model-routes/publish`
 - `GET /api/gateway/skills`
 - `GET /api/gateway/skill-schemas`
+- `POST /api/gateway/skill-schemas/update`
+- `POST /api/gateway/skill-schemas/publish`
 - `POST /api/gateway/skills`
 - `POST /api/gateway/skills/update`
 - `POST /api/gateway/skills/publish`
@@ -320,9 +322,9 @@ go run ./cmd/console-web      # :1818
 
 `POST /api/gateway/llm/stream` 在同一套模型路由、fallback、审计和用量记录之上提供 SSE 最小流式输出契约：先发送 `meta`，再发送多个 `delta`，最后以 `done` 输出完成原因和用量。当前仍使用 mock provider adapter，真实 provider SDK、provider-native stream 和精确 token 计量保留到后续迭代。
 
-`GET /api/gateway/skill-schemas` 暴露当前 Skill 输入 schema registry，控制台用它展示字段职责，调用路径也复用同一份 registry 做必填和类型校验。
+`GET /api/gateway/skill-schemas` 暴露当前 Skill 输入 schema registry，控制台用它展示字段职责，调用路径也复用同一份 registry 做必填和类型校验；`POST /api/gateway/skill-schemas/update` 和 `/publish` 提供草稿保存和发布闭环，当前只开放给 Administrator / Developer。
 
-`POST /api/gateway/skills/invoke` 已提供 V1 可替换 Skill adapter 最小闭环：按名称解析 Published Skill 绑定，按 `schemaVersion` 从 schema registry 校验输入；当 `Protocol=HTTP` 且 `Route` 是 `http/https` 绝对地址时，会发起真实 JSON POST 调用并解析返回的 `output`，MCP 和相对 HTTP 路由继续走开发 adapter；调用结果会写入请求日志、审计和成功 Skill call 用量记录。更完整的 schema 版本管理、MCP 真实适配和治理策略保留到后续迭代。
+`POST /api/gateway/skills/invoke` 已提供 V1 可替换 Skill adapter 最小闭环：按名称解析 Published Skill 绑定，按 `schemaVersion` 从 schema registry 校验输入；当 `Protocol=HTTP` 且 `Route` 是 `http/https` 绝对地址时，会发起真实 JSON POST 调用并解析返回的 `output`，MCP 和相对 HTTP 路由继续走开发 adapter；调用结果会写入请求日志、审计和成功 Skill call 用量记录。更完整的 schema diff、审批、MCP 真实适配和治理策略保留到后续迭代。
 
 `GET /api/gateway/request-logs` 支持 `q`、`consumer`、`status` 和 `limit` 查询参数，用于控制台按调用方、状态和关键词查看近期请求链路。`GET /api/gateway/request-logs/export` 复用同一套查询参数导出 CSV，默认最多导出 500 条。`POST /api/gateway/request-logs/retention/purge` 按 `olderThanDays` 清理过期请求日志，默认保留 30 天，面向 Administrator 和 Operator。
 

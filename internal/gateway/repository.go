@@ -68,6 +68,15 @@ type UpdateSkillBindingInput struct {
 	SchemaVersion string
 }
 
+type UpdateSkillSchemaInput struct {
+	ID             string
+	SkillName      string
+	Version        string
+	Description    string
+	RequiredFields []store.SkillSchemaField
+	OptionalFields []store.SkillSchemaField
+}
+
 type LLMInvocationInput struct {
 	ID          string
 	ModelAlias  string
@@ -127,6 +136,8 @@ type SkillRepository interface {
 type SkillSchemaRepository interface {
 	ListSkillSchemas(ctx context.Context) ([]store.SkillSchema, error)
 	FindSkillSchema(ctx context.Context, name, version string) (store.SkillSchema, bool, error)
+	UpdateSkillSchema(ctx context.Context, input UpdateSkillSchemaInput) (store.SkillSchema, bool, error)
+	PublishSkillSchema(ctx context.Context, id string) (store.SkillSchema, bool, error)
 }
 
 type RequestLogRepository interface {
@@ -283,6 +294,23 @@ func (repo MemorySkillRepository) ListSkillSchemas(context.Context) ([]store.Ski
 
 func (repo MemorySkillRepository) FindSkillSchema(_ context.Context, name, version string) (store.SkillSchema, bool, error) {
 	item, ok := repo.store.FindSkillSchema(name, version)
+	return item, ok, nil
+}
+
+func (repo MemorySkillRepository) UpdateSkillSchema(_ context.Context, input UpdateSkillSchemaInput) (store.SkillSchema, bool, error) {
+	item, ok := repo.store.UpdateSkillSchema(store.SkillSchemaUpdateInput{
+		ID:             input.ID,
+		SkillName:      input.SkillName,
+		Version:        input.Version,
+		Description:    input.Description,
+		RequiredFields: input.RequiredFields,
+		OptionalFields: input.OptionalFields,
+	})
+	return item, ok, nil
+}
+
+func (repo MemorySkillRepository) PublishSkillSchema(_ context.Context, id string) (store.SkillSchema, bool, error) {
+	item, ok := repo.store.PublishSkillSchema(id)
 	return item, ok, nil
 }
 
@@ -962,6 +990,121 @@ func (repo PostgresSkillRepository) FindSkillSchema(ctx context.Context, name, v
 	}
 
 	return item, true, nil
+}
+
+func (repo PostgresSkillRepository) UpdateSkillSchema(ctx context.Context, input UpdateSkillSchemaInput) (store.SkillSchema, bool, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("begin update skill schema: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	version := strings.TrimSpace(input.Version)
+	if version == "" {
+		version = "0.1"
+	}
+	requiredJSON, err := json.Marshal(input.RequiredFields)
+	if err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("encode required skill schema fields: %w", err)
+	}
+	optionalJSON, err := json.Marshal(input.OptionalFields)
+	if err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("encode optional skill schema fields: %w", err)
+	}
+
+	rows, err := tx.Query(ctx, `
+		update skill_schemas
+		set skill_name = $2,
+			version = $3,
+			description = $4,
+			required_fields = $5,
+			optional_fields = $6,
+			status = 'Draft',
+			updated_at = now()
+		where id = $1
+		returning id, skill_name, version, description, required_fields, optional_fields, status, updated_at
+	`, input.ID, strings.TrimSpace(input.SkillName), version, strings.TrimSpace(input.Description), requiredJSON, optionalJSON)
+	if err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("update skill schema: %w", err)
+	}
+	defer rows.Close()
+
+	schema, err := pgx.CollectOneRow(rows, scanSkillSchema)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.SkillSchema{}, false, nil
+		}
+		return store.SkillSchema{}, false, fmt.Errorf("collect updated skill schema: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "UPDATE skill schema:"+schema.SkillName, schema.Version, "32ms", "200", "Success"); err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("insert skill schema update request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "update skill schema", schema.SkillName+"@"+schema.Version, "Success", nextID("req")); err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("insert skill schema update audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("commit update skill schema: %w", err)
+	}
+
+	return schema, true, nil
+}
+
+func (repo PostgresSkillRepository) PublishSkillSchema(ctx context.Context, id string) (store.SkillSchema, bool, error) {
+	tx, err := repo.pool.Begin(ctx)
+	if err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("begin publish skill schema: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.Query(ctx, `
+		update skill_schemas
+		set status = 'Published', updated_at = now()
+		where id = $1
+		returning id, skill_name, version, description, required_fields, optional_fields, status, updated_at
+	`, id)
+	if err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("publish skill schema: %w", err)
+	}
+	defer rows.Close()
+
+	schema, err := pgx.CollectOneRow(rows, scanSkillSchema)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return store.SkillSchema{}, false, nil
+		}
+		return store.SkillSchema{}, false, fmt.Errorf("collect published skill schema: %w", err)
+	}
+	rows.Close()
+
+	if _, err := tx.Exec(ctx, `
+		insert into request_logs(id, request, consumer, latency, result, status)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("req"), "PUBLISH skill schema:"+schema.SkillName, schema.Version, "36ms", "200", "Success"); err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("insert skill schema publish request log: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(id, module, action, object, status, request_id)
+		values($1, $2, $3, $4, $5, $6)
+	`, nextID("audit"), "网关与模型", "publish skill schema", schema.SkillName+"@"+schema.Version, "Success", nextID("req")); err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("insert skill schema publish audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return store.SkillSchema{}, false, fmt.Errorf("commit publish skill schema: %w", err)
+	}
+
+	return schema, true, nil
 }
 
 func scanSkillBinding(row pgx.CollectableRow) (store.SkillBinding, error) {

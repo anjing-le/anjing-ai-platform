@@ -164,6 +164,15 @@ type SkillBindingUpdateInput struct {
 	SchemaVersion string
 }
 
+type SkillSchemaUpdateInput struct {
+	ID             string
+	SkillName      string
+	Version        string
+	Description    string
+	RequiredFields []SkillSchemaField
+	OptionalFields []SkillSchemaField
+}
+
 type SkillSchemaField struct {
 	Name        string `json:"name"`
 	Type        string `json:"type"`
@@ -862,6 +871,40 @@ func (s *Store) FindSkillSchema(name, version string) (SkillSchema, bool) {
 	return SkillSchema{}, false
 }
 
+func (s *Store) UpdateSkillSchema(input SkillSchemaUpdateInput) (SkillSchema, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	version := strings.TrimSpace(input.Version)
+	if version == "" {
+		version = "0.1"
+	}
+	for index := range s.skillSchemas {
+		if s.skillSchemas[index].ID != input.ID {
+			continue
+		}
+
+		s.skillSchemas[index].SkillName = strings.TrimSpace(input.SkillName)
+		s.skillSchemas[index].Version = version
+		s.skillSchemas[index].Description = strings.TrimSpace(input.Description)
+		s.skillSchemas[index].RequiredFields = append([]SkillSchemaField(nil), input.RequiredFields...)
+		s.skillSchemas[index].OptionalFields = append([]SkillSchemaField(nil), input.OptionalFields...)
+		s.skillSchemas[index].Status = "Draft"
+		s.skillSchemas[index].UpdatedAt = nowLabel()
+		s.requestLogs = append([]RequestLog{{
+			ID:        nextID("req"),
+			Request:   "UPDATE skill schema:" + s.skillSchemas[index].SkillName,
+			Consumer:  version,
+			Latency:   "32ms",
+			Result:    "200",
+			Status:    "Success",
+			CreatedAt: nowLabel(),
+		}}, s.requestLogs...)
+		s.addAuditLocked("网关与模型", "update skill schema", s.skillSchemas[index].SkillName+"@"+version, "Success")
+		return cloneSkillSchema(s.skillSchemas[index]), true
+	}
+	return SkillSchema{}, false
+}
+
 func (s *Store) CreateSkillBinding(name, protocol, route, timeout string, schemaVersion ...string) SkillBinding {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -941,6 +984,31 @@ func (s *Store) PublishSkillBinding(id string) (SkillBinding, bool) {
 		return s.skills[index], true
 	}
 	return SkillBinding{}, false
+}
+
+func (s *Store) PublishSkillSchema(id string) (SkillSchema, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.skillSchemas {
+		if s.skillSchemas[index].ID != id {
+			continue
+		}
+
+		s.skillSchemas[index].Status = "Published"
+		s.skillSchemas[index].UpdatedAt = nowLabel()
+		s.requestLogs = append([]RequestLog{{
+			ID:        nextID("req"),
+			Request:   "PUBLISH skill schema:" + s.skillSchemas[index].SkillName,
+			Consumer:  s.skillSchemas[index].Version,
+			Latency:   "36ms",
+			Result:    "200",
+			Status:    "Success",
+			CreatedAt: nowLabel(),
+		}}, s.requestLogs...)
+		s.addAuditLocked("网关与模型", "publish skill schema", s.skillSchemas[index].SkillName+"@"+s.skillSchemas[index].Version, "Success")
+		return cloneSkillSchema(s.skillSchemas[index]), true
+	}
+	return SkillSchema{}, false
 }
 
 func (s *Store) ListRequestLogs() []RequestLog {

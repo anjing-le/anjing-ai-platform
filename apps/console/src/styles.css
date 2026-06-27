@@ -2344,6 +2344,7 @@ tbody tr.is-selected td:first-child {
 .model-checks span,
 .skill-checks span,
 .skill-schema-registry__head span,
+.skill-schema-form label span,
 .skill-schema-fields span,
 .plan-checks span,
 .budget-alert-checks span,
@@ -2516,6 +2517,19 @@ tbody tr.is-selected td:first-child {
   gap: 6px;
 }
 
+.skill-schema-registry__title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skill-schema-registry__title > div {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
 .skill-schema-registry__head strong {
   overflow-wrap: anywhere;
   font-size: 0.94rem;
@@ -2541,6 +2555,61 @@ tbody tr.is-selected td:first-child {
   overflow-wrap: anywhere;
   font-size: 0.92rem;
   line-height: 1.25;
+}
+
+.skill-schema-form {
+  display: grid;
+  gap: 10px;
+}
+
+.skill-schema-form fieldset {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.skill-schema-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.skill-schema-form textarea {
+  width: 100%;
+  min-height: 68px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.skill-schema-form textarea:focus {
+  border-color: var(--ink);
+  outline: none;
+}
+
+.skill-schema-form textarea:disabled {
+  background: #f7f7f7;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.skill-schema-form__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.skill-schema-form__actions .button {
+  justify-content: center;
+  min-width: 0;
+  width: 100%;
 }
 
 .docs-reference-grid {
@@ -2783,6 +2852,10 @@ tbody tr.is-selected td:first-child {
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.45;
+}
+
+.action-hint--error {
+  color: #8a1f1f;
 }
 
 .status {

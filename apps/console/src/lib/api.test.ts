@@ -6,9 +6,11 @@ import {
   loadPlatformSnapshot,
   loginSession,
   logoutSession,
+  publishSkillSchema,
   updateModelRoute,
   updateRoute,
   updateSkillBinding,
+  updateSkillSchema,
   type AuthSession,
   type PlatformSnapshot,
 } from "./api";
@@ -248,5 +250,58 @@ describe("console API client", () => {
 
     expect(result[0].skillName).toBe("search-knowledge");
     expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/skill-schemas");
+  });
+
+  it("updates skill schema drafts", async () => {
+    const input = {
+      id: "schema_search_v01",
+      skillName: "search-knowledge",
+      version: "0.2",
+      description: "Search input contract",
+      requiredFields: [{ name: "query", type: "string", description: "Search query" }],
+      optionalFields: [{ name: "filters", type: "object", description: "Structured filters" }],
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        success: true,
+        data: {
+          ...input,
+          status: "Draft",
+          updatedAt: "today",
+        },
+      }),
+    );
+
+    const result = await updateSkillSchema(input, "developer");
+
+    expect(result.status).toBe("Draft");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/skill-schemas/update");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
+    expect(fetchMock.mock.calls[0][1]?.body).toBe(JSON.stringify(input));
+  });
+
+  it("publishes skill schemas", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        success: true,
+        data: {
+          id: "schema_search_v01",
+          skillName: "search-knowledge",
+          version: "0.2",
+          description: "Search input contract",
+          requiredFields: [{ name: "query", type: "string", description: "Search query" }],
+          optionalFields: [],
+          status: "Published",
+          updatedAt: "today",
+        },
+      }),
+    );
+
+    const result = await publishSkillSchema("schema_search_v01", "developer");
+
+    expect(result.status).toBe("Published");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/gateway/skill-schemas/publish");
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
+    expect(fetchMock.mock.calls[0][1]?.body).toBe(JSON.stringify({ id: "schema_search_v01" }));
   });
 });

@@ -202,7 +202,7 @@ export const consoleServiceMap = [
     id: "gateway",
     entry: "网关与模型",
     owner: "gateway-api",
-    scope: "API 路由、模型路由、Skill 调用、请求日志",
+    scope: "API 路由、模型路由、Skill 调用、Schema Registry、请求日志",
     apis: [
       "/api/gateway/routes",
       "/api/gateway/routes/update",
@@ -212,6 +212,8 @@ export const consoleServiceMap = [
       "/api/gateway/model-routes/update",
       "/api/gateway/skills",
       "/api/gateway/skill-schemas",
+      "/api/gateway/skill-schemas/update",
+      "/api/gateway/skill-schemas/publish",
       "/api/gateway/skills/update",
       "/api/gateway/skills/publish",
       "/api/gateway/skills/invoke",
