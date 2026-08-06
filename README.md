@@ -59,6 +59,12 @@ pnpm screenshots:console
 - 质量门禁：见 `docs/architecture/quality-gates.md`
 - 质量脚本：见 `scripts/README.md`
 
+## 环境要求
+
+- Go 1.25（与 `go.mod` 保持一致）
+- Node.js 与 Corepack；仓库通过 `packageManager` 固定使用 pnpm 10.10.0
+- Docker 与 Docker Compose（仅在使用 PostgreSQL、Redis 或单镜像预览时需要）
+
 ## 本地启动
 
 最快体验：
