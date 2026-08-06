@@ -72,7 +72,15 @@ pnpm screenshots:console
 ```bash
 corepack enable
 pnpm install
+```
+
+安装依赖后，请在两个独立终端分别启动常驻的 API 与控制台进程：
+
+```bash
+# 终端 1
 pnpm dev:api
+
+# 终端 2
 pnpm dev:console
 ```
 
