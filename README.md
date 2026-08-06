@@ -70,6 +70,7 @@ pnpm screenshots:console
 最快体验：
 
 ```bash
+corepack enable
 pnpm install
 pnpm dev:api
 pnpm dev:console
